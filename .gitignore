@@ -1,0 +1,16 @@
+cat << 'EOF' > .gitignore
+# Скомпилированные бинарники в корне
+dccag*
+*.exe
+*.out
+
+# Папка сборок
+build/
+
+# Файлы отчетов и дампов
+dccag_report.json
+
+# Системный мусор
+.DS_Store
+*.swp
+EOF

@@ -1,0 +1,4557 @@
+package main
+
+import (
+	"encoding/json"
+	"flag"
+	"fmt"
+	"math/rand"
+	"os"
+	"sort"
+	"strings"
+	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+)
+
+const LegacyTaxRate = 0.15
+
+var debugReportFlag = flag.Bool("report", false, "Включить сбор подробного отчета телеметрии")
+
+var globalDebugReport = DebugReportData{
+	ClassDeaths:        make(map[string]int),
+	DeathCauses:        make(map[string]int),
+	DeathsByFloor:      make(map[int]int),
+	GoldSpentBreakdown: make(map[string]int),
+	AverageAtk:         make(map[string]float64),
+}
+
+type DebugReportData struct {
+	TotalRuns          int                `json:"total_runs"`
+	MaxFloorReached    int                `json:"max_floor_reached"`
+	TotalGoldSpent     int                `json:"total_gold_spent"`
+	GoldSpentBreakdown map[string]int     `json:"gold_spent_breakdown"`
+	ClassDeaths        map[string]int     `json:"class_deaths"`
+	DeathCauses        map[string]int     `json:"death_causes"`
+	DeathsByFloor      map[int]int        `json:"deaths_by_floor"`
+	FleeAttempts       int                `json:"flee_attempts"`
+	FleeSuccesses      int                `json:"flee_successes"`
+	AverageAtk         map[string]float64 `json:"average_atk"`
+}
+
+func (m *Model) accumulateDebugReport() {
+	globalDebugReport.TotalRuns++
+	if m.Floor > globalDebugReport.MaxFloorReached {
+		globalDebugReport.MaxFloorReached = m.Floor
+	}
+
+	globalDebugReport.TotalGoldSpent += (m.Stats.TotalGoldEarned - m.Gold)
+
+	for _, fallen := range m.Stats.FallenHeroes {
+		globalDebugReport.DeathCauses[fallen.Cause]++
+		globalDebugReport.ClassDeaths[string(fallen.Class)]++
+		globalDebugReport.DeathsByFloor[fallen.Floor]++
+	}
+
+	for _, h := range m.Party {
+		if !h.IsDead {
+			globalDebugReport.AverageAtk[string(h.Class)] = float64(h.TotalAtk())
+		}
+	}
+}
+
+func saveDebugReportToFile() {
+	if !*debugReportFlag {
+		return
+	}
+	fileData, err := json.MarshalIndent(globalDebugReport, "", "  ")
+	if err == nil {
+		_ = os.WriteFile("dccag_report.json", fileData, 0o644)
+		fmt.Println("\n[DEBUG] Подробный отчет телеметрии сохранен в файл: dccag_report.json")
+	}
+}
+
+// --- Стили ---
+var (
+	wallStyle         = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+	floorStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("236"))
+	partyStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("226")).Bold(true)
+	dangerStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true)
+	healStyle         = lipgloss.NewStyle().Foreground(lipgloss.Color("82")).Bold(true)
+	accentStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("205")).Bold(true)
+	goldStyle         = lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
+	questStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("51")).Bold(true)
+	subtleStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
+	townArtStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("221")).Bold(true)
+	altarStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("165")).Bold(true)
+	fountStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true)
+	trappedChestStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("208")).Bold(true)
+	barrelStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("172")).Bold(true)
+	potionStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("43")).Bold(true)
+	relicTileStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("220")).Bold(true)
+
+	stressStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("135")).Bold(true)
+	titleStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("220")).Bold(true)
+	fireStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("202")).Bold(true)
+
+	heroCardStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("62")).
+			Padding(0, 1)
+
+	heroCardActive = lipgloss.NewStyle().
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("226")).
+			Padding(0, 1)
+
+	heroCardDead = lipgloss.NewStyle().
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("238")).
+			Padding(0, 1)
+
+	statsBoxStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.DoubleBorder()).
+			BorderForeground(lipgloss.Color("214")).
+			Padding(1, 2).
+			Align(lipgloss.Left)
+
+	menuBoxStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.DoubleBorder()).
+			BorderForeground(lipgloss.Color("205")).
+			Padding(1, 3).
+			Align(lipgloss.Center)
+)
+
+func renderBar(current, max int, totalBars int, filledColor, emptyColor lipgloss.Color) string {
+	if totalBars < 2 {
+		totalBars = 2
+	}
+	if max <= 0 {
+		max = 1
+	}
+	ratio := float64(current) / float64(max)
+	if ratio < 0 {
+		ratio = 0
+	} else if ratio > 1 {
+		ratio = 1
+	}
+	filled := int(ratio * float64(totalBars))
+	empty := totalBars - filled
+	fStr := lipgloss.NewStyle().Foreground(filledColor).Render(strings.Repeat("█", filled))
+	eStr := lipgloss.NewStyle().Foreground(emptyColor).Render(strings.Repeat("░", empty))
+	return "[" + fStr + eStr + "]"
+}
+
+func shortenItemName(name string, maxLen int) string {
+	if maxLen <= 0 {
+		return ""
+	}
+	replacer := strings.NewReplacer(
+		"Пылающий", "Пыл.",
+		"Ядовитый", "Ядов.",
+		"Леденящий", "Лед.",
+		"Громовой", "Гром.",
+		"Закаленный", "Зак.",
+		"Кровопийцы", "Кров.",
+		"Медитации", "Мед.",
+		"Ярости", "Яр.",
+		"Титана", "Тит.",
+		"Двуручный", "2Р-",
+		"Адамантит", "Адам.",
+		"Драконья кость", "Драк.",
+		"Ростовой щит", "Р.щит",
+		"Башенный щит", "Б.щит",
+		"Осадный щит", "О.щит",
+		"готический доспех", "гот.доспех",
+		"бастионный доспех", "баст.доспех",
+		"полудоспех", "полудосп.",
+		"протекторы", "протект.",
+		"наголенники", "нагол.",
+		"Священническое", "Свящ.",
+		"Священническая", "Свящ.",
+		"Инквизитора", "Инкв.",
+		"Кристаллический", "Крист.",
+		"Архимагический", "Архимаг.",
+		"Зачарованные", "Зачар.",
+	)
+	res := replacer.Replace(name)
+	runes := []rune(res)
+	if len(runes) > maxLen {
+		if maxLen <= 1 {
+			return string(runes[:maxLen])
+		}
+		return string(runes[:maxLen-1]) + "…"
+	}
+	return res
+}
+
+func padRight(s string, targetWidth int) string {
+	w := lipgloss.Width(s)
+	if w >= targetWidth {
+		return s
+	}
+	return s + strings.Repeat(" ", targetWidth-w)
+}
+
+// --- Зелья ---
+type PotionType string
+
+const (
+	PotionHP     PotionType = "Зелье HP"
+	PotionMP     PotionType = "Зелье MP"
+	PotionStress PotionType = "Настойка Рассудка"
+)
+
+type PotionSize string
+
+const (
+	SizeSmall  PotionSize = "Малое"
+	SizeMedium PotionSize = "Среднее"
+	SizeLarge  PotionSize = "Большое"
+	SizeGrand  PotionSize = "Великое"
+)
+
+type Potion struct {
+	Type   PotionType
+	Size   PotionSize
+	Power  int
+	Cost   int
+	Symbol string
+}
+
+func getPotionName(p Potion) string {
+	return fmt.Sprintf("%s %s", p.Size, p.Type)
+}
+
+func createPotion(pType PotionType, size PotionSize) Potion {
+	switch size {
+	case SizeSmall:
+		switch pType {
+		case PotionHP:
+			return Potion{Type: pType, Size: size, Power: 20, Cost: 40, Symbol: "🟢"}
+		case PotionMP:
+			return Potion{Type: pType, Size: size, Power: 15, Cost: 35, Symbol: "🔵"}
+		case PotionStress:
+			return Potion{Type: pType, Size: size, Power: 25, Cost: 50, Symbol: "🟣"}
+		}
+	case SizeMedium:
+		switch pType {
+		case PotionHP:
+			return Potion{Type: pType, Size: size, Power: 45, Cost: 90, Symbol: "🟢"}
+		case PotionMP:
+			return Potion{Type: pType, Size: size, Power: 35, Cost: 80, Symbol: "🔵"}
+		case PotionStress:
+			return Potion{Type: pType, Size: size, Power: 50, Cost: 110, Symbol: "🟣"}
+		}
+	case SizeLarge:
+		switch pType {
+		case PotionHP:
+			return Potion{Type: pType, Size: size, Power: 80, Cost: 180, Symbol: "🟢"}
+		case PotionMP:
+			return Potion{Type: pType, Size: size, Power: 65, Cost: 160, Symbol: "🔵"}
+		case PotionStress:
+			return Potion{Type: pType, Size: size, Power: 75, Cost: 210, Symbol: "🟣"}
+		}
+	case SizeGrand:
+		switch pType {
+		case PotionHP:
+			return Potion{Type: pType, Size: size, Power: 140, Cost: 350, Symbol: "🟢"}
+		case PotionMP:
+			return Potion{Type: pType, Size: size, Power: 110, Cost: 300, Symbol: "🔵"}
+		case PotionStress:
+			return Potion{Type: pType, Size: size, Power: 100, Cost: 400, Symbol: "🟣"}
+		}
+	}
+	return Potion{Type: PotionHP, Size: SizeSmall, Power: 20, Cost: 40, Symbol: "🟢"}
+}
+
+// --- Биомы ---
+type BiomeType string
+
+const (
+	BiomeCatacombs BiomeType = "Гнилые Катакомбы"
+	BiomeGrotto    BiomeType = "Затопленные Гроты"
+	BiomeInferno   BiomeType = "Пепельные Недра"
+	BiomeCrystal   BiomeType = "Кристальный Лабиринт"
+	BiomeAbyss     BiomeType = "Трон Бездны"
+)
+
+type BiomeConfig struct {
+	Name       BiomeType
+	WallColor  lipgloss.Color
+	FloorColor lipgloss.Color
+	FloorRune  rune
+	EnvHazard  string
+}
+
+func getBiome(floor int) BiomeConfig {
+	cycle := (floor - 1) % 5
+	switch cycle {
+	case 0:
+		return BiomeConfig{Name: BiomeCatacombs, WallColor: lipgloss.Color("240"), FloorColor: lipgloss.Color("236"), FloorRune: '·', EnvHazard: "Сырость и гниль"}
+	case 1:
+		return BiomeConfig{Name: BiomeGrotto, WallColor: lipgloss.Color("31"), FloorColor: lipgloss.Color("24"), FloorRune: '~', EnvHazard: "Затопленные плиты (-2 Скор)"}
+	case 2:
+		return BiomeConfig{Name: BiomeInferno, WallColor: lipgloss.Color("124"), FloorColor: lipgloss.Color("52"), FloorRune: '≈', EnvHazard: "Палящий зной (+Огонь)"}
+	case 3:
+		return BiomeConfig{Name: BiomeCrystal, WallColor: lipgloss.Color("141"), FloorColor: lipgloss.Color("54"), FloorRune: '◊', EnvHazard: "Искажение эфира (+3 к MP)"}
+	default:
+		return BiomeConfig{Name: BiomeAbyss, WallColor: lipgloss.Color("89"), FloorColor: lipgloss.Color("233"), FloorRune: '×', EnvHazard: "Дыхание Бездны (+10% стресса)"}
+	}
+}
+
+type TownLegacy struct {
+	TreasuryGold int
+	SmithyLevel  int
+	ChurchLevel  int
+	TavernLevel  int
+}
+
+// --- Реликвии ---
+type PartyRelic struct {
+	Name        string
+	Level       int
+	Description string
+	GoldMult    float64
+	EnemyDmgMod float64
+	MartyrFury  bool
+	StressRes   int
+}
+
+func generateRelic(level int) PartyRelic {
+	relicTypes := []string{"Компас Алчности", "Корона Мученика", "Священный Грааль"}
+	chosen := relicTypes[rand.Intn(len(relicTypes))]
+
+	prefix := "Потускневший"
+	if level == 2 {
+		prefix = "Освященный"
+	} else if level == 3 {
+		prefix = "Древний"
+	}
+
+	fullName := fmt.Sprintf("%s %s (Ур.%d)", prefix, chosen, level)
+
+	switch chosen {
+	case "Компас Алчности":
+		gMult := 1.15 + (float64(level) * 0.10)
+		dmgMod := 1.15 - (float64(level) * 0.03)
+		return PartyRelic{
+			Name: fullName, Level: level, GoldMult: gMult, EnemyDmgMod: dmgMod, MartyrFury: false,
+			Description: fmt.Sprintf("+%.0f%% золота, урон врагов %.2fx", (gMult-1)*100, dmgMod),
+		}
+	case "Корона Мученика":
+		return PartyRelic{
+			Name: fullName, Level: level, GoldMult: 1.0, EnemyDmgMod: 1.0, MartyrFury: true,
+			Description: fmt.Sprintf("При гибели живые получают +%d Atk", level*3),
+		}
+	default:
+		res := 15 + (level * 15)
+		return PartyRelic{
+			Name: fullName, Level: level, GoldMult: 1.0, EnemyDmgMod: 1.0, MartyrFury: false, StressRes: res,
+			Description: fmt.Sprintf("Снижает стресс отряда на %d%%", res),
+		}
+	}
+}
+
+type AfflictionType string
+
+const (
+	AfflictionNone     AfflictionType = "Спокоен"
+	AfflictionParanoid AfflictionType = "Параноик"
+	AfflictionSelfish  AfflictionType = "Эгоист"
+	AfflictionManiac   AfflictionType = "Безумец"
+	AfflictionVirtuous AfflictionType = "Воодушевлен"
+)
+
+var FirstNames = []string{
+	"Бранд", "Торин", "Лира", "Алдос", "Селина",
+	"Рагнар", "Ингвар", "Вульф", "Сигурд", "Морган",
+	"Элиас", "Дункан", "Готфрид", "Вальтер", "Кассиан",
+	"Айрис", "Морриган", "Бригитта", "Агнес", "Хильда",
+	"Ярополк", "Радомир", "Добрыня", "Лютобор", "Бронислав",
+	"Аэрон", "Дрейвен", "Кэлар", "Зордан", "Тарион",
+	"Велдор", "Фалькон", "Йоррик", "Эдан", "Зарвин",
+	"Лирианна", "Велара", "Мираэль", "Селестина", "Каэлина",
+	"Тирианна", "Найра", "Эльмира", "Зейра", "Ксандр",
+	"Верисса", "Орвин", "Сильран", "Келдра", "Вейнара",
+}
+
+func getRandomName() string {
+	return FirstNames[rand.Intn(len(FirstNames))]
+}
+
+type HeroHeroics struct {
+	DamageDealt      int
+	DamageTaken      int
+	Kills            int
+	BossKills        int
+	CritsLanded      int
+	HealsGiven       int
+	NearDeathEscapes int
+
+	TreasureFound   int
+	SecretsRevealed int
+	Blocks          int
+	AggroPulled     int
+	CriticalStrikes int
+	Backstabs       int
+	LootStolen      int
+	CCDuration      int
+	ManaBursts      int
+	Revives         int
+	DoTsRemoved     int
+}
+
+type ElementType string
+
+const (
+	ElemNone      ElementType = "Нет"
+	ElemFire      ElementType = "Огонь"
+	ElemPoison    ElementType = "Яд"
+	ElemFrost     ElementType = "Мороз"
+	ElemLightning ElementType = "Молния"
+)
+
+type SuffixType string
+
+const (
+	SuffNone      SuffixType = "Нет"
+	SuffVampirism SuffixType = "Вампиризм"
+	SuffFury      SuffixType = "Ярость"
+	SuffMana      SuffixType = "Медитация"
+	SuffTitan     SuffixType = "Титан"
+)
+
+type PrefixDef struct {
+	Name    string
+	Element ElementType
+	Bonus   int
+}
+
+type SuffixDef struct {
+	Name   string
+	Effect SuffixType
+	Bonus  int
+}
+
+var Prefixes = []PrefixDef{
+	{Name: "Пылающий", Element: ElemFire, Bonus: 3},
+	{Name: "Ядовитый", Element: ElemPoison, Bonus: 2},
+	{Name: "Леденящий", Element: ElemFrost, Bonus: 2},
+	{Name: "Громовой", Element: ElemLightning, Bonus: 4},
+	{Name: "Закаленный", Element: ElemNone, Bonus: 2},
+}
+
+var Suffixes = []SuffixDef{
+	{Name: "Кровопийцы", Effect: SuffVampirism, Bonus: 25},
+	{Name: "Ярости", Effect: SuffFury, Bonus: 4},
+	{Name: "Медитации", Effect: SuffMana, Bonus: 3},
+	{Name: "Титана", Effect: SuffTitan, Bonus: 4},
+}
+
+type EquipSlot string
+
+const (
+	SlotWeapon EquipSlot = "Оружие"
+	SlotHead   EquipSlot = "Шлем"
+	SlotChest  EquipSlot = "Доспех"
+	SlotLegs   EquipSlot = "Поножи"
+)
+
+type ArmorCategory string
+
+const (
+	ArmorHeavy  ArmorCategory = "Тяжелая"
+	ArmorMedium ArmorCategory = "Средняя"
+	ArmorLight  ArmorCategory = "Легкая"
+	ArmorNone   ArmorCategory = "Нет"
+)
+
+type MaterialTier struct {
+	Name      string
+	BonusMult int
+	ValueMult int
+}
+
+var Materials = []MaterialTier{
+	{Name: "Железо", BonusMult: 1, ValueMult: 1},
+	{Name: "Сталь", BonusMult: 2, ValueMult: 2},
+	{Name: "Мифрил", BonusMult: 3, ValueMult: 4},
+	{Name: "Адамант", BonusMult: 4, ValueMult: 7},
+}
+
+type EquipItem struct {
+	BaseName     string
+	Slot         EquipSlot
+	Category     ArmorCategory
+	AllowedClass HeroClass
+	Material     MaterialTier
+	UpgradeLevel int
+	BaseStat     int
+	BonusMP      int
+	BonusHP      int
+	CritBonus    int
+	BlockBonus   int
+	StressRes    int
+	Value        int
+	Prefix       *PrefixDef
+	Suffix       *SuffixDef
+}
+
+func (e *EquipItem) TotalStat() int {
+	stat := e.BaseStat * e.Material.BonusMult
+	stat += e.UpgradeLevel * 2
+	if e.Prefix != nil {
+		stat += e.Prefix.Bonus
+	}
+	if e.Suffix != nil && e.Suffix.Effect == SuffTitan {
+		stat += e.Suffix.Bonus
+	}
+	return stat
+}
+
+func (e *EquipItem) DisplayName() string {
+	var parts []string
+	if e.Prefix != nil {
+		parts = append(parts, e.Prefix.Name)
+	}
+	parts = append(parts, e.BaseName)
+	if e.UpgradeLevel > 0 {
+		parts = append(parts, fmt.Sprintf("+%d", e.UpgradeLevel))
+	}
+	if e.Suffix != nil {
+		parts = append(parts, e.Suffix.Name)
+	}
+	return strings.Join(parts, " ")
+}
+
+// --- Герои ---
+type HeroClass string
+
+const (
+	ClassTank    HeroClass = "Танк"
+	ClassWarrior HeroClass = "Воин"
+	ClassRogue   HeroClass = "Разбойник"
+	ClassMage    HeroClass = "Маг"
+	ClassCleric  HeroClass = "Клирик"
+)
+
+type Hero struct {
+	Name         string
+	Title        string
+	Class        HeroClass
+	MaxHP        int
+	HP           int
+	MaxMP        int
+	MP           int
+	Stress       int
+	Affliction   AfflictionType
+	BaseAtk      int
+	BaseDef      int
+	Speed        int
+	IsDead       bool
+	IsGuarding   bool
+	IsBerserk    bool
+	IsStealthed  bool
+	IsCharged    bool
+	IsAura       bool
+	CauseOfDeath string
+	SkillName    string
+	SkillCost    int
+	ElixirCount  int
+	Feats        HeroHeroics
+
+	Weapon *EquipItem
+	Head   *EquipItem
+	Chest  *EquipItem
+	Legs   *EquipItem
+
+	Potion *Potion
+}
+
+func (h *Hero) AddTreasure() {
+	h.Feats.TreasureFound++
+}
+
+func (h *Hero) RevealSecret() {
+	h.Feats.SecretsRevealed++
+}
+
+func (h *Hero) AddBlock() {
+	h.Feats.Blocks++
+}
+
+func (h *Hero) PullAggro() {
+	h.Feats.AggroPulled++
+}
+
+func (h *Hero) AddCriticalStrike() {
+	h.Feats.CriticalStrikes++
+}
+
+func (h *Hero) AddBackstab() {
+	h.Feats.Backstabs++
+}
+
+func (h *Hero) StealLoot() {
+	h.Feats.LootStolen++
+}
+
+func (h *Hero) AddCCDuration() {
+	h.Feats.CCDuration++
+}
+
+func (h *Hero) AddManaBurst() {
+	h.Feats.ManaBursts++
+}
+
+func (h *Hero) AddRevive() {
+	h.Feats.Revives++
+}
+
+func (h *Hero) RemoveDot() {
+	h.Feats.DoTsRemoved++
+}
+
+func (h *Hero) FullName() string {
+	name := h.Name
+	if h.Title != "" {
+		name = fmt.Sprintf("%s «%s»", h.Name, h.Title)
+	}
+	return name
+}
+
+func (h *Hero) TotalAtk() int {
+	b := 0
+	if h.Weapon != nil {
+		b = h.Weapon.TotalStat()
+	}
+	if h.Affliction == AfflictionVirtuous {
+		b += 3
+	}
+	if h.IsBerserk {
+		b += 5
+	}
+	if h.IsCharged {
+		b += 6
+	}
+	return h.BaseAtk + b
+}
+
+func (h *Hero) TotalDef() int {
+	b := 0
+	slots := []*EquipItem{h.Weapon, h.Head, h.Chest, h.Legs}
+	for _, it := range slots {
+		if it != nil {
+			b += it.TotalStat()
+			b += it.BlockBonus
+		}
+	}
+	if h.IsGuarding {
+		b += 5
+	}
+	if h.IsAura {
+		b += 3
+	}
+	if h.IsBerserk {
+		b -= 2
+	}
+	if b < 0 {
+		b = 0
+	}
+	return h.BaseDef + b
+}
+
+func (h *Hero) GetItemInSlot(slot EquipSlot) *EquipItem {
+	switch slot {
+	case SlotWeapon:
+		return h.Weapon
+	case SlotHead:
+		return h.Head
+	case SlotChest:
+		return h.Chest
+	case SlotLegs:
+		return h.Legs
+	}
+	return nil
+}
+
+func (h *Hero) SetItemInSlot(slot EquipSlot, item *EquipItem) {
+	switch slot {
+	case SlotWeapon:
+		h.Weapon = item
+	case SlotHead:
+		h.Head = item
+	case SlotChest:
+		h.Chest = item
+	case SlotLegs:
+		h.Legs = item
+	}
+}
+
+func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipItem {
+	matIdx := floor / 3
+	if matIdx >= len(Materials) {
+		matIdx = len(Materials) - 1
+	}
+	mat := Materials[rand.Intn(matIdx+1)]
+
+	upg := 0
+	if rand.Intn(100) > 75 {
+		upg = rand.Intn(floor/3 + 1)
+		if upg > 3 {
+			upg = 3
+		}
+	}
+
+	var pfx *PrefixDef
+	if rand.Intn(100) > 60 {
+		p := Prefixes[rand.Intn(len(Prefixes))]
+		pfx = &p
+	}
+
+	var sfx *SuffixDef
+	if rand.Intn(100) > 70 {
+		s := Suffixes[rand.Intn(len(Suffixes))]
+		sfx = &s
+	}
+
+	tier := floor / 4
+	if tier > 3 {
+		tier = 3
+	}
+	if rand.Intn(100) < 25 && tier < 3 {
+		tier++
+	}
+
+	name := "Снаряжение"
+	baseStat := 2
+	bonusMP := 0
+	bonusHP := 0
+	critBonus := 0
+	blockBonus := 0
+	stressRes := 0
+	cat := ArmorMedium
+
+	switch class {
+	case ClassTank:
+		cat = ArmorHeavy
+		switch slot {
+		case SlotWeapon:
+			names := []string{"Гладиус и Ростовой щит", "Палаш и Башенный щит", "Моргенштерн и Осадный щит", "Бастионный меч и Павеза"}
+			name = names[tier]
+			baseStat = 3 + tier*2
+			blockBonus = 2 + tier*2
+		case SlotChest:
+			names := []string{"Тяжелая бригантина", "Латный полудоспех", "Рыцарский готический доспех", "Полный бастионный доспех"}
+			name = names[tier]
+			baseStat = 4 + tier*3
+			bonusHP = 10 + tier*10
+		case SlotHead:
+			names := []string{"Топфхельм", "Салад", "Армет", "Бацинет бастиона"}
+			name = names[tier]
+			baseStat = 2 + tier*2
+			blockBonus = 1 + tier
+		case SlotLegs:
+			names := []string{"Латные наголенники", "Шарнирные поножи", "Латные поножи", "Тяжелые протекторы"}
+			name = names[tier]
+			baseStat = 2 + tier*2
+			bonusHP = 5 + tier*5
+		}
+
+	case ClassWarrior:
+		cat = ArmorHeavy
+		switch slot {
+		case SlotWeapon:
+			names := []string{"Эспадон", "Двуручный клеймор", "Боевой топор", "Тяжелый фальшион"}
+			name = names[tier]
+			baseStat = 5 + tier*3
+			critBonus = 1 + tier
+		case SlotChest:
+			names := []string{"Кольчужный хауберк", "Шарнирная кираса", "Чешуйчатый доспех", "Латный нагрудник"}
+			name = names[tier]
+			baseStat = 3 + tier*2
+			bonusHP = 8 + tier*8
+		case SlotHead:
+			names := []string{"Норманнский шлем", "Открытый бацинет", "Барбют", "Стальной шишак"}
+			name = names[tier]
+			baseStat = 2 + tier*2
+			critBonus = 1
+		case SlotLegs:
+			names := []string{"Чешуйчатые наголенники", "Кольчужные чулки", "Латные пластины", "Бригантинные поножи"}
+			name = names[tier]
+			baseStat = 2 + tier*2
+		}
+
+	case ClassRogue:
+		cat = ArmorMedium
+		switch slot {
+		case SlotWeapon:
+			names := []string{"Охотничьи ножи", "Парные стилеты", "Зазубренные кинжалы", "Воровские кортики"}
+			name = names[tier]
+			baseStat = 4 + tier*2
+			critBonus = 2 + tier*2
+		case SlotChest:
+			names := []string{"Кожаный колет", "Стеганый гамбезон", "Клёпаная куртка", "Ассасинский плащ"}
+			name = names[tier]
+			baseStat = 2 + tier*2
+			critBonus = 1 + tier
+		case SlotHead:
+			names := []string{"Тканевая маска", "Кожаный капюшон", "Разбойничья бандана", "Капюшон скрытности"}
+			name = names[tier]
+			baseStat = 1 + tier*2
+			critBonus = 1
+		case SlotLegs:
+			names := []string{"Кожаные краги", "Плотные гетры", "Мягкие кожаные поножи", "Клёпаные наголенники"}
+			name = names[tier]
+			baseStat = 1 + tier*2
+		}
+
+	case ClassMage:
+		cat = ArmorLight
+		switch slot {
+		case SlotWeapon:
+			names := []string{"Рунная трость", "Студенческий посох", "Кристаллический жезл", "Архимагический посох"}
+			name = names[tier]
+			baseStat = 6 + tier*3
+			bonusMP = 10 + tier*10
+		case SlotChest:
+			names := []string{"Студенческая роба", "Магическая мантия", "Ритуальное облачение", "Астральное одеяние"}
+			name = names[tier]
+			baseStat = 2 + tier*2
+			bonusMP = 15 + tier*10
+		case SlotHead:
+			names := []string{"Остроконечная шляпа", "Ученический обруч", "Чародейская диадема", "Капюшон магистра"}
+			name = names[tier]
+			baseStat = 1 + tier*2
+			bonusMP = 8 + tier*6
+		case SlotLegs:
+			names := []string{"Тканевые обмотки", "Шёлковые поножи", "Защитные ленты", "Зачарованные набедренники"}
+			name = names[tier]
+			baseStat = 1 + tier*2
+			bonusMP = 6 + tier*4
+		}
+
+	case ClassCleric:
+		cat = ArmorMedium
+		switch slot {
+		case SlotWeapon:
+			names := []string{"Окованная дубина", "Боевой молот", "Шестопёр", "Булава и Книжник"}
+			name = names[tier]
+			baseStat = 4 + tier*2
+			bonusMP = 8 + tier*6
+		case SlotChest:
+			names := []string{"Священническое сутано", "Доспех Инквизитора", "Пресвитерская кираса", "Священный доспех"}
+			name = names[tier]
+			baseStat = 3 + tier*2
+			stressRes = 10 + tier*5
+		case SlotHead:
+			names := []string{"Священническая митра", "Койф", "Капеллина", "Обруч правосудия"}
+			name = names[tier]
+			baseStat = 2 + tier*2
+			stressRes = 5 + tier*5
+		case SlotLegs:
+			names := []string{"Кольчужные поножи", "Священнические наголенники", "Инквизиторские сапоги", "Стальные наколенники"}
+			name = names[tier]
+			baseStat = 2 + tier*2
+			bonusHP = 6 + tier*6
+		}
+	}
+
+	val := (baseStat + tier*3) * mat.ValueMult * 12
+
+	return EquipItem{
+		BaseName: name, Slot: slot, Category: cat, AllowedClass: class,
+		Material: mat, UpgradeLevel: upg, BaseStat: baseStat,
+		BonusMP: bonusMP, BonusHP: bonusHP, CritBonus: critBonus,
+		BlockBonus: blockBonus, StressRes: stressRes, Value: val,
+		Prefix: pfx, Suffix: sfx,
+	}
+}
+
+func generateItemForClass(class HeroClass, floor int) EquipItem {
+	slots := []EquipSlot{SlotWeapon, SlotHead, SlotChest, SlotLegs}
+	chosenSlot := slots[rand.Intn(len(slots))]
+	return generateItemForClassSlot(class, chosenSlot, floor)
+}
+
+func (m *Model) checkAndAwardTitle(h *Hero) {
+	if h.Title != "" && h.Title != "Ополченец" {
+		return
+	}
+
+	newTitle := ""
+	switch {
+	case h.Feats.BossKills >= 3:
+		newTitle = "Истребитель чудовищ"
+	case h.Feats.BossKills >= 1:
+		newTitle = "Драконоборец"
+	case h.Feats.NearDeathEscapes >= 6:
+		newTitle = "Проклятый удачей"
+	case h.Feats.NearDeathEscapes >= 3:
+		newTitle = "Бессмертный"
+	case h.Feats.TreasureFound >= 5:
+		newTitle = "Искатель кладов"
+	case h.Feats.SecretsRevealed >= 4:
+		newTitle = "Хранитель тайн"
+
+	case h.Class == ClassTank && h.Feats.Blocks >= 10:
+		newTitle = "Непробиваемый"
+	case h.Class == ClassTank && h.Feats.AggroPulled >= 8:
+		newTitle = "Грозовой щит"
+	case h.Class == ClassTank && h.Feats.DamageTaken >= 75:
+		newTitle = "Стена"
+
+	case h.Class == ClassWarrior && h.Feats.Kills >= 12:
+		newTitle = "Кровавый клинок"
+	case h.Class == ClassWarrior && h.Feats.Kills >= 5:
+		newTitle = "Палач"
+	case h.Class == ClassWarrior && h.Feats.DamageDealt >= 90:
+		newTitle = "Топор"
+	case h.Class == ClassWarrior && h.Feats.CriticalStrikes >= 4:
+		newTitle = "Разрыватель рядов"
+
+	case h.Class == ClassRogue && h.Feats.CritsLanded >= 6:
+		newTitle = "Призрачный удар"
+	case h.Class == ClassRogue && h.Feats.CritsLanded >= 3:
+		newTitle = "Тень"
+	case h.Class == ClassRogue && h.Feats.Kills >= 4:
+		newTitle = "Клинок"
+	case h.Class == ClassRogue && h.Feats.Backstabs >= 5:
+		newTitle = "Нож за спиной"
+	case h.Class == ClassRogue && h.Feats.LootStolen >= 3:
+		newTitle = "Ловкая рука"
+
+	case h.Class == ClassMage && h.Feats.DamageDealt >= 150:
+		newTitle = "Буревестник"
+	case h.Class == ClassMage && h.Feats.DamageDealt >= 90:
+		newTitle = "Пепел"
+	case h.Class == ClassMage && h.Feats.CCDuration >= 40:
+		newTitle = "Оковы пустоты"
+	case h.Class == ClassMage && h.Feats.ManaBursts >= 3:
+		newTitle = "Вспышка"
+
+	case h.Class == ClassCleric && h.Feats.HealsGiven >= 120:
+		newTitle = "Благодать"
+	case h.Class == ClassCleric && h.Feats.HealsGiven >= 70:
+		newTitle = "Святой"
+	case h.Class == ClassCleric && h.Feats.Revives >= 3:
+		newTitle = "Воскреситель"
+	case h.Class == ClassCleric && h.Feats.DoTsRemoved >= 4:
+		newTitle = "Очиститель"
+	}
+
+	if newTitle != "" {
+		h.Title = newTitle
+		m.addLog(titleStyle.Render(fmt.Sprintf("👑 [СЛАВА] %s заслужил титул «%s»!", h.Name, newTitle)))
+	}
+}
+
+func (m *Model) addStress(h *Hero, amt int) {
+	if h.IsDead {
+		return
+	}
+	if m.Relic != nil && m.Relic.StressRes > 0 {
+		amt = amt * (100 - m.Relic.StressRes) / 100
+	}
+
+	itemRes := 0
+	for _, it := range []*EquipItem{h.Head, h.Chest, h.Legs} {
+		if it != nil {
+			itemRes += it.StressRes
+		}
+	}
+	if itemRes > 60 {
+		itemRes = 60
+	}
+	amt = amt * (100 - itemRes) / 100
+
+	h.Stress += amt
+
+	if amt >= 15 {
+		splash := amt / 3
+		for _, ally := range m.Party {
+			if !ally.IsDead && ally != h {
+				ally.Stress += splash
+			}
+		}
+	}
+
+	if h.Stress >= 100 && h.Affliction == AfflictionNone {
+		d20 := rand.Intn(20) + 1
+		if d20 >= 16 {
+			h.Affliction = AfflictionVirtuous
+			m.addLog(healStyle.Render(fmt.Sprintf("🌟 [ВООДУШЕВЛЕНИЕ] (D20=%d) %s превозмог страх!", d20, h.FullName())))
+			for _, ally := range m.Party {
+				if !ally.IsDead {
+					ally.Stress -= 30
+					if ally.Stress < 0 {
+						ally.Stress = 0
+					}
+				}
+			}
+		} else {
+			affs := []AfflictionType{AfflictionParanoid, AfflictionSelfish, AfflictionManiac}
+			h.Affliction = affs[rand.Intn(len(affs))]
+			m.addLog(stressStyle.Render(fmt.Sprintf("👁️ [ПСИХОЗ] (D20=%d) %s сломлен: %s!", d20, h.FullName(), h.Affliction)))
+		}
+	}
+
+	if h.Stress >= 200 && h.Affliction != AfflictionVirtuous {
+		h.Stress = 200
+		if h.HP <= 1 {
+			h.HP = 0
+			h.CauseOfDeath = fmt.Sprintf("Сердечный приступ (%s)", h.Affliction)
+			m.recordFallenHero(h)
+			m.addLog(dangerStyle.Render(fmt.Sprintf("💔 [ИНФАРКТ] Сердце %s разорвалось от безумия! Смерть!", h.Name)))
+			for _, ally := range m.Party {
+				if !ally.IsDead {
+					ally.Stress += 25
+				}
+			}
+			return
+		}
+
+		h.HP = 1
+		h.Stress = 160
+		m.addLog(dangerStyle.Render(fmt.Sprintf("💔 [СЕРДЕЧНЫЙ ПРИСТУП] %s схватился за сердце! HP упало до 1!", h.FullName())))
+		for _, ally := range m.Party {
+			if !ally.IsDead && ally != h {
+				ally.Stress += 15
+			}
+		}
+	}
+}
+
+// --- Монстры и Аффиксы ---
+type MonsterAffix string
+
+const (
+	AffixNone     MonsterAffix = "Обычный"
+	AffixFire     MonsterAffix = "Огненный"
+	AffixPoison   MonsterAffix = "Ядовитый"
+	AffixFrost    MonsterAffix = "Ледяной"
+	AffixStone    MonsterAffix = "Каменный"
+	AffixVampiric MonsterAffix = "Вампир"
+)
+
+func getAffixIcon(a MonsterAffix) string {
+	switch a {
+	case AffixFire:
+		return "🔥"
+	case AffixPoison:
+		return "☣️"
+	case AffixFrost:
+		return "❄️"
+	case AffixStone:
+		return "🪨"
+	case AffixVampiric:
+		return "🩸"
+	default:
+		return ""
+	}
+}
+
+type MonsterType string
+
+const (
+	MobRat         MonsterType = "Чумная крыса"
+	MobGoblin      MonsterType = "Гоблин"
+	MobSkeleton    MonsterType = "Скелет"
+	MobSlime       MonsterType = "Болотный слизень"
+	MobDrowned     MonsterType = "Утопленник"
+	MobLizard      MonsterType = "Болотный ящер"
+	MobImp         MonsterType = "Пепельный бес"
+	MobOrc         MonsterType = "Орк-берсерк"
+	MobSalamander  MonsterType = "Саламандра"
+	MobGargoyle    MonsterType = "Гаргулья"
+	MobGolem       MonsterType = "Кристальный голем"
+	MobPhantom     MonsterType = "Фантом"
+	MobVoidDemon   MonsterType = "Демон Бездны"
+	MobDeathKnight MonsterType = "Рыцарь Смерти"
+	MobDragon      MonsterType = "Пепельный Дракон"
+)
+
+type Monster struct {
+	ID      int
+	Type    MonsterType
+	Name    string
+	Level   int
+	Affix   MonsterAffix
+	Glyph   rune
+	Color   string
+	HP      int
+	MaxHP   int
+	Atk     int
+	Defense int
+	Speed   int
+	Exp     int
+	IsDead  bool
+}
+
+type MonsterPack struct {
+	Members []*Monster
+	IsBoss  bool
+}
+
+func (p *MonsterPack) LivingCount() int {
+	cnt := 0
+	for _, m := range p.Members {
+		if !m.IsDead {
+			cnt++
+		}
+	}
+	return cnt
+}
+
+func (p *MonsterPack) GetFirstLiving() *Monster {
+	for _, m := range p.Members {
+		if !m.IsDead {
+			return m
+		}
+	}
+	return nil
+}
+
+func (p *MonsterPack) GetLowestHPFocus() *Monster {
+	var target *Monster
+	minHP := 99999
+	for _, m := range p.Members {
+		if !m.IsDead && m.HP < minHP {
+			minHP = m.HP
+			target = m
+		}
+	}
+	return target
+}
+
+func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
+	pack := &MonsterPack{IsBoss: isBoss}
+	scaleMult := 1 + (floor / 10)
+
+	if isBoss {
+		if floor%10 == 0 {
+			dragonLvl := floor
+			dragonHP := (260 + (floor * 20)) * scaleMult
+			dragon := &Monster{
+				ID: 1, Type: MobDragon, Name: fmt.Sprintf("Пепельный Дракон (БОСС Этажа %d)", floor), Level: dragonLvl, Affix: AffixFire,
+				Glyph: 'D', Color: "196", HP: dragonHP, MaxHP: dragonHP,
+				Atk: (25 + floor) * scaleMult, Defense: (9 + floor/2) * scaleMult, Speed: 12, Exp: 350 * scaleMult,
+			}
+			pack.Members = append(pack.Members, dragon)
+
+			for i := 1; i <= 2; i++ {
+				guard := &Monster{
+					ID: i + 1, Type: MobDeathKnight, Name: fmt.Sprintf("Рыцарь Смерти #%d", i), Level: dragonLvl - 1, Affix: AffixVampiric,
+					Glyph: 'K', Color: "89", HP: (65 + floor*5) * scaleMult, MaxHP: (65 + floor*5) * scaleMult,
+					Atk: (18 + floor) * scaleMult, Defense: (6 + floor/3) * scaleMult, Speed: 10, Exp: 55 * scaleMult,
+				}
+				pack.Members = append(pack.Members, guard)
+			}
+			return pack
+		}
+
+		bossLvl := floor
+		hp := (70 + (bossLvl * 15)) * scaleMult
+		bType := MobOrc
+		bGlyph := 'B'
+		bColor := "202"
+		bName := "Вождь Орков"
+		bAtk := (14 + (bossLvl * 2)) * scaleMult
+		bDef := (4 + bossLvl/3) * scaleMult
+
+		if floor >= 7 {
+			bType = MobGolem
+			bName = "Алмазный Колосс"
+			bGlyph = 'G'
+			bColor = "141"
+			bDef = (8 + floor/4) * scaleMult
+		} else if floor >= 4 {
+			bType = MobDrowned
+			bName = "Глубинный Левиафан"
+			bGlyph = 'L'
+			bColor = "31"
+		}
+
+		pack.Members = append(pack.Members, &Monster{
+			ID: 1, Type: bType, Name: bName, Level: bossLvl, Affix: AffixStone,
+			Glyph: bGlyph, Color: bColor, HP: hp, MaxHP: hp,
+			Atk: bAtk, Defense: bDef, Speed: 10, Exp: (70 + bossLvl*8) * scaleMult,
+		})
+		for i := 1; i <= 2; i++ {
+			pack.Members = append(pack.Members, &Monster{
+				ID: i + 1, Type: MobSkeleton, Name: fmt.Sprintf("Прислужник #%d", i), Level: floor, Affix: AffixNone,
+				Glyph: 's', Color: "245", HP: (24 + floor*5) * scaleMult, MaxHP: (24 + floor*5) * scaleMult,
+				Atk: (9 + floor*2) * scaleMult, Defense: 3 * scaleMult, Speed: 9, Exp: (18 + floor*3) * scaleMult,
+			})
+		}
+		return pack
+	}
+
+	packSize := rand.Intn(3) + 3
+	affixes := []MonsterAffix{AffixNone, AffixFire, AffixPoison, AffixFrost, AffixStone, AffixVampiric}
+
+	for i := 1; i <= packSize; i++ {
+		mobLvl := floor
+		if rand.Intn(100) < 30 {
+			mobLvl++
+		}
+
+		aff := AffixNone
+		if floor >= 3 && rand.Intn(100) < (20+(floor*5)) {
+			aff = affixes[rand.Intn(len(affixes))]
+		}
+
+		var mType MonsterType
+		var glyph rune
+		var color string
+		var baseAtk, baseDef, baseHP int
+
+		biomeCycle := (floor - 1) % 5
+
+		if biomeCycle == 0 {
+			roll := rand.Intn(3)
+			if roll == 0 {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobRat, 'r', "137", 5, 0, 14
+			} else if roll == 1 {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobGoblin, 'g', "118", 7, 1, 17
+			} else {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobSkeleton, 's', "252", 8, 3, 22
+			}
+		} else if biomeCycle == 1 {
+			roll := rand.Intn(3)
+			if roll == 0 {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobSlime, 'c', "43", 9, 1, 26
+			} else if roll == 1 {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobDrowned, 'u', "31", 11, 2, 34
+			} else {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobLizard, 'l', "29", 12, 3, 30
+			}
+		} else if biomeCycle == 2 {
+			roll := rand.Intn(3)
+			if roll == 0 {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobImp, 'i', "208", 13, 2, 36
+			} else if roll == 1 {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobOrc, 'o', "130", 15, 4, 46
+			} else {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobSalamander, 'm', "196", 16, 3, 40
+			}
+		} else if biomeCycle == 3 {
+			roll := rand.Intn(3)
+			if roll == 0 {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobGargoyle, 'G', "102", 17, 6, 52
+			} else if roll == 1 {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobGolem, 'C', "141", 18, 7, 60
+			} else {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobPhantom, 'p', "159", 19, 2, 44
+			}
+		} else {
+			roll := rand.Intn(2)
+			if roll == 0 {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobVoidDemon, 'V', "161", 21, 5, 66
+			} else {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobDeathKnight, 'K', "89", 22, 7, 76
+			}
+		}
+
+		hp := (baseHP + (mobLvl * 5)) * scaleMult
+		atk := (baseAtk + (mobLvl * 2)) * scaleMult
+		def := (baseDef + (mobLvl / 3)) * scaleMult
+
+		if aff == AffixFire {
+			atk += 3 * scaleMult
+		} else if aff == AffixStone {
+			def += 3 * scaleMult
+			hp += 12 * scaleMult
+		}
+
+		pack.Members = append(pack.Members, &Monster{
+			ID: i, Type: mType, Name: fmt.Sprintf("%s #%d", mType, i), Level: mobLvl, Affix: aff,
+			Glyph: glyph, Color: color, HP: hp, MaxHP: hp, Atk: atk, Defense: def, Speed: 8 + mobLvl/2, Exp: (10 + mobLvl*4) * scaleMult,
+		})
+	}
+	return pack
+}
+
+type CombatantType int
+
+const (
+	CombatantHero CombatantType = iota
+	CombatantMonster
+)
+
+type TurnOrderEntry struct {
+	Type       CombatantType
+	HeroRef    *Hero
+	MonsterRef *Monster
+	Initiative int
+}
+
+type ActiveCombat struct {
+	Pos          Point
+	Pack         *MonsterPack
+	TurnQueue    []TurnOrderEntry
+	TurnIdx      int
+	HasBarrel    bool
+	FleeCooldown int
+}
+
+// --- Квесты ---
+type QuestType int
+
+const (
+	QuestHuntMonster QuestType = iota
+	QuestOpenChests
+	QuestReachFloor
+	QuestUseAltar
+	QuestFindRelic
+	QuestEscapeTrap
+)
+
+type AutoQuest struct {
+	Type        QuestType
+	Title       string
+	Description string
+	TargetMob   MonsterType
+	TargetCount int
+	Current     int
+	RewardGold  int
+	Completed   bool
+}
+
+func generateAutoQuest(curFloor int) AutoQuest {
+	qType := QuestType(rand.Intn(6))
+	switch qType {
+	case QuestHuntMonster:
+		var pool []MonsterType
+		biomeCycle := (curFloor - 1) % 5
+		switch biomeCycle {
+		case 0:
+			pool = []MonsterType{MobRat, MobGoblin, MobSkeleton}
+		case 1:
+			pool = []MonsterType{MobSlime, MobDrowned, MobLizard}
+		case 2:
+			pool = []MonsterType{MobImp, MobOrc, MobSalamander}
+		case 3:
+			pool = []MonsterType{MobGargoyle, MobGolem, MobPhantom}
+		default:
+			pool = []MonsterType{MobVoidDemon, MobDeathKnight}
+		}
+		target := pool[rand.Intn(len(pool))]
+		count := rand.Intn(3) + 3
+		return AutoQuest{
+			Type: QuestHuntMonster, TargetMob: target, TargetCount: count,
+			Title: fmt.Sprintf("Охота: %s", target), Description: fmt.Sprintf("Истребить %d [%s]", count, target),
+			RewardGold: count * (20 + curFloor*5),
+		}
+	case QuestOpenChests:
+		count := rand.Intn(2) + 2
+		return AutoQuest{
+			Type: QuestOpenChests, TargetCount: count,
+			Title: "Сбор сокровищ", Description: fmt.Sprintf("Вскрыть %d сундуков", count),
+			RewardGold: count * (30 + curFloor*3),
+		}
+	case QuestReachFloor:
+		tf := curFloor + 1
+		return AutoQuest{
+			Type: QuestReachFloor, TargetCount: tf,
+			Title:       fmt.Sprintf("Освоение глубин: Этаж %d", tf),
+			Description: fmt.Sprintf("Подготовиться и спуститься на этаж %d", tf),
+			RewardGold:  tf * 50,
+		}
+	case QuestFindRelic:
+		return AutoQuest{
+			Type: QuestFindRelic, TargetCount: 1,
+			Title: "Поиск Реликвии", Description: "Найти древний реликварий в глубинах",
+			RewardGold: 100 + curFloor*15,
+		}
+	case QuestEscapeTrap:
+		return AutoQuest{
+			Type: QuestEscapeTrap, TargetCount: 1,
+			Title: "Побег из засады", Description: "Исследовать запечатанный зал и найти выход",
+			RewardGold: 110 + curFloor*20,
+		}
+	default:
+		return AutoQuest{
+			Type: QuestUseAltar, TargetCount: 1,
+			Title: "Кровавый пакт", Description: "Принести жертву у Алтаря",
+			RewardGold: 80 + curFloor*15,
+		}
+	}
+}
+
+type BagUpgrade struct {
+	Level    int
+	Name     string
+	Capacity int
+	Cost     int
+}
+
+var bagUpgrades = []BagUpgrade{
+	{Level: 1, Name: "Холщовый мешок", Capacity: 5, Cost: 0},
+	{Level: 2, Name: "Кожаный ранец", Capacity: 8, Cost: 150},
+	{Level: 3, Name: "Бездонная торба", Capacity: 12, Cost: 380},
+	{Level: 4, Name: "Походный кофр", Capacity: 16, Cost: 750},
+	{Level: 5, Name: "Обозный тюк", Capacity: 20, Cost: 1400},
+	{Level: 6, Name: "Мешок иллюзий", Capacity: 25, Cost: 2600},
+}
+
+type FallenHeroRecord struct {
+	FullName string
+	Class    HeroClass
+	Cause    string
+	Floor    int
+}
+
+type RunStats struct {
+	TotalGoldEarned int
+	FloorsCleared   int
+	ChestsOpened    int
+	AltarsUsed      int
+	FountainsUsed   int
+	TrapsDisarmed   int
+	Resurrections   int
+	QuestsCompleted int
+	UpgradesForged  int
+	BarrelsBlown    int
+	MonsterKills    map[MonsterType]int
+	TotalSteps      int
+	FallenHeroes    []FallenHeroRecord
+}
+
+func newStats() RunStats {
+	return RunStats{
+		MonsterKills: make(map[MonsterType]int),
+		FallenHeroes: []FallenHeroRecord{},
+	}
+}
+
+type Tile rune
+
+const (
+	TileWall         Tile = '#'
+	TileFloor        Tile = '.'
+	TileStairs       Tile = '>'
+	TileChest        Tile = '$'
+	TileExit         Tile = '<'
+	TileAltar        Tile = '_'
+	TileFountain     Tile = '~'
+	TileTrappedChest Tile = 'T'
+	TileBarrel       Tile = 'o'
+	TileRelic        Tile = '*'
+)
+
+type Point struct {
+	X, Y int
+}
+
+type GameState int
+
+const (
+	StateMenu GameState = iota
+	StatePlaying
+	StateDefeat
+	StateStatsManual
+	StateArmory
+	StateInfoBook
+)
+
+type TownPhase int
+
+const (
+	TownPhaseSellLoot TownPhase = iota
+	TownPhaseGuild
+	TownPhaseAlchemist
+	TownPhaseSmithy
+	TownPhaseInvest
+	TownPhaseUpgradeBag
+	TownPhaseChurch
+	TownPhaseTavern
+	TownPhaseDepart
+)
+
+type Model struct {
+	State            GameState
+	MenuCountdown    int
+	TermWidth        int
+	TermHeight       int
+	MapWidth         int
+	MapHeight        int
+	Grid             [][]Tile
+	Explored         [][]bool
+	Packs            map[Point]*MonsterPack
+	PartyPos         Point
+	PathHistory      []Point
+	LoopDetectCount  int
+	Party            []*Hero
+	Bag              []EquipItem
+	BagLevel         int
+	Gold             int
+	Floor            int
+	InTown           bool
+	TownPhase        TownPhase
+	TownDialog       string
+	Combat           *ActiveCombat
+	Logs             []string
+	AutoMode         bool
+	SpeedMs          int
+	TownDelayMs      int
+	StatsScroll      int
+	RestartCountdown int
+	CurrentQuest     AutoQuest
+	Relic            *PartyRelic
+	Legacy           TownLegacy
+	Stats            RunStats
+}
+
+type (
+	TickMsg        time.Time
+	RestartTickMsg time.Time
+	MenuTickMsg    time.Time
+)
+
+func tickCmd(speedMs int) tea.Cmd {
+	return tea.Tick(time.Duration(speedMs)*time.Millisecond, func(t time.Time) tea.Msg {
+		return TickMsg(t)
+	})
+}
+
+func restartTickCmd() tea.Cmd {
+	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
+		return RestartTickMsg(t)
+	})
+}
+
+func menuTickCmd() tea.Cmd {
+	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
+		return MenuTickMsg(t)
+	})
+}
+
+func initialModelWithLegacy(legacy TownLegacy) Model {
+	rand.Seed(time.Now().UnixNano())
+
+	// Базовая мана увеличена на +5 для умного использования способностей
+	heroes := []*Hero{
+		{Name: getRandomName(), Class: ClassTank, MaxHP: 65, HP: 65, MaxMP: 30, MP: 30, BaseAtk: 5 + legacy.SmithyLevel, BaseDef: 4, Speed: 8, SkillName: "Стойка", SkillCost: 8},
+		{Name: getRandomName(), Class: ClassWarrior, MaxHP: 48, HP: 48, MaxMP: 25, MP: 25, BaseAtk: 7 + legacy.SmithyLevel, BaseDef: 2, Speed: 10, SkillName: "Ярость", SkillCost: 10},
+		{Name: getRandomName(), Class: ClassRogue, MaxHP: 36, HP: 36, MaxMP: 35, MP: 35, BaseAtk: 7 + legacy.SmithyLevel, BaseDef: 1, Speed: 15, SkillName: "Тень", SkillCost: 12},
+		{Name: getRandomName(), Class: ClassMage, MaxHP: 28, HP: 28, MaxMP: 45, MP: 45, BaseAtk: 9 + legacy.SmithyLevel, BaseDef: 0, Speed: 11, SkillName: "Заряд", SkillCost: 15},
+		{Name: getRandomName(), Class: ClassCleric, MaxHP: 34, HP: 34, MaxMP: 40, MP: 40, BaseAtk: 5 + legacy.SmithyLevel, BaseDef: 2, Speed: 9, SkillName: "Аура", SkillCost: 12},
+	}
+
+	for _, h := range heroes {
+		w := generateItemForClassSlot(h.Class, SlotWeapon, 1)
+		w.UpgradeLevel = legacy.SmithyLevel
+		h.Weapon = &w
+
+		head := generateItemForClassSlot(h.Class, SlotHead, 1)
+		h.Head = &head
+
+		chest := generateItemForClassSlot(h.Class, SlotChest, 1)
+		chest.UpgradeLevel = 0
+		h.Chest = &chest
+
+		legs := generateItemForClassSlot(h.Class, SlotLegs, 1)
+		h.Legs = &legs
+	}
+
+	activeRelic := generateRelic(1)
+
+	m := Model{
+		State:            StateMenu,
+		MenuCountdown:    20,
+		Party:            heroes,
+		Bag:              []EquipItem{},
+		BagLevel:         0,
+		Gold:             50 + legacy.TreasuryGold,
+		Floor:            1,
+		InTown:           false,
+		TownPhase:        TownPhaseSellLoot,
+		TownDialog:       "Отряд вошел через ворота Столицы на привал.",
+		Combat:           nil,
+		Logs:             []string{"[Хроники] Отряд ступил во мрак подземелья dccag."},
+		AutoMode:         true,
+		SpeedMs:          260,
+		TownDelayMs:      2200,
+		StatsScroll:      0,
+		RestartCountdown: 10,
+		CurrentQuest:     generateAutoQuest(1),
+		Relic:            &activeRelic,
+		Legacy:           legacy,
+		Stats:            newStats(),
+		Packs:            make(map[Point]*MonsterPack),
+		TermWidth:        120,
+		TermHeight:       36,
+	}
+	m.Stats.TotalGoldEarned = 50 + legacy.TreasuryGold
+	m.initDungeonForFloor(1)
+	return m
+}
+
+func initialModel() Model {
+	return initialModelWithLegacy(TownLegacy{TreasuryGold: 0, SmithyLevel: 0, ChurchLevel: 0, TavernLevel: 0})
+}
+
+func (m *Model) currentBagCapacity() int {
+	return bagUpgrades[m.BagLevel].Capacity
+}
+
+// Динамический расчет размера подземелья с ограничением (Soft-cap)
+func (m *Model) calculateDungeonSize(floor int) (int, int) {
+	w := 70 + (floor-1)*3
+	h := 30 + (floor-1)*1
+	if w > 130 {
+		w = 130
+	}
+	if h > 55 {
+		h = 55
+	}
+	return w, h
+}
+
+func (m *Model) initDungeonForFloor(floor int) {
+	w, h := m.calculateDungeonSize(floor)
+	m.MapWidth = w
+	m.MapHeight = h
+	m.Grid = make([][]Tile, h)
+	m.Explored = make([][]bool, h)
+	for y := 0; y < h; y++ {
+		m.Grid[y] = make([]Tile, w)
+		m.Explored[y] = make([]bool, w)
+	}
+	m.generateDungeon()
+	m.revealFog()
+}
+
+func (m Model) Init() tea.Cmd {
+	return tea.Batch(tea.EnterAltScreen, menuTickCmd())
+}
+
+func (m *Model) generateDungeon() {
+	m.Packs = make(map[Point]*MonsterPack)
+	m.Combat = nil
+	for y := 0; y < m.MapHeight; y++ {
+		for x := 0; x < m.MapWidth; x++ {
+			m.Grid[y][x] = TileWall
+			m.Explored[y][x] = false
+		}
+	}
+
+	type Rect struct{ X, Y, W, H int }
+	rooms := []Rect{}
+	attempts := (m.MapWidth * m.MapHeight) / 50
+	if attempts < 8 {
+		attempts = 8
+	}
+
+	for i := 0; i < attempts; i++ {
+		w := rand.Intn(7) + 7
+		h := rand.Intn(4) + 4
+		if m.MapWidth-w-2 <= 1 || m.MapHeight-h-2 <= 1 {
+			continue
+		}
+		x := rand.Intn(m.MapWidth-w-2) + 1
+		y := rand.Intn(m.MapHeight-h-2) + 1
+		rooms = append(rooms, Rect{x, y, w, h})
+		for ry := y; ry < y+h; ry++ {
+			for rx := x; rx < x+w; rx++ {
+				m.Grid[ry][rx] = TileFloor
+			}
+		}
+	}
+
+	if len(rooms) == 0 {
+		return
+	}
+
+	carveWideCorridor := func(x1, y1, x2, y2 int) {
+		cx, cy := x1, y1
+		for cx != x2 {
+			m.Grid[cy][cx] = TileFloor
+			if cy+1 < m.MapHeight {
+				m.Grid[cy+1][cx] = TileFloor
+			}
+			if x2 > cx {
+				cx++
+			} else {
+				cx--
+			}
+		}
+		for cy != y2 {
+			m.Grid[cy][cx] = TileFloor
+			if cx+1 < m.MapWidth {
+				m.Grid[cy+1][cx] = TileFloor
+			}
+			if y2 > cy {
+				cy++
+			} else {
+				cy--
+			}
+		}
+	}
+
+	for i := 0; i < len(rooms)-1; i++ {
+		x1, y1 := rooms[i].X+rooms[i].W/2, rooms[i].Y+rooms[i].H/2
+		x2, y2 := rooms[i+1].X+rooms[i+1].W/2, rooms[i+1].Y+rooms[i+1].H/2
+		carveWideCorridor(x1, y1, x2, y2)
+	}
+
+	exitPos := Point{rooms[0].X + 1, rooms[0].Y + 1}
+	if m.CurrentQuest.Type == QuestEscapeTrap && !m.CurrentQuest.Completed {
+		m.Grid[exitPos.Y][exitPos.X] = TileFloor
+	} else {
+		m.Grid[exitPos.Y][exitPos.X] = TileExit
+	}
+	if exitPos.X+1 < rooms[0].X+rooms[0].W-1 {
+		m.PartyPos = Point{exitPos.X + 1, exitPos.Y}
+	} else {
+		m.PartyPos = Point{exitPos.X, exitPos.Y + 1}
+	}
+	m.Grid[m.PartyPos.Y][m.PartyPos.X] = TileFloor
+
+	endRoom := rooms[len(rooms)-1]
+	m.Grid[endRoom.Y+endRoom.H/2][endRoom.X+endRoom.W/2] = TileStairs
+
+	relicSpawned := false
+
+	for i := 1; i < len(rooms); i++ {
+		r := rooms[i]
+		isBoss := (m.Floor%10 == 0 && i == len(rooms)-1)
+		pos := Point{r.X + r.W/2, r.Y + r.H/2}
+		if isBoss {
+			m.Packs[pos] = spawnMonsterPack(true, m.Floor)
+		} else {
+			m.Packs[pos] = spawnMonsterPack(false, m.Floor)
+			eventRoll := rand.Intn(13)
+			cornerPos := Point{r.X + 1, r.Y + 1}
+			switch {
+			case (!relicSpawned && m.CurrentQuest.Type == QuestFindRelic) || (eventRoll == 12 && !relicSpawned):
+				m.Grid[cornerPos.Y][cornerPos.X] = TileRelic
+				relicSpawned = true
+			case eventRoll == 0:
+				m.Grid[cornerPos.Y][cornerPos.X] = TileAltar
+			case eventRoll == 1:
+				m.Grid[cornerPos.Y][cornerPos.X] = TileFountain
+			case eventRoll == 2:
+				m.Grid[cornerPos.Y][cornerPos.X] = TileTrappedChest
+			case eventRoll == 3:
+				m.Grid[cornerPos.Y][cornerPos.X] = TileBarrel
+			case eventRoll >= 7:
+				m.Grid[cornerPos.Y][cornerPos.X] = TileChest
+			}
+		}
+	}
+}
+
+func (m *Model) revealFog() {
+	radius := 6
+	for y := m.PartyPos.Y - radius; y <= m.PartyPos.Y+radius; y++ {
+		for x := m.PartyPos.X - radius; x <= m.PartyPos.X+radius; x++ {
+			if x >= 0 && x < m.MapWidth && y >= 0 && y < m.MapHeight {
+				dx := x - m.PartyPos.X
+				dy := y - m.PartyPos.Y
+				if dx*dx+dy*dy <= radius*radius {
+					m.Explored[y][x] = true
+				}
+			}
+		}
+	}
+}
+
+func (m *Model) addLog(msg string) {
+	m.Logs = append(m.Logs, msg)
+	if len(m.Logs) > 5 {
+		m.Logs = m.Logs[len(m.Logs)-5:]
+	}
+}
+
+func (m *Model) needsHealing() bool {
+	for _, h := range m.Party {
+		if !h.IsDead && (float64(h.HP)/float64(h.MaxHP) <= 0.50 || h.Stress >= 70) {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *Model) checkRetreat() bool {
+	if len(m.Bag) >= m.currentBagCapacity() {
+		return true
+	}
+
+	living := 0
+	for _, h := range m.Party {
+		if !h.IsDead {
+			living++
+			if float64(h.HP)/float64(h.MaxHP) <= 0.35 || h.Stress >= 130 {
+				return true
+			}
+		}
+	}
+	if living <= 2 {
+		return true
+	}
+	return false
+}
+
+func (m *Model) isPartyWiped() bool {
+	for _, h := range m.Party {
+		if !h.IsDead {
+			return false
+		}
+	}
+	return true
+}
+
+func (m *Model) checkQuestProgress(action QuestType, targetMob MonsterType, val int) {
+	if m.CurrentQuest.Completed {
+		return
+	}
+	if m.CurrentQuest.Type == action {
+		if action == QuestHuntMonster && m.CurrentQuest.TargetMob != targetMob {
+			return
+		}
+		if action == QuestReachFloor {
+			if val >= m.CurrentQuest.TargetCount {
+				m.CurrentQuest.Current = m.CurrentQuest.TargetCount
+				m.CurrentQuest.Completed = true
+				m.addLog(questStyle.Render(fmt.Sprintf("📜 [КОНТРАКТ] %s выполнен!", m.CurrentQuest.Title)))
+			}
+			return
+		}
+		m.CurrentQuest.Current += val
+		if m.CurrentQuest.Current >= m.CurrentQuest.TargetCount {
+			m.CurrentQuest.Current = m.CurrentQuest.TargetCount
+			m.CurrentQuest.Completed = true
+			m.addLog(questStyle.Render(fmt.Sprintf("📜 [КОНТРАКТ] %s выполнен!", m.CurrentQuest.Title)))
+		}
+	}
+}
+
+func (m *Model) findNextStep() Point {
+	retreat := m.checkRetreat()
+	seekingFountain := m.needsHealing()
+	forceDeeper := (m.CurrentQuest.Type == QuestEscapeTrap) && !m.CurrentQuest.Completed
+
+	hasFountainOnMap := false
+	for y := 0; y < m.MapHeight; y++ {
+		for x := 0; x < m.MapWidth; x++ {
+			if m.Grid[y][x] == TileFountain {
+				hasFountainOnMap = true
+				break
+			}
+		}
+		if hasFountainOnMap {
+			break
+		}
+	}
+
+	findPath := func(avoidMonsters bool, targetCondition func(Point, Tile) bool) (Point, bool) {
+		queue := []Point{m.PartyPos}
+		visited := make(map[Point]bool)
+		cameFrom := make(map[Point]Point)
+		visited[m.PartyPos] = true
+		dirs := []Point{{0, -1}, {0, 1}, {-1, 0}, {1, 0}}
+
+		for len(queue) > 0 {
+			curr := queue[0]
+			queue = queue[1:]
+
+			if curr != m.PartyPos && targetCondition(curr, m.Grid[curr.Y][curr.X]) {
+				step := curr
+				for cameFrom[step] != m.PartyPos {
+					step = cameFrom[step]
+				}
+				return step, true
+			}
+
+			for _, d := range dirs {
+				next := Point{curr.X + d.X, curr.Y + d.Y}
+				if next.X >= 0 && next.X < m.MapWidth && next.Y >= 0 && next.Y < m.MapHeight {
+					if !visited[next] && m.Grid[next.Y][next.X] != TileWall {
+						if avoidMonsters {
+							if _, hasMob := m.Packs[next]; hasMob {
+								continue
+							}
+						}
+						visited[next] = true
+						cameFrom[next] = curr
+						queue = append(queue, next)
+					}
+				}
+			}
+		}
+		return m.PartyPos, false
+	}
+
+	if seekingFountain && hasFountainOnMap {
+		step, found := findPath(true, func(p Point, t Tile) bool {
+			return t == TileFountain
+		})
+		if found {
+			return step
+		}
+	}
+
+	if retreat && !forceDeeper {
+		step, found := findPath(true, func(p Point, t Tile) bool {
+			return t == TileExit
+		})
+		if found {
+			return step
+		}
+		step, found = findPath(false, func(p Point, t Tile) bool {
+			return t == TileExit
+		})
+		if found {
+			return step
+		}
+	}
+
+	isExplorationQuest := m.CurrentQuest.Type == QuestReachFloor && !m.CurrentQuest.Completed
+
+	isTarget := func(p Point, t Tile) bool {
+		_, hasPack := m.Packs[p]
+		if hasPack {
+			return true
+		}
+		if seekingFountain && t == TileAltar {
+			return false
+		}
+
+		if t == TileStairs && isExplorationQuest {
+			return true
+		}
+
+		if t == TileStairs && !forceDeeper {
+			hasVisibleLoot := false
+			for y := 0; y < m.MapHeight; y++ {
+				for x := 0; x < m.MapWidth; x++ {
+					if m.Explored[y][x] {
+						tile := m.Grid[y][x]
+						if tile == TileChest || tile == TileRelic {
+							hasVisibleLoot = true
+							break
+						}
+					}
+				}
+			}
+			if hasVisibleLoot {
+				return false
+			}
+		}
+
+		return t == TileChest || t == TileStairs || t == TileAltar || t == TileFountain || t == TileTrappedChest || t == TileBarrel || t == TileRelic
+	}
+
+	if seekingFountain {
+		step, found := findPath(true, isTarget)
+		if found {
+			return step
+		}
+	}
+
+	step, found := findPath(false, isTarget)
+	if found {
+		return step
+	}
+
+	return m.PartyPos
+}
+
+func (m *Model) equipOrBag(item EquipItem) {
+	var bestHero *Hero
+	maxDiff := -99999
+
+	for _, h := range m.Party {
+		if h.IsDead {
+			continue
+		}
+		if item.AllowedClass != "" && item.AllowedClass != h.Class {
+			continue
+		}
+
+		currItem := h.GetItemInSlot(item.Slot)
+		currStat := 0
+		if currItem != nil {
+			currStat = currItem.TotalStat()
+		}
+
+		diff := item.TotalStat() - currStat
+		if diff > maxDiff {
+			maxDiff = diff
+			bestHero = h
+		}
+	}
+
+	if bestHero != nil && maxDiff > 0 {
+		oldItem := bestHero.GetItemInSlot(item.Slot)
+		if oldItem != nil {
+			m.Bag = append(m.Bag, *oldItem)
+		}
+		newItem := item
+		bestHero.SetItemInSlot(newItem.Slot, &newItem)
+		m.addLog(healStyle.Render(fmt.Sprintf("✨ %s сменил [%s] на [%s] (Мощь: %d)!",
+			bestHero.Name, item.Slot, newItem.DisplayName(), newItem.TotalStat())))
+	} else {
+		m.Bag = append(m.Bag, item)
+		m.addLog(subtleStyle.Render(fmt.Sprintf("📦 %s сложен в сумку.", item.DisplayName())))
+	}
+}
+
+func (m *Model) recordFallenHero(h *Hero) {
+	m.Stats.FallenHeroes = append(m.Stats.FallenHeroes, FallenHeroRecord{
+		FullName: h.FullName(),
+		Class:    h.Class,
+		Cause:    h.CauseOfDeath,
+		Floor:    m.Floor,
+	})
+
+	h.IsDead = true
+	h.IsGuarding = false
+	h.IsBerserk = false
+	h.IsStealthed = false
+	h.IsCharged = false
+	h.IsAura = false
+	h.Weapon = nil
+	h.Head = nil
+	h.Chest = nil
+	h.Legs = nil
+
+	if m.Relic != nil && m.Relic.MartyrFury {
+		m.addLog(fireStyle.Render("👑 [Корона] Ярость павшего усилила живых (+4 Atk)!"))
+		for _, ally := range m.Party {
+			if !ally.IsDead {
+				ally.BaseAtk += 4
+			}
+		}
+	}
+}
+
+func (m *Model) handleAltar() {
+	m.Stats.AltarsUsed++
+	m.checkQuestProgress(QuestUseAltar, "", 1)
+	d20 := rand.Intn(20) + 1
+	isEven := d20%2 == 0
+	target := m.getRandomLivingHero()
+
+	if target != nil {
+		bloodCost := 10
+		if !isEven {
+			bloodCost = 16
+		}
+		target.HP -= bloodCost
+		target.BaseAtk += 2
+		m.addStress(target, 15)
+
+		if target.HP <= 0 {
+			target.HP = 0
+			target.CauseOfDeath = "Принесен в жертву Алтарю"
+			m.recordFallenHero(target)
+			m.addLog(dangerStyle.Render(fmt.Sprintf("🩸 %s пал жертвой Алтаря!", target.Name)))
+		} else {
+			m.addLog(altarStyle.Render(fmt.Sprintf("🩸 %s пожертвовал %d HP (+2 Atk)!", target.Name, bloodCost)))
+		}
+	}
+}
+
+func (m *Model) handleFountain() {
+	m.Stats.FountainsUsed++
+	for _, h := range m.Party {
+		if !h.IsDead {
+			h.HP = h.MaxHP
+			h.MP = h.MaxMP
+			h.Stress = 0
+			h.Affliction = AfflictionNone
+			h.IsGuarding = false
+			h.IsBerserk = false
+			h.IsStealthed = false
+			h.IsCharged = false
+			h.IsAura = false
+		}
+	}
+	m.addLog(fountStyle.Render("💧 [Источник] Здоровье, мана и рассудок отряда восстановлены!"))
+}
+
+func (m *Model) handleTrappedChest() {
+	m.Stats.ChestsOpened++
+	m.checkQuestProgress(QuestOpenChests, "", 1)
+	d20 := rand.Intn(20) + 1
+
+	rogueBonus := 0
+	for _, h := range m.Party {
+		if h.Class == ClassRogue && !h.IsDead {
+			rogueBonus = 3
+			break
+		}
+	}
+
+	rollSuccess := (d20+rogueBonus >= 12)
+
+	if rollSuccess {
+		m.Stats.TrapsDisarmed++
+		gold := int(float64(rand.Intn(25)+15) * m.Relic.GoldMult * 2)
+		m.Gold += gold
+		m.Stats.TotalGoldEarned += gold
+
+		targetClass := ClassWarrior
+		if lh := m.getRandomLivingHero(); lh != nil {
+			targetClass = lh.Class
+			lh.AddTreasure()
+			lh.RevealSecret()
+			m.checkAndAwardTitle(lh)
+		}
+		rareItem := generateItemForClass(targetClass, m.Floor+1)
+		m.addLog(goldStyle.Render(fmt.Sprintf("🗝️ [Ларь] Ловушка снята: +%dG и [%s]!", gold, rareItem.DisplayName())))
+		m.equipOrBag(rareItem)
+	} else {
+		m.addLog(dangerStyle.Render(fmt.Sprintf("💥 [Ловушка!] (D20=%d) Взрыв нанес урон!", d20)))
+		for _, h := range m.Party {
+			if !h.IsDead {
+				trapDmg := rand.Intn(8) + 6
+				h.HP -= trapDmg
+				m.addStress(h, 20)
+				if h.HP <= 0 {
+					h.HP = 0
+					h.CauseOfDeath = "Взорван ловушкой"
+					m.recordFallenHero(h)
+				}
+			}
+		}
+	}
+}
+
+func (m *Model) handleRelicTile() {
+	m.checkQuestProgress(QuestFindRelic, "", 1)
+	newLevel := 2
+	if m.Floor >= 6 {
+		newLevel = 3
+	}
+	newRelic := generateRelic(newLevel)
+
+	if m.Relic == nil || newRelic.Level > m.Relic.Level {
+		m.Relic = &newRelic
+		m.addLog(relicTileStyle.Render(fmt.Sprintf("✨ [РЕЛИКВИЯ] Отряд нашел %s!", newRelic.Name)))
+	} else {
+		m.Gold += 80
+		m.Stats.TotalGoldEarned += 80
+		m.addLog(goldStyle.Render("✨ [Реликварий] Реликвия разобрана на +80G!"))
+	}
+}
+
+func (m *Model) checkAndDrinkPotions(h *Hero) {
+	if h.IsDead || h.Potion == nil || m.InTown {
+		return
+	}
+
+	shouldDrink := false
+	p := *h.Potion
+
+	switch p.Type {
+	case PotionHP:
+		missingHP := h.MaxHP - h.HP
+		if float64(h.HP)/float64(h.MaxHP) <= 0.45 || missingHP >= p.Power {
+			shouldDrink = true
+		}
+
+	case PotionMP:
+		missingMP := h.MaxMP - h.MP
+		skillNeeded := h.SkillCost
+		if h.MP < skillNeeded || (h.MaxMP > 0 && float64(h.MP)/float64(h.MaxHP) <= 0.35) || missingMP >= p.Power {
+			shouldDrink = true
+		}
+
+	case PotionStress:
+		if h.Stress >= 60 || h.Affliction != AfflictionNone {
+			shouldDrink = true
+		}
+	}
+
+	if shouldDrink {
+		h.Potion = nil
+		switch p.Type {
+		case PotionHP:
+			h.HP += p.Power
+			if h.HP > h.MaxHP {
+				h.HP = h.MaxHP
+			}
+			m.addLog(potionStyle.Render(fmt.Sprintf("🧪 %s выпил [%s] (+%d HP)!", h.Name, getPotionName(p), p.Power)))
+		case PotionMP:
+			h.MP += p.Power
+			if h.HP > h.MaxHP {
+				h.HP = h.MaxHP
+			}
+			m.addLog(potionStyle.Render(fmt.Sprintf("🧪 %s выпил [%s] (+%d MP)!", h.Name, getPotionName(p), p.Power)))
+		case PotionStress:
+			h.Stress -= p.Power
+			if h.Stress < 0 {
+				h.Stress = 0
+			}
+			h.Affliction = AfflictionNone
+			m.addLog(potionStyle.Render(fmt.Sprintf("🧪 %s принял [%s] (-%d стресса)!", h.Name, getPotionName(p), p.Power)))
+		}
+	}
+}
+
+func (m *Model) startCombat(pos Point, pack *MonsterPack) {
+	combat := &ActiveCombat{
+		Pos:          pos,
+		Pack:         pack,
+		HasBarrel:    rand.Intn(100) < 35,
+		FleeCooldown: 0,
+	}
+
+	biome := getBiome(m.Floor)
+	speedPenalty := 0
+	if biome.Name == BiomeGrotto {
+		speedPenalty = 2
+	}
+
+	for _, h := range m.Party {
+		if !h.IsDead {
+			h.IsGuarding = false
+			h.IsBerserk = false
+			h.IsStealthed = false
+			h.IsCharged = false
+			h.IsAura = false
+			initRoll := rand.Intn(20) + 1 + h.Speed - speedPenalty
+			combat.TurnQueue = append(combat.TurnQueue, TurnOrderEntry{
+				Type: CombatantHero, HeroRef: h, Initiative: initRoll,
+			})
+		}
+	}
+
+	for _, mob := range pack.Members {
+		if !mob.IsDead {
+			initRoll := rand.Intn(20) + 1 + mob.Speed
+			combat.TurnQueue = append(combat.TurnQueue, TurnOrderEntry{
+				Type: CombatantMonster, MonsterRef: mob, Initiative: initRoll,
+			})
+		}
+	}
+
+	sort.Slice(combat.TurnQueue, func(i, j int) bool {
+		return combat.TurnQueue[i].Initiative > combat.TurnQueue[j].Initiative
+	})
+
+	m.Combat = combat
+	m.addLog(accentStyle.Render(fmt.Sprintf("⚔️ СХВАТКА! Вражеский отряд (%d тварей)!", pack.LivingCount())))
+}
+
+func (m *Model) shouldAttemptFlee() bool {
+	if m.Combat == nil || m.Combat.FleeCooldown > 0 {
+		return false
+	}
+	curHP, maxHP := 0, 0
+	livingCount := 0
+	for _, h := range m.Party {
+		if !h.IsDead {
+			curHP += h.HP
+			maxHP += h.MaxHP
+			livingCount++
+		}
+	}
+	if maxHP == 0 || livingCount == 0 {
+		return false
+	}
+	hpPercent := float64(curHP) / float64(maxHP)
+	return hpPercent < 0.25 || (livingCount == 1 && hpPercent < 0.50)
+}
+
+func (m *Model) attemptFlee() {
+	globalDebugReport.FleeAttempts++
+	d20 := rand.Intn(20) + 1
+	m.addLog(dangerStyle.Render(fmt.Sprintf("🏃 [ПОБЕГ] Отряд пытается отступить! D20: %d", d20)))
+
+	if d20 >= 11 {
+		globalDebugReport.FleeSuccesses++
+		m.addLog(healStyle.Render(fmt.Sprintf("💨 [ПОБЕГ] Успех (D20=%d)! Отряд вырвался и унес тела павших в Город.", d20)))
+
+		evacuatedCount := 0
+		for _, h := range m.Party {
+			if h.IsDead {
+				h.HP = 1
+				h.IsDead = false
+				h.CauseOfDeath = ""
+				evacuatedCount++
+			}
+		}
+		if evacuatedCount > 0 {
+			m.addLog(altarStyle.Render(fmt.Sprintf("🕊️ [Эвакуация] Отряд вынес с поля боя %d павших героев! Их можно исцелить в Церкви.", evacuatedCount)))
+		}
+
+		m.Combat = nil
+		m.InTown = true
+		m.TownPhase = TownPhaseSellLoot
+		m.TownDialog = "Отряд спасся бегством, эвакуировав павших в Столицу."
+		m.addLog(dangerStyle.Render("🏰 Отряд укрылся за стенами Города!"))
+	} else {
+		m.addLog(dangerStyle.Render(fmt.Sprintf("💥 [ПРОВАЛ ПОБЕГА] (D20=%d)! Враги зашли в тыл и нанесли удар в спину!", d20)))
+
+		for _, h := range m.Party {
+			if !h.IsDead {
+				backstabDmg := rand.Intn(6) + 4
+				h.HP -= backstabDmg
+				h.Feats.DamageTaken += backstabDmg
+				m.addStress(h, 8)
+
+				if h.HP <= 0 {
+					h.HP = 0
+					h.CauseOfDeath = "Зарублен в спину при неудачном побеге"
+					m.recordFallenHero(h)
+				}
+			}
+		}
+		m.Combat.FleeCooldown = 3
+	}
+}
+
+func (m *Model) executeCombatTurn() {
+	if m.Combat == nil {
+		return
+	}
+
+	if m.Combat.FleeCooldown > 0 {
+		m.Combat.FleeCooldown--
+	}
+
+	if m.shouldAttemptFlee() {
+		m.attemptFlee()
+		if m.Combat == nil {
+			return
+		}
+	}
+
+	if m.Combat.Pack.LivingCount() == 0 {
+		m.addLog(healStyle.Render("💀 Вражеский отряд повержен!"))
+		delete(m.Packs, m.Combat.Pos)
+		m.PartyPos = m.Combat.Pos
+		m.Combat = nil
+		m.revealFog()
+		return
+	}
+
+	if m.isPartyWiped() {
+		m.State = StateDefeat
+		m.Combat = nil
+		m.RestartCountdown = 10
+		return
+	}
+
+	if m.Combat.TurnIdx >= len(m.Combat.TurnQueue) {
+		m.Combat.TurnIdx = 0
+	}
+	current := m.Combat.TurnQueue[m.Combat.TurnIdx]
+	m.Combat.TurnIdx++
+
+	biome := getBiome(m.Floor)
+
+	if current.Type == CombatantHero {
+		h := current.HeroRef
+		if h.IsDead {
+			return
+		}
+
+		m.checkAndDrinkPotions(h)
+
+		if h.Affliction == AfflictionParanoid && rand.Intn(100) < 30 {
+			m.addLog(stressStyle.Render(fmt.Sprintf("👁️ %s забился в угол (Паранойя)!", h.Name)))
+			return
+		}
+
+		skillCost := h.SkillCost
+		if biome.Name == BiomeCrystal {
+			skillCost += 3
+		}
+
+		targetMob := m.Combat.Pack.GetLowestHPFocus()
+
+		// 1. ТАНК: Стойка + Удар щитом (6 MP)
+		if h.Class == ClassTank {
+			if h.MP >= skillCost && !h.IsGuarding {
+				h.MP -= skillCost
+				h.IsGuarding = true
+				h.AddBlock()
+				h.PullAggro()
+				m.checkAndAwardTitle(h)
+				m.addLog(healStyle.Render(fmt.Sprintf("🛡️ %s принимает [Оборонительную Стойку] (+5 Def, блок)!", h.Name)))
+			} else if h.MP >= 6 && targetMob != nil && targetMob.Atk >= 12 && rand.Intn(100) < 45 {
+				h.MP -= 6
+				bashDmg := h.TotalDef() + 4
+				targetMob.HP -= bashDmg
+				targetMob.Atk = max(2, targetMob.Atk-3)
+				h.AddBlock()
+				m.addLog(healStyle.Render(fmt.Sprintf("🛡️ %s проводит [Удар щитом] (-%d HP, враг ослаблен на -3 Atk)!", h.Name, bashDmg)))
+				if targetMob.HP <= 0 {
+					targetMob.HP = 0
+					targetMob.IsDead = true
+					h.Feats.Kills++
+				}
+				return
+			}
+		}
+
+		// 2. ВОИН: Ярость + Рассечение (7 MP)
+		if h.Class == ClassWarrior {
+			if h.MP >= skillCost && !h.IsBerserk {
+				h.MP -= skillCost
+				h.IsBerserk = true
+				m.addLog(fireStyle.Render(fmt.Sprintf("⚔️ %s входит в [Состояние Ярости] (+5 Atk, -2 Def)!", h.Name)))
+			} else if h.MP >= 7 && m.Combat.Pack.LivingCount() >= 2 && rand.Intn(100) < 55 {
+				h.MP -= 7
+				cleaveDmg := h.TotalAtk() + 2
+				hitCount := 0
+				for _, mob := range m.Combat.Pack.Members {
+					if !mob.IsDead && hitCount < 2 {
+						mob.HP -= cleaveDmg
+						h.Feats.DamageDealt += cleaveDmg
+						if mob.HP <= 0 {
+							mob.HP = 0
+							mob.IsDead = true
+							h.Feats.Kills++
+						}
+						hitCount++
+					}
+				}
+				m.addLog(dangerStyle.Render(fmt.Sprintf("⚔️ %s выполняет [Рассечение] по %d врагам (-%d HP)!", h.Name, hitCount, cleaveDmg)))
+				return
+			}
+		}
+
+		// 3. РАЗБОЙНИК: Скрытность + Отравленный клинок (6 MP)
+		if h.Class == ClassRogue {
+			if h.MP >= skillCost && !h.IsStealthed {
+				h.MP -= skillCost
+				h.IsStealthed = true
+				h.AddBackstab()
+				m.addLog(accentStyle.Render(fmt.Sprintf("🗡️ %s растворился в тенях [Скрытность] (100%% крит)!", h.Name)))
+			} else if h.MP >= 6 && targetMob != nil && targetMob.HP > 20 && rand.Intn(100) < 50 {
+				h.MP -= 6
+				poisonDmg := h.TotalAtk() + 6
+				targetMob.HP -= poisonDmg
+				h.Feats.DamageDealt += poisonDmg
+				m.addLog(stressStyle.Render(fmt.Sprintf("☣️ %s наносит [Отравленный выпад] в уязвимую зону (-%d HP)!", h.Name, poisonDmg)))
+				if targetMob.HP <= 0 {
+					targetMob.HP = 0
+					targetMob.IsDead = true
+					h.Feats.Kills++
+				}
+				return
+			}
+		}
+
+		// 4. КЛИРИК: приоритетное лечение союзников + Аура + Священная кара (7 MP)
+		if h.Class == ClassCleric {
+			var criticalAlly *Hero
+			for _, ally := range m.Party {
+				if !ally.IsDead && float64(ally.HP)/float64(ally.MaxHP) <= 0.50 {
+					criticalAlly = ally
+					break
+				}
+			}
+
+			if criticalAlly != nil && h.MP >= skillCost && h.Affliction != AfflictionSelfish {
+				h.MP -= skillCost
+				hAmt := rand.Intn(10) + 16 + (m.Floor * 3)
+				criticalAlly.HP += hAmt
+				if criticalAlly.HP > criticalAlly.MaxHP {
+					criticalAlly.HP = criticalAlly.MaxHP
+				}
+				criticalAlly.Stress = max(0, criticalAlly.Stress-12)
+				h.Feats.HealsGiven += hAmt
+				m.addLog(healStyle.Render(fmt.Sprintf("✨ %s исцелил %s (+%d HP)!", h.Name, criticalAlly.Name, hAmt)))
+				m.checkAndAwardTitle(h)
+				return
+			} else if !h.IsAura && h.MP >= (skillCost+6) {
+				h.MP -= skillCost
+				h.IsAura = true
+				m.addLog(fountStyle.Render(fmt.Sprintf("✨ %s раскрывает [Ауру Защиты] (+3 Def отряду)!", h.Name)))
+			} else if h.MP >= 7 && targetMob != nil && rand.Intn(100) < 40 {
+				h.MP -= 7
+				smiteDmg := h.TotalAtk() + 4
+				targetMob.HP -= smiteDmg
+				if lowest := m.getRandomLivingHero(); lowest != nil && lowest.HP < lowest.MaxHP {
+					lowest.HP = min(lowest.MaxHP, lowest.HP+6)
+				}
+				m.addLog(fountStyle.Render(fmt.Sprintf("✨ %s обрушил [Священную кару] (-%d HP врагу, +6 HP союзнику)!", h.Name, smiteDmg)))
+				if targetMob.HP <= 0 {
+					targetMob.HP = 0
+					targetMob.IsDead = true
+					h.Feats.Kills++
+				}
+				return
+			}
+		}
+
+		// 5. МАГ: подрыв бочек + Огненная буря + Ледяная стрела (7 MP) + Заряд
+		if h.Class == ClassMage {
+			if m.Combat.HasBarrel && h.MP >= skillCost {
+				h.MP -= skillCost
+				m.Combat.HasBarrel = false
+				m.Stats.BarrelsBlown++
+				h.AddManaBurst()
+				barrelDmg := 22 + (m.Floor * 3)
+				m.addLog(barrelStyle.Render(fmt.Sprintf("💥 %s ПОДРЫВАЕТ БОЧКУ СО СМОЛОЙ (-%d HP отряду)!", h.Name, barrelDmg)))
+				for _, mob := range m.Combat.Pack.Members {
+					if !mob.IsDead {
+						mob.HP -= barrelDmg
+						h.Feats.DamageDealt += barrelDmg
+						if mob.HP <= 0 {
+							mob.HP = 0
+							mob.IsDead = true
+							h.Feats.Kills++
+							g := int(float64(mob.Exp) * m.Relic.GoldMult * 2)
+							m.Gold += g
+							m.Stats.TotalGoldEarned += g
+							m.Stats.MonsterKills[mob.Type]++
+							m.checkQuestProgress(QuestHuntMonster, mob.Type, 1)
+
+							if mob.Type == MobDragon {
+								h.Feats.BossKills++
+								bossItem := generateItemForClass(h.Class, m.Floor+2)
+								bossItem.UpgradeLevel = 4
+								m.addLog(accentStyle.Render(fmt.Sprintf("👑 Реликвия Дракона: [%s]!", bossItem.DisplayName())))
+								m.equipOrBag(bossItem)
+							}
+						}
+					}
+				}
+				m.checkAndAwardTitle(h)
+				return
+			} else if m.Combat.Pack.LivingCount() >= 2 && h.MP >= skillCost {
+				h.MP -= skillCost
+				aoeDmg := h.TotalAtk() + 6
+				h.AddManaBurst()
+				h.AddCCDuration()
+				m.addLog(fireStyle.Render(fmt.Sprintf("🔥 %s накрыл врагов [Огненной Бурей]!", h.Name)))
+				for _, mob := range m.Combat.Pack.Members {
+					if !mob.IsDead {
+						mob.HP -= aoeDmg
+						h.Feats.DamageDealt += aoeDmg
+						if mob.HP <= 0 {
+							mob.HP = 0
+							mob.IsDead = true
+							h.Feats.Kills++
+							g := int(float64(mob.Exp) * m.Relic.GoldMult * 2)
+							m.Gold += g
+							m.Stats.TotalGoldEarned += g
+							m.Stats.MonsterKills[mob.Type]++
+							m.checkQuestProgress(QuestHuntMonster, mob.Type, 1)
+
+							if mob.Type == MobDragon {
+								h.Feats.BossKills++
+								bossItem := generateItemForClass(h.Class, m.Floor+2)
+								bossItem.UpgradeLevel = 4
+								m.addLog(accentStyle.Render(fmt.Sprintf("👑 Реликвия Дракона: [%s]!", bossItem.DisplayName())))
+								m.equipOrBag(bossItem)
+							}
+						}
+					}
+				}
+				m.checkAndAwardTitle(h)
+				return
+			} else if h.MP >= 7 && targetMob != nil && rand.Intn(100) < 45 {
+				h.MP -= 7
+				frostDmg := h.TotalAtk() + 8
+				targetMob.HP -= frostDmg
+				targetMob.Speed = max(4, targetMob.Speed-3)
+				m.addLog(fountStyle.Render(fmt.Sprintf("❄️ %s выпускает [Ледяную стрелу] (-%d HP, враг замедлен)!", h.Name, frostDmg)))
+				if targetMob.HP <= 0 {
+					targetMob.HP = 0
+					targetMob.IsDead = true
+					h.Feats.Kills++
+				}
+				return
+			} else if h.MP >= skillCost && !h.IsCharged && !m.Combat.HasBarrel {
+				h.MP -= skillCost
+				h.IsCharged = true
+				h.AddManaBurst()
+				m.addLog(accentStyle.Render(fmt.Sprintf("🔮 %s концентрирует [Чародейский заряд] (+6 к силе заклинаний)!", h.Name)))
+			}
+		}
+
+		if targetMob == nil {
+			return
+		}
+
+		if (targetMob.Type == MobSkeleton || targetMob.Type == MobGolem || targetMob.Type == MobGargoyle) && rand.Intn(100) < 20 {
+			m.addLog(subtleStyle.Render(fmt.Sprintf("🛡️ [%s] отразил выпад монолитным блоком!", targetMob.Name)))
+			return
+		}
+
+		d20 := rand.Intn(20) + 1
+		hitRoll := d20 + (h.TotalAtk() / 3)
+		targetAC := 10 + targetMob.Defense
+		critThreshold := 19
+		for _, it := range []*EquipItem{h.Weapon, h.Head, h.Chest} {
+			if it != nil {
+				critThreshold -= it.CritBonus
+			}
+		}
+		if h.IsStealthed {
+			critThreshold = 1
+		}
+		if critThreshold < 14 && !h.IsStealthed {
+			critThreshold = 14
+		}
+		bonusDmg := 0
+		armorPierce := 0
+
+		// Базовые малые приемы классов за умеренную ману
+		switch h.Class {
+		case ClassMage:
+			if h.MP >= 5 {
+				h.MP -= 5
+				bonusDmg += 5
+				m.addLog(fireStyle.Render(fmt.Sprintf("🔥 %s выпускает [Огненную стрелу] (+5 ур)!", h.Name)))
+			}
+		case ClassCleric:
+			if h.MP >= 4 {
+				h.MP -= 4
+				for _, ally := range m.Party {
+					if !ally.IsDead && ally.Stress > 0 {
+						ally.Stress = max(0, ally.Stress-6)
+						h.RemoveDot()
+						m.addLog(fountStyle.Render(fmt.Sprintf("✨ %s: [Благословение] (-6 стресса %s)!", h.Name, ally.Name)))
+						break
+					}
+				}
+			}
+		case ClassWarrior:
+			if h.MP >= 4 && h.MP < skillCost {
+				h.MP -= 4
+				bonusDmg += 3
+				armorPierce = 3
+				m.addLog(dangerStyle.Render(fmt.Sprintf("⚔️ %s: [Сокрушающий выпад] (пробитие брони)!", h.Name)))
+			}
+		case ClassRogue:
+			if h.MP >= 3 && h.MP < skillCost {
+				h.MP -= 3
+				critThreshold = 17
+				h.StealLoot()
+				m.addLog(accentStyle.Render(fmt.Sprintf("🗡️ %s: [Быстрый порез] (крит 17+)!", h.Name)))
+			}
+		case ClassTank:
+			if h.MP >= 4 {
+				h.MP -= 4
+				h.BaseDef += 2
+				h.PullAggro()
+				m.addLog(healStyle.Render(fmt.Sprintf("🛡️ %s: [Провокация] (+2 Защ)!", h.Name)))
+			}
+		}
+
+		isCrit := d20 >= critThreshold || h.IsStealthed
+		isFumble := d20 == 1 && !h.IsStealthed
+
+		if isFumble {
+			m.addLog(subtleStyle.Render(fmt.Sprintf("💨 %s промахнулся (D20=1)!", h.Name)))
+			return
+		}
+		if hitRoll < targetAC && !isCrit {
+			m.addLog(subtleStyle.Render(fmt.Sprintf("🛡️ Броня [%s] отразила удар %s.", targetMob.Name, h.Name)))
+			return
+		}
+
+		effectiveDef := max(0, targetMob.Defense-armorPierce)
+		varRand := max(4, h.TotalAtk()/2)
+		dmg := h.TotalAtk() + rand.Intn(varRand) - (effectiveDef / 2) + bonusDmg
+		dmg = max(4+(m.Floor/2), dmg)
+
+		// Стихийные взаимодействия оружия
+		if h.Weapon != nil && h.Weapon.Prefix != nil {
+			elem := h.Weapon.Prefix.Element
+			switch elem {
+			case ElemFire:
+				if targetMob.Type == MobSlime || targetMob.Type == MobDrowned {
+					dmg += 6
+					m.addLog(fireStyle.Render("🔥 Огонь иссушает водяную тварь (+6)!"))
+				} else if targetMob.Type == MobDragon || targetMob.Type == MobSalamander {
+					dmg -= 4
+				}
+			case ElemFrost:
+				if targetMob.Type == MobDragon || targetMob.Type == MobImp || targetMob.Type == MobSalamander {
+					dmg += 8
+					m.addLog(fountStyle.Render("❄️ Ледяной удар пробивает огонь (+8)!"))
+				}
+			case ElemLightning:
+				if targetMob.Type == MobSkeleton || targetMob.Type == MobDeathKnight || targetMob.Type == MobGolem {
+					dmg += 7
+					m.addLog(accentStyle.Render("⚡ Молния раскалывает доспехи (+7)!"))
+				}
+			}
+		}
+
+		if isCrit {
+			dmg = int(float64(dmg) * 1.8)
+			h.Feats.CritsLanded++
+			h.AddCriticalStrike()
+			m.checkAndAwardTitle(h)
+			m.addLog(dangerStyle.Render(fmt.Sprintf("💥 КРИТ (D20=%d)! %s сокрушает врага!", d20, h.Name)))
+			h.IsStealthed = false
+		}
+
+		if h.IsCharged {
+			h.IsCharged = false
+		}
+
+		targetMob.HP -= dmg
+		h.Feats.DamageDealt += dmg
+		m.checkAndAwardTitle(h)
+		m.addLog(fmt.Sprintf("⚔️ %s нанес %d урона [%s] (%d HP).", h.Name, dmg, targetMob.Name, targetMob.HP))
+
+		if targetMob.HP <= 0 {
+			targetMob.HP = 0
+			targetMob.IsDead = true
+			h.Feats.Kills++
+			g := int(float64(targetMob.Exp) * m.Relic.GoldMult * 2)
+			m.Gold += g
+			m.Stats.TotalGoldEarned += g
+			m.Stats.MonsterKills[targetMob.Type]++
+			m.checkQuestProgress(QuestHuntMonster, targetMob.Type, 1)
+
+			if targetMob.Type == MobDragon {
+				h.Feats.BossKills++
+				bossItem := generateItemForClass(h.Class, m.Floor+2)
+				bossItem.UpgradeLevel = 4
+				m.addLog(accentStyle.Render(fmt.Sprintf("👑 Реликвия Дракона: [%s]!", bossItem.DisplayName())))
+				m.equipOrBag(bossItem)
+			}
+			m.checkAndAwardTitle(h)
+		}
+		return
+	}
+
+	if current.Type == CombatantMonster {
+		mob := current.MonsterRef
+		if mob.IsDead {
+			return
+		}
+
+		tank := m.Party[0]
+		var victim *Hero
+		if !tank.IsDead && rand.Intn(100) < 50 {
+			victim = tank
+		} else {
+			victim = m.getRandomLivingHero()
+		}
+
+		if victim == nil {
+			return
+		}
+
+		m.checkAndDrinkPotions(victim)
+
+		mobRoll := rand.Intn(20) + 1
+		mobHit := mobRoll + (mob.Atk / 3)
+		heroAC := 10 + victim.TotalDef()
+
+		if mobRoll == 1 {
+			m.addLog(healStyle.Render(fmt.Sprintf("🛡️ %s парировал выпад [%s]!", victim.Name, mob.Name)))
+			return
+		}
+		if mobHit < heroAC && mobRoll < 19 {
+			m.addLog(subtleStyle.Render(fmt.Sprintf("🛡️ Доспехи %s выдержали удар.", victim.Name)))
+			return
+		}
+
+		rawDmg := mob.Atk - (victim.TotalDef() / 2)
+		if victim.IsGuarding {
+			rawDmg = int(float64(rawDmg) * 0.6)
+		}
+
+		switch mob.Type {
+		case MobRat, MobGoblin:
+			if rand.Intn(100) < 28 {
+				rawDmg += mob.Level * 2
+				m.addLog(dangerStyle.Render(fmt.Sprintf("🗡️ [%s] проводит [Подлый укол]!", mob.Name)))
+			}
+		case MobOrc, MobSalamander:
+			if float64(mob.HP)/float64(mob.MaxHP) <= 0.5 {
+				rawDmg += 5 + mob.Level
+				m.addLog(fireStyle.Render(fmt.Sprintf("💢 [%s] впадает в ярость (+%d Atk)!", mob.Name, 5+mob.Level)))
+			}
+		case MobSlime, MobDrowned:
+			m.addStress(victim, 10)
+		case MobPhantom, MobVoidDemon:
+			m.addStress(victim, 18)
+			rawDmg += 4
+			m.addLog(stressStyle.Render(fmt.Sprintf("👁️ [%s] тянет рассудок %s (+18 Стр)!", mob.Name, victim.Name)))
+		}
+
+		switch mob.Affix {
+		case AffixFire:
+			rawDmg += 4
+			m.addLog(fireStyle.Render(fmt.Sprintf("🔥 Огонь [%s] опалил %s!", mob.Name, victim.Name)))
+		case AffixPoison:
+			m.addStress(victim, 14)
+			victim.HP -= 3
+			m.addLog(stressStyle.Render(fmt.Sprintf("☣️ Яд отравил %s (-3 HP, +14 Стр)!", victim.Name)))
+		case AffixVampiric:
+			drain := max(2, rawDmg/2)
+			mob.HP = min(mob.MaxHP, mob.HP+drain)
+			m.addLog(dangerStyle.Render(fmt.Sprintf("🩸 [%s] испил крови %s (+%d HP)!", mob.Name, victim.Name, drain)))
+		}
+
+		if mobRoll >= 19 {
+			rawDmg = int(float64(rawDmg) * 1.5)
+			m.addStress(victim, 25)
+		}
+
+		inDmg := max(3, int(float64(rawDmg)*m.Relic.EnemyDmgMod))
+
+		if mob.Type == MobDragon && rand.Intn(100) < 35 {
+			inDmg += 4
+			m.addLog(fireStyle.Render("🐲 Дракон извергает дыхание по всему отряду!"))
+			for _, ally := range m.Party {
+				if !ally.IsDead && ally != victim {
+					splash := 4 + mob.Level
+					ally.HP -= splash
+					ally.Feats.DamageTaken += splash
+					m.addStress(ally, 10)
+					if ally.HP <= 0 {
+						ally.HP = 0
+						ally.CauseOfDeath = "Испепелен дыханием Дракона"
+						m.recordFallenHero(ally)
+					}
+				}
+			}
+		}
+
+		victim.HP -= inDmg
+		victim.Feats.DamageTaken += inDmg
+		m.addStress(victim, 8)
+
+		if biome.Name == BiomeAbyss {
+			m.addStress(victim, 3)
+		}
+
+		if victim.HP <= 0 {
+			victim.HP = 0
+			victim.CauseOfDeath = fmt.Sprintf("Сражен монстром [%s]", mob.Name)
+			m.recordFallenHero(victim)
+			m.addLog(dangerStyle.Render(fmt.Sprintf("☠️ %s пал в бою от удара [%s]!", victim.Name, mob.Name)))
+			for _, ally := range m.Party {
+				if !ally.IsDead {
+					m.addStress(ally, 20)
+				}
+			}
+		} else {
+			if float64(victim.HP)/float64(victim.MaxHP) <= 0.20 {
+				victim.Feats.NearDeathEscapes++
+			}
+			m.checkAndAwardTitle(victim)
+			m.addLog(dangerStyle.Render(fmt.Sprintf("🩸 [%s] нанес %d урона %s!", mob.Name, inDmg, victim.Name)))
+		}
+	}
+}
+
+func (m *Model) step() {
+	if m.State != StatePlaying {
+		return
+	}
+	if m.isPartyWiped() {
+		m.State = StateDefeat
+		m.RestartCountdown = 10
+		return
+	}
+
+	m.Stats.TotalSteps++
+
+	if m.Stats.TotalSteps > 0 && m.Stats.TotalSteps%25 == 0 {
+		healedCount := 0
+		for _, h := range m.Party {
+			if h.IsDead {
+				continue
+			}
+			changed := false
+			if h.HP < h.MaxHP {
+				h.HP++
+				changed = true
+			}
+			if h.MP < h.MaxMP {
+				h.MP++
+				changed = true
+			}
+			if h.Stress > 0 {
+				h.Stress--
+				changed = true
+			}
+			if changed {
+				healedCount++
+			}
+		}
+		if healedCount > 0 {
+			m.addLog(healStyle.Render("🌿 [Привал] В тишине подземелья отряд немного передохнул (+1 HP/MP, -1 Стресс)."))
+		}
+	}
+
+	for _, h := range m.Party {
+		m.checkAndDrinkPotions(h)
+	}
+
+	if m.Combat != nil {
+		m.executeCombatTurn()
+		return
+	}
+
+	if m.InTown {
+		m.stepTown()
+		return
+	}
+
+	if m.checkRetreat() && m.Grid[m.PartyPos.Y][m.PartyPos.X] == TileExit && m.Stats.TotalSteps > 0 {
+		m.InTown = true
+		m.TownPhase = TownPhaseSellLoot
+		m.TownDialog = "Отряд вернулся в город."
+		return
+	}
+
+	next := m.findNextStep()
+
+	loopHit := false
+	for _, p := range m.PathHistory {
+		if p == next {
+			m.LoopDetectCount++
+			loopHit = true
+			break
+		}
+	}
+	if !loopHit {
+		m.LoopDetectCount = 0
+	}
+
+	if m.LoopDetectCount > 4 {
+		m.addLog(dangerStyle.Render("⚠️ [Коллизия] Экстренный прорыв к свободному залу."))
+		foundSafeSpot := false
+		for y := 0; y < m.MapHeight && !foundSafeSpot; y++ {
+			for x := 0; x < m.MapWidth && !foundSafeSpot; x++ {
+				if m.Grid[y][x] == TileFloor || m.Grid[y][x] == TileExit {
+					dx := x - m.PartyPos.X
+					dy := y - m.PartyPos.Y
+					if dx*dx+dy*dy <= 25 && dx*dx+dy*dy > 1 {
+						m.PartyPos = Point{x, y}
+						foundSafeSpot = true
+					}
+				}
+			}
+		}
+		m.PathHistory = []Point{}
+		m.LoopDetectCount = 0
+		m.revealFog()
+		return
+	} else {
+		m.PathHistory = append(m.PathHistory, next)
+		if len(m.PathHistory) > 10 {
+			m.PathHistory = m.PathHistory[1:]
+		}
+	}
+
+	if pack, exists := m.Packs[next]; exists {
+		m.startCombat(next, pack)
+		return
+	}
+
+	if next == m.PartyPos {
+		m.Floor++
+		m.Stats.FloorsCleared++
+		m.checkQuestProgress(QuestReachFloor, "", m.Floor)
+		m.checkQuestProgress(QuestEscapeTrap, "", 1)
+
+		if m.Floor%10 == 0 {
+			m.addLog(accentStyle.Render(fmt.Sprintf("🌟 ЭТАЖ %d ПРОЙДЕН! Бездна зовет...", m.Floor)))
+		} else {
+			m.addLog(accentStyle.Render(fmt.Sprintf("Этаж %d пройден! Спуск глубже.", m.Floor)))
+		}
+
+		m.initDungeonForFloor(m.Floor)
+		return
+	}
+
+	switch m.Grid[next.Y][next.X] {
+	case TileChest:
+		m.Stats.ChestsOpened++
+		m.checkQuestProgress(QuestOpenChests, "", 1)
+		gold := int(float64(rand.Intn(16)+10+(m.Floor*2)) * m.Relic.GoldMult * 2)
+		m.Gold += gold
+		m.Stats.TotalGoldEarned += gold
+
+		targetClass := ClassWarrior
+		if lh := m.getRandomLivingHero(); lh != nil {
+			targetClass = lh.Class
+			lh.AddTreasure()
+			m.checkAndAwardTitle(lh)
+		}
+		item := generateItemForClass(targetClass, m.Floor)
+		m.addLog(goldStyle.Render(fmt.Sprintf("🎁 Сундук: +%dG и [%s].", gold, item.DisplayName())))
+		m.equipOrBag(item)
+		m.Grid[next.Y][next.X] = TileFloor
+
+	case TileRelic:
+		m.handleRelicTile()
+		m.Grid[next.Y][next.X] = TileFloor
+
+	case TileAltar:
+		m.handleAltar()
+		m.Grid[next.Y][next.X] = TileFloor
+
+	case TileFountain:
+		m.handleFountain()
+		m.Grid[next.Y][next.X] = TileFloor
+
+	case TileTrappedChest:
+		m.handleTrappedChest()
+		m.Grid[next.Y][next.X] = TileFloor
+
+	case TileBarrel:
+		m.Grid[next.Y][next.X] = TileFloor
+
+	case TileStairs:
+		m.Floor++
+		m.Stats.FloorsCleared++
+		m.checkQuestProgress(QuestReachFloor, "", m.Floor)
+		m.checkQuestProgress(QuestEscapeTrap, "", 1)
+
+		if m.Floor%10 == 0 {
+			m.addLog(accentStyle.Render(fmt.Sprintf("🌟 ЭТАЖ %d ПРОЙДЕН! Бездна зовет...", m.Floor)))
+		} else {
+			m.addLog(accentStyle.Render(fmt.Sprintf("Спуск на этаж %d!", m.Floor)))
+		}
+
+		m.initDungeonForFloor(m.Floor)
+		return
+	}
+
+	m.PartyPos = next
+	m.revealFog()
+}
+
+func (m *Model) getRandomLivingHero() *Hero {
+	var living []*Hero
+	for _, h := range m.Party {
+		if !h.IsDead {
+			living = append(living, h)
+		}
+	}
+	if len(living) == 0 {
+		return nil
+	}
+	return living[rand.Intn(len(living))]
+}
+
+func (m *Model) stepTown() {
+	switch m.TownPhase {
+	case TownPhaseSellLoot:
+		if len(m.Bag) == 0 {
+			m.TownPhase = TownPhaseGuild
+			m.stepTown()
+			return
+		}
+
+		soldGold := 0
+		for _, it := range m.Bag {
+			soldGold += it.Value * 2
+		}
+		m.Gold += soldGold
+		m.Stats.TotalGoldEarned += soldGold
+		m.TownDialog = fmt.Sprintf("Рынок: Продано трофеев на +%dG.", soldGold)
+		m.addLog(goldStyle.Render(fmt.Sprintf("⚖️ [Рынок] Трофеи проданы на +%dG.", soldGold)))
+		m.Bag = []EquipItem{}
+
+		for _, h := range m.Party {
+			if !h.IsDead {
+				h.Stress = max(0, h.Stress-40)
+				if h.Stress < 60 {
+					h.Affliction = AfflictionNone
+				}
+			}
+		}
+		m.addLog(healStyle.Render("🏰 [Город] Безопасные стены сняли 40 стресса."))
+		m.TownPhase = TownPhaseGuild
+
+	case TownPhaseGuild:
+		hasDead := false
+		for _, h := range m.Party {
+			if h.IsDead {
+				hasDead = true
+				break
+			}
+		}
+		if !hasDead && !m.CurrentQuest.Completed {
+			m.TownPhase = TownPhaseAlchemist
+			m.stepTown()
+			return
+		}
+
+		if m.CurrentQuest.Completed {
+			reward := m.CurrentQuest.RewardGold * 2
+			m.Gold += reward
+			m.Stats.TotalGoldEarned += reward
+			m.Stats.QuestsCompleted++
+			m.addLog(questStyle.Render(fmt.Sprintf("📜 [Гильдия] Контракт закрыт: +%dG!", reward)))
+			m.CurrentQuest = generateAutoQuest(m.Floor)
+		}
+
+		hiredCount := 0
+		recruitCost := max(35, 50+(m.Floor*28)-(m.Legacy.ChurchLevel*8))
+
+		for i, h := range m.Party {
+			if h.IsDead {
+				if m.Gold >= recruitCost {
+					m.Gold -= recruitCost
+					globalDebugReport.GoldSpentBreakdown["Найм ветеранов"] += recruitCost
+					classes := []HeroClass{ClassTank, ClassWarrior, ClassRogue, ClassMage, ClassCleric}
+					newClass := classes[rand.Intn(len(classes))]
+
+					extraHP := (m.Floor - 1) * 6
+					extraAtk := (m.Floor - 1) * 2
+
+					newRecruit := &Hero{
+						Name: getRandomName(), Class: newClass, MaxHP: 45 + extraHP, HP: 45 + extraHP,
+						MaxMP: 35, MP: 35, BaseAtk: 6 + extraAtk + m.Legacy.SmithyLevel, BaseDef: 2 + (m.Floor / 2),
+						Speed: 10, SkillName: "Удар", SkillCost: 10, IsDead: false,
+					}
+
+					itemFloor := max(1, m.Floor)
+					w := generateItemForClassSlot(newClass, SlotWeapon, itemFloor)
+					w.UpgradeLevel = m.Legacy.SmithyLevel
+					newRecruit.Weapon = &w
+
+					head := generateItemForClassSlot(newClass, SlotHead, itemFloor)
+					newRecruit.Head = &head
+					ch := generateItemForClassSlot(newClass, SlotChest, itemFloor)
+					newRecruit.Chest = &ch
+					legs := generateItemForClassSlot(newClass, SlotLegs, itemFloor)
+					newRecruit.Legs = &legs
+
+					m.Party[i] = newRecruit
+					hiredCount++
+					m.addLog(healStyle.Render(fmt.Sprintf("⚔️ [Гильдия] Нанят ветеран %s (%s) за %dG!", newRecruit.Name, newClass, recruitCost)))
+				} else {
+					classes := []HeroClass{ClassTank, ClassWarrior, ClassRogue, ClassMage, ClassCleric}
+					newClass := classes[rand.Intn(len(classes))]
+
+					newRecruit := &Hero{
+						Name: getRandomName(), Title: "Ополченец", Class: newClass, MaxHP: 38, HP: 38,
+						MaxMP: 25, MP: 25, BaseAtk: 5, BaseDef: 1,
+						Speed: 9, SkillName: "Удар", SkillCost: 10, IsDead: false,
+					}
+					w := generateItemForClassSlot(newClass, SlotWeapon, 1)
+					newRecruit.Weapon = &w
+					head := generateItemForClassSlot(newClass, SlotHead, 1)
+					newRecruit.Head = &head
+					ch := generateItemForClassSlot(newClass, SlotChest, 1)
+					newRecruit.Chest = &ch
+					legs := generateItemForClassSlot(newClass, SlotLegs, 1)
+					newRecruit.Legs = &legs
+
+					m.Party[i] = newRecruit
+					hiredCount++
+					m.addLog(subtleStyle.Render(fmt.Sprintf("🤝 [Гильдия] Субсидия: ополченец %s (%s) встал в строй бесплатно!", newRecruit.Name, newClass)))
+				}
+			}
+		}
+
+		if hiredCount > 0 {
+			m.TownDialog = fmt.Sprintf("Гильдия: Ряды отряда пополнены (%d бойцов).", hiredCount)
+		} else {
+			m.TownDialog = "Гильдия: Вакансий нет, отряд укомплектован."
+		}
+		m.TownPhase = TownPhaseAlchemist
+
+	case TownPhaseAlchemist:
+		potionsBought := 0
+		spentPotions := 0
+		reserveFund := 250
+		freeGold := m.Gold - reserveFund
+
+		if freeGold > 0 {
+			alchemistBudget := freeGold / 2
+
+			for alchemistBudget > 0 {
+				livingHeroes := []*Hero{}
+				for _, h := range m.Party {
+					if !h.IsDead {
+						livingHeroes = append(livingHeroes, h)
+					}
+				}
+
+				if len(livingHeroes) == 0 {
+					break
+				}
+
+				sort.Slice(livingHeroes, func(i, j int) bool {
+					return livingHeroes[i].ElixirCount < livingHeroes[j].ElixirCount
+				})
+
+				targetHero := livingHeroes[0]
+				elixirCost := int(450.0 * float64(targetHero.ElixirCount+1) * 1.3)
+
+				if alchemistBudget >= elixirCost {
+					m.Gold -= elixirCost
+					alchemistBudget -= elixirCost
+					spentPotions += elixirCost
+					targetHero.ElixirCount++
+
+					if targetHero.ElixirCount%2 == 1 {
+						targetHero.BaseAtk += 2
+						m.addLog(accentStyle.Render(fmt.Sprintf("⚗️ [Алхимик] %s выпил «Эликсир Силы» (+2 Atk, всего: %d) за %dG!", targetHero.Name, targetHero.ElixirCount, elixirCost)))
+					} else {
+						targetHero.MaxHP += 12
+						targetHero.HP += 12
+						m.addLog(healStyle.Render(fmt.Sprintf("⚗️ [Алхимик] %s выпил «Эликсир Жизни» (+12 HP, всего: %d) за %dG!", targetHero.Name, targetHero.ElixirCount, elixirCost)))
+					}
+					potionsBought++
+				} else {
+					break
+				}
+			}
+
+			for _, h := range m.Party {
+				if h.IsDead || h.Potion != nil {
+					continue
+				}
+				pType := PotionHP
+				if h.Stress > 25 || h.Affliction != AfflictionNone {
+					pType = PotionStress
+				} else if h.Class == ClassMage || h.Class == ClassCleric {
+					pType = PotionMP
+				}
+
+				cand := createPotion(pType, SizeSmall)
+				if alchemistBudget >= cand.Cost {
+					m.Gold -= cand.Cost
+					alchemistBudget -= cand.Cost
+					spentPotions += cand.Cost
+					h.Potion = &cand
+					potionsBought++
+				}
+			}
+		}
+
+		if spentPotions > 0 {
+			globalDebugReport.GoldSpentBreakdown["Алхимия и зелья"] += spentPotions
+		}
+
+		if potionsBought > 0 {
+			m.TownDialog = fmt.Sprintf("Алхимик: Потрачено %dG, остаток бюджета передан кузнецу.", spentPotions)
+		} else {
+			m.TownDialog = "Алхимик: Бюджет сохранен для кузнеца."
+		}
+		m.TownPhase = TownPhaseSmithy
+
+	case TownPhaseSmithy:
+		upgradesCount := 0
+		totalSpent := 0
+		reserveFund := 250
+		smithyBudget := m.Gold - reserveFund
+
+		getUpgradeCost := func(it *EquipItem) int {
+			if it == nil {
+				return 999999
+			}
+			matMult := max(1, it.Material.ValueMult)
+			nextLvl := it.UpgradeLevel + 1
+			cost := (nextLvl * nextLvl * 40 * matMult) - (m.Legacy.SmithyLevel * 20)
+			return max(35*matMult, cost)
+		}
+
+		type UpgradeTarget struct {
+			HeroRef  *Hero
+			Slot     EquipSlot
+			Cost     int
+			ItemName string
+			CurLvl   int
+		}
+
+		for smithyBudget > 0 {
+			var targets []UpgradeTarget
+			for _, h := range m.Party {
+				if h.IsDead {
+					continue
+				}
+				checkSlot := func(slot EquipSlot, it *EquipItem) {
+					if it != nil && it.UpgradeLevel < 7 {
+						cost := getUpgradeCost(it)
+						if smithyBudget >= cost {
+							targets = append(targets, UpgradeTarget{
+								HeroRef:  h,
+								Slot:     slot,
+								Cost:     cost,
+								ItemName: it.BaseName,
+								CurLvl:   it.UpgradeLevel,
+							})
+						}
+					}
+				}
+				checkSlot(SlotWeapon, h.Weapon)
+				checkSlot(SlotHead, h.Head)
+				checkSlot(SlotChest, h.Chest)
+				checkSlot(SlotLegs, h.Legs)
+			}
+
+			if len(targets) == 0 {
+				break
+			}
+
+			sort.Slice(targets, func(i, j int) bool {
+				if targets[i].CurLvl != targets[j].CurLvl {
+					return targets[i].CurLvl < targets[j].CurLvl
+				}
+				return targets[i].Cost < targets[j].Cost
+			})
+
+			chosen := targets[0]
+			if smithyBudget >= chosen.Cost {
+				m.Gold -= chosen.Cost
+				smithyBudget -= chosen.Cost
+				totalSpent += chosen.Cost
+				m.Stats.UpgradesForged++
+				upgradesCount++
+
+				var upgradedItem *EquipItem
+				switch chosen.Slot {
+				case SlotWeapon:
+					chosen.HeroRef.Weapon.UpgradeLevel++
+					upgradedItem = chosen.HeroRef.Weapon
+				case SlotHead:
+					chosen.HeroRef.Head.UpgradeLevel++
+					upgradedItem = chosen.HeroRef.Head
+				case SlotChest:
+					chosen.HeroRef.Chest.UpgradeLevel++
+					upgradedItem = chosen.HeroRef.Chest
+				case SlotLegs:
+					chosen.HeroRef.Legs.UpgradeLevel++
+					upgradedItem = chosen.HeroRef.Legs
+				}
+
+				icon := "🛡️"
+				if chosen.Slot == SlotWeapon {
+					icon = "⚒️"
+				}
+				m.addLog(goldStyle.Render(fmt.Sprintf("%s [Кузнец] %s заточил [%s] (%s) до +%d (-%dG)!",
+					icon, chosen.HeroRef.Name, chosen.ItemName, upgradedItem.Material.Name, upgradedItem.UpgradeLevel, chosen.Cost)))
+			} else {
+				break
+			}
+		}
+
+		if totalSpent > 0 {
+			globalDebugReport.GoldSpentBreakdown["Кузница (заточки)"] += totalSpent
+		}
+
+		if upgradesCount > 0 {
+			m.TownDialog = fmt.Sprintf("Кузня: Заточено предметов: %d на %dG.", upgradesCount, totalSpent)
+		} else {
+			m.TownDialog = "Кузня: Средства зарезервированы под нужды таверны и церкви."
+		}
+		m.TownPhase = TownPhaseInvest
+
+	case TownPhaseInvest:
+		type Building struct {
+			Name  string
+			Level int
+			Cost  int
+		}
+
+		bSmithy := Building{Name: "Кузница", Level: m.Legacy.SmithyLevel, Cost: 350 + (m.Legacy.SmithyLevel * m.Legacy.SmithyLevel * 180)}
+		bChurch := Building{Name: "Церковь", Level: m.Legacy.ChurchLevel, Cost: 300 + (m.Legacy.ChurchLevel * m.Legacy.ChurchLevel * 150)}
+		bTavern := Building{Name: "Таверна", Level: m.Legacy.TavernLevel, Cost: 250 + (m.Legacy.TavernLevel * m.Legacy.TavernLevel * 130)}
+
+		buildings := []Building{bSmithy, bChurch, bTavern}
+		minLvl := 999
+		for _, b := range buildings {
+			if b.Level < minLvl && b.Level < 10 {
+				minLvl = b.Level
+			}
+		}
+
+		var candidates []Building
+		for _, b := range buildings {
+			if b.Level == minLvl && b.Level < 10 && m.Gold >= b.Cost {
+				candidates = append(candidates, b)
+			}
+		}
+
+		if len(candidates) > 0 {
+			chosen := candidates[rand.Intn(len(candidates))]
+			m.Gold -= chosen.Cost
+			globalDebugReport.GoldSpentBreakdown["Инвестиции в Магистрат"] += chosen.Cost
+			switch chosen.Name {
+			case "Кузница":
+				m.Legacy.SmithyLevel++
+			case "Церковь":
+				m.Legacy.ChurchLevel++
+			case "Таверна":
+				m.Legacy.TavernLevel++
+			}
+			m.addLog(titleStyle.Render(fmt.Sprintf("🏛️ [Магистрат] «%s» улучшен до Ур.%d (-%dG)!", chosen.Name, chosen.Level+1, chosen.Cost)))
+			m.TownDialog = fmt.Sprintf("Магистрат: Улучшен объект «%s» (Ур.%d).", chosen.Name, chosen.Level+1)
+		} else {
+			m.TownDialog = "Магистрат: Ожидаются инвестиции в развитие."
+		}
+		m.TownPhase = TownPhaseUpgradeBag
+
+	case TownPhaseUpgradeBag:
+		if m.BagLevel < len(bagUpgrades)-1 {
+			nextBag := bagUpgrades[m.BagLevel+1]
+			if m.Gold >= nextBag.Cost {
+				m.Gold -= nextBag.Cost
+				globalDebugReport.GoldSpentBreakdown["Улучшение сумок"] += nextBag.Cost
+				m.BagLevel++
+				m.addLog(goldStyle.Render(fmt.Sprintf("🎒 [Кожевник] Куплен %s (Вместимость: %d слотов) за %dG!", nextBag.Name, nextBag.Capacity, nextBag.Cost)))
+				m.TownDialog = fmt.Sprintf("Кожевник: Куплен %s (-%dG)!", nextBag.Name, nextBag.Cost)
+			}
+		}
+		m.TownPhase = TownPhaseChurch
+
+	case TownPhaseChurch:
+		hasDead := false
+		hasStress := false
+		for _, h := range m.Party {
+			if h.HP == 1 {
+				hasDead = true
+			}
+			if h.Stress > 0 {
+				hasStress = true
+			}
+		}
+
+		if !hasDead && !hasStress {
+			m.TownPhase = TownPhaseTavern
+			m.stepTown()
+			return
+		}
+
+		blessCost := max(120, (150*m.Floor)-(m.Legacy.ChurchLevel*40))
+
+		if m.Gold >= blessCost {
+			revivedCount := 0
+			healedStressCount := 0
+			for _, h := range m.Party {
+				if h.HP == 1 {
+					h.HP = h.MaxHP / 2
+					revivedCount++
+				}
+				if h.Stress > 0 {
+					h.Stress = 0
+					h.Affliction = AfflictionNone
+					healedStressCount++
+				}
+			}
+			m.Gold -= blessCost
+			globalDebugReport.GoldSpentBreakdown["Церковь (исцеление/воскрешение)"] += blessCost
+			m.TownDialog = fmt.Sprintf("Церковь: Проведены литургии и исцеления (-%dG)!", blessCost)
+			m.addLog(fountStyle.Render(fmt.Sprintf("⛪ [Церковь] Воскрешено: %d, снято стресса: %d (-%dG).", revivedCount, healedStressCount, blessCost)))
+		} else if hasDead {
+			m.addLog(dangerStyle.Render("⛪ [Похороны] Казна пуста для воскрешения павших! Отряд проводит погребение у реки..."))
+			for _, h := range m.Party {
+				if h.HP == 1 {
+					h.HP = 0
+					h.CauseOfDeath = "Похоронен в Безымянной Могиле (нет средств на воскрешение)"
+					m.recordFallenHero(h)
+					m.addLog(subtleStyle.Render(fmt.Sprintf("⚰️ Тело %s предано земле. Душа уходит в Скорбную Гильдию.", h.FullName())))
+				}
+			}
+		}
+
+		m.TownPhase = TownPhaseTavern
+		m.stepTown()
+		return
+
+	case TownPhaseTavern:
+		tavernCost := max(40, (25*m.Floor)-(m.Legacy.TavernLevel*10))
+
+		if m.Gold >= tavernCost {
+			m.Gold -= tavernCost
+			globalDebugReport.GoldSpentBreakdown["Таверна (ночлег)"] += tavernCost
+
+			for _, h := range m.Party {
+				if h.HP > 1 {
+					h.HP = h.MaxHP
+					h.MP = h.MaxMP
+					h.IsGuarding = false
+					h.IsBerserk = false
+					h.IsStealthed = false
+					h.IsCharged = false
+					h.IsAura = false
+				}
+			}
+			m.TownDialog = fmt.Sprintf("Таверна: Полноценный ночлег в комнатах (-%dG).", tavernCost)
+			m.addLog(healStyle.Render(fmt.Sprintf("🍻 [Таверна] Отряд отдохнул в уюте (-%dG). HP и MP полные.", tavernCost)))
+		} else {
+			barnCost := tavernCost / 4
+			if m.Gold >= barnCost {
+				m.Gold -= barnCost
+				globalDebugReport.GoldSpentBreakdown["Таверна (сарай)"] += barnCost
+			}
+			for _, h := range m.Party {
+				if h.HP > 1 {
+					h.HP = max(1, int(float64(h.MaxHP)*0.35))
+					h.MP = int(float64(h.MaxMP) * 0.35)
+					h.Stress += 10
+				}
+			}
+			m.TownDialog = "Таверна: Денег нет! Ночлег в сарае в долг."
+			m.addLog(dangerStyle.Render("🏚️ [Сарай] Казна пуста! Ночлег в холодном сарае: 35% HP/MP, +10 стресса."))
+		}
+		m.TownPhase = TownPhaseDepart
+
+	case TownPhaseDepart:
+		m.InTown = false
+		m.PathHistory = []Point{}
+		m.LoopDetectCount = 0
+		m.initDungeonForFloor(m.Floor)
+		m.addLog(accentStyle.Render("🛡️ Отряд экипирован и спускается на глубину!"))
+	}
+}
+
+func resetGameStatic(m Model) (Model, tea.Cmd) {
+	m.accumulateDebugReport()
+	saveDebugReportToFile()
+
+	savedGold := int(float64(m.Gold) * LegacyTaxRate)
+	newLegacy := m.Legacy
+	newLegacy.TreasuryGold = savedGold
+
+	fresh := initialModelWithLegacy(newLegacy)
+	fresh.TermWidth = m.TermWidth
+	fresh.TermHeight = m.TermHeight
+
+	return fresh, tea.Batch(tickCmd(fresh.SpeedMs), menuTickCmd())
+}
+
+func (m Model) resetGame() (Model, tea.Cmd) {
+	return resetGameStatic(m)
+}
+
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.TermWidth = msg.Width
+		m.TermHeight = msg.Height
+		if len(m.Grid) == 0 {
+			m.initDungeonForFloor(m.Floor)
+		}
+
+	case MenuTickMsg:
+		if m.State == StateMenu {
+			m.MenuCountdown--
+			if m.MenuCountdown <= 0 {
+				m.State = StatePlaying
+				return m, tickCmd(m.SpeedMs)
+			}
+			return m, menuTickCmd()
+		}
+
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "ctrl+c", "q":
+			return m, tea.Quit
+		case "enter", " ":
+			if m.State == StateMenu {
+				m.State = StatePlaying
+				return m, tickCmd(m.SpeedMs)
+			}
+			if m.State == StatePlaying {
+				m.AutoMode = !m.AutoMode
+				if m.AutoMode {
+					delay := m.SpeedMs
+					if m.InTown {
+						delay = m.TownDelayMs
+					}
+					return m, tickCmd(delay)
+				}
+			}
+		case "r":
+			if m.State != StatePlaying && m.State != StateMenu {
+				return m.resetGame()
+			}
+		case "s":
+			if m.State == StatePlaying {
+				m.State = StateStatsManual
+				m.StatsScroll = 0
+			} else if m.State == StateStatsManual {
+				m.State = StatePlaying
+				return m, tickCmd(m.SpeedMs)
+			}
+		case "i":
+			if m.State == StatePlaying {
+				m.State = StateInfoBook
+				m.StatsScroll = 0
+			} else if m.State == StateInfoBook {
+				m.State = StatePlaying
+				return m, tickCmd(m.SpeedMs)
+			}
+		case "e":
+			if m.State == StatePlaying {
+				m.State = StateArmory
+			} else if m.State == StateArmory {
+				m.State = StatePlaying
+				return m, tickCmd(m.SpeedMs)
+			}
+		case "esc":
+			if m.State == StateArmory || m.State == StateStatsManual || m.State == StateInfoBook {
+				m.State = StatePlaying
+				return m, tickCmd(m.SpeedMs)
+			}
+		case "up", "k":
+			if (m.State == StateStatsManual || m.State == StateDefeat || m.State == StateInfoBook) && m.StatsScroll > 0 {
+				m.StatsScroll--
+			}
+		case "down", "j":
+			if m.State == StateStatsManual || m.State == StateDefeat || m.State == StateInfoBook {
+				m.StatsScroll++
+			}
+		case "pgup":
+			if m.State == StateStatsManual || m.State == StateDefeat || m.State == StateInfoBook {
+				m.StatsScroll = max(0, m.StatsScroll-5)
+			}
+		case "pgdown":
+			if m.State == StateStatsManual || m.State == StateDefeat || m.State == StateInfoBook {
+				m.StatsScroll += 5
+			}
+		case "+", "=":
+			if m.SpeedMs > 80 {
+				m.SpeedMs -= 40
+			}
+		case "-", "_":
+			if m.SpeedMs < 800 {
+				m.SpeedMs += 40
+			}
+		case "n":
+			if m.State == StatePlaying && !m.AutoMode {
+				m.step()
+			}
+		}
+
+	case RestartTickMsg:
+		if m.State == StateDefeat {
+			m.RestartCountdown--
+			if m.RestartCountdown <= 0 {
+				return m.resetGame()
+			}
+			return m, restartTickCmd()
+		}
+
+	case TickMsg:
+		if m.State == StatePlaying && m.AutoMode {
+			m.step()
+			if m.State == StateDefeat {
+				return m, restartTickCmd()
+			}
+			delay := m.SpeedMs
+			if m.InTown {
+				delay = m.TownDelayMs
+			}
+			return m, tickCmd(delay)
+		}
+	}
+	return m, nil
+}
+
+func (m Model) renderMenuScreen() string {
+	var sb strings.Builder
+
+	banner := townArtStyle.Render(`
+       ___,-------,,-----------------------,,-------,___
+  _,-""             ''---------------------''             ""-,_
+,'        /\                                           /\        '.
+/        /  \         ______________________          /  \         \
+|       / /\ \        |                    |         / /\ \        |
+|      | |  | |       |     D C C A G      |        |  | | |       |
+|      | |__| |       |____________________|        |__| | |       |
+|      |______|         _||          ||_            |______|       |
+|       |    |         (_||          ||_)           |    |         |
+|       |    |          | |          | |            |    |         |
+|      _||||_          _|_|_        _|_|_          _||||_          |
+`)
+
+	sb.WriteString(banner + "\n")
+	sb.WriteString(titleStyle.Render("       Dungeon Crawler Console Auto Game (dccag)\n\n"))
+
+	sb.WriteString("Добро пожаловать в мрачный подземельный рогалик!\n")
+	sb.WriteString("Ваша задача — провести отряд сквозь БЕСКОНЕЧНЫЕ этажи опаснейших биомов.\n\n")
+
+	sb.WriteString(questStyle.Render("ОСОБЕННОСТИ ИГРЫ:\n"))
+	sb.WriteString(" • Безопасные стены Столицы снижают стресс при входе на 40 ед.\n")
+	sb.WriteString(" • Автоматический тактический бой (Focus Fire, синергия стихий).\n")
+	sb.WriteString(" • Снятие лимитов с заточки в Кузнице, алхимические мутации и стойка Танка.\n")
+	sb.WriteString(" • Мета-прогрессия: здания Столицы до 10 уровня и передача 15% золота Наследию.\n")
+	sb.WriteString(" • Бесконечное подземелье: циклические биомы и боссы каждые 10 этажей.\n\n")
+
+	sb.WriteString(dangerStyle.Render(fmt.Sprintf("⏳ Автоматический старт экспедиции через: %d сек...\n\n", m.MenuCountdown)))
+	sb.WriteString(healStyle.Render("[ENTER] или [SPACE] — Начать экспедицию немедленно\n"))
+	sb.WriteString(subtleStyle.Render("[Q] — Выход из игры"))
+
+	box := menuBoxStyle.Render(sb.String())
+	w := max(100, m.TermWidth)
+	h := max(30, m.TermHeight)
+	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, box)
+}
+
+func (m Model) renderStatsScreen(title string, titleColor lipgloss.Color) string {
+	var sb strings.Builder
+
+	header := lipgloss.NewStyle().Foreground(titleColor).Bold(true).Render(title)
+	sb.WriteString(fmt.Sprintf("═══ %s ═══\n\n", header))
+
+	sb.WriteString(lipgloss.NewStyle().Bold(true).Render("НАСЛЕДИЕ КОРОЛЕВСТВА:\n"))
+	sb.WriteString(fmt.Sprintf(" • В Казну следующего поколения передано: %s\n", goldStyle.Render(fmt.Sprintf("%dG", int(float64(m.Gold)*LegacyTaxRate)))))
+	sb.WriteString(fmt.Sprintf(" • Уровень Кузницы: %d | Церкви: %d | Таверны: %d\n\n", m.Legacy.SmithyLevel, m.Legacy.ChurchLevel, m.Legacy.TavernLevel))
+
+	sb.WriteString(lipgloss.NewStyle().Bold(true).Render("ДОСТИЖЕНИЯ И КОНТРАКТЫ:\n"))
+	sb.WriteString(fmt.Sprintf(" • Зачищено этажей: %d | Шагов: %d | Золота: %s\n", m.Stats.FloorsCleared, m.Stats.TotalSteps, goldStyle.Render(fmt.Sprintf("%dG", m.Stats.TotalGoldEarned))))
+	sb.WriteString(fmt.Sprintf(" • Выполнено квестов: %d | Заточек: %d | Вскрыто ларей: %d\n\n", m.Stats.QuestsCompleted, m.Stats.UpgradesForged, m.Stats.ChestsOpened))
+
+	sb.WriteString(lipgloss.NewStyle().Bold(true).Render("ВЫЖИВШИЕ БОЙЦЫ:\n"))
+	for _, h := range m.Party {
+		if !h.IsDead {
+			heroName := h.FullName()
+			if h.Title != "" {
+				heroName = titleStyle.Render(heroName)
+			}
+			sb.WriteString(fmt.Sprintf(" • %-20s (%-9s) [%s] (Atk:%2d | Def:%2d)\n",
+				heroName, h.Class, healStyle.Render("ВЫЖИЛ"), h.TotalAtk(), h.TotalDef()))
+		}
+	}
+	sb.WriteString("\n")
+
+	sb.WriteString(lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("КНИГА ПАМЯТИ (ПАВШИЕ: %d):\n", len(m.Stats.FallenHeroes))))
+	if len(m.Stats.FallenHeroes) == 0 {
+		sb.WriteString(subtleStyle.Render(" Ни один боец не погиб в этом походе.\n"))
+	} else {
+		for _, f := range m.Stats.FallenHeroes {
+			sb.WriteString(fmt.Sprintf(" ☠️ %-18s (%-9s) | Этаж: %d | %s\n",
+				dangerStyle.Render(f.FullName), f.Class, f.Floor, subtleStyle.Render(f.Cause)))
+		}
+	}
+
+	if m.State == StateDefeat {
+		countdownStr := dangerStyle.Render(fmt.Sprintf("\n⏳ Автоматический перезапуск через: %d сек...", m.RestartCountdown))
+		sb.WriteString(countdownStr + "\n")
+	}
+
+	sb.WriteString(subtleStyle.Render("\n[↑/↓] Прокрутка | [R] Перезапуск | [S] Назад | [Q] Выход"))
+
+	fullText := sb.String()
+	lines := strings.Split(fullText, "\n")
+
+	maxVisibleLines := max(10, m.TermHeight-8)
+	maxScroll := max(0, len(lines)-maxVisibleLines)
+	if m.StatsScroll > maxScroll {
+		m.StatsScroll = maxScroll
+	}
+	if m.StatsScroll < 0 {
+		m.StatsScroll = 0
+	}
+
+	endIdx := min(len(lines), m.StatsScroll+maxVisibleLines)
+	visibleLines := lines[m.StatsScroll:endIdx]
+	renderedContent := strings.Join(visibleLines, "\n")
+
+	box := statsBoxStyle.Render(renderedContent)
+	w := max(100, m.TermWidth)
+	h := max(30, m.TermHeight)
+	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, box)
+}
+
+func (m Model) renderInfoBookScreen() string {
+	boxW := m.TermWidth - 8
+	if boxW > 104 {
+		boxW = 104
+	}
+	if boxW < 60 {
+		boxW = 60
+	}
+	innerW := boxW - 6
+
+	cSec := lipgloss.NewStyle().Foreground(lipgloss.Color("51")).Bold(true)
+	cSub := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
+	cMob := lipgloss.NewStyle().Foreground(lipgloss.Color("203")).Bold(true)
+	cBoss := lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true)
+	cHp := lipgloss.NewStyle().Foreground(lipgloss.Color("82"))
+	cAtk := lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
+	cDef := lipgloss.NewStyle().Foreground(lipgloss.Color("39"))
+	cSpd := lipgloss.NewStyle().Foreground(lipgloss.Color("226"))
+	cTier := lipgloss.NewStyle().Foreground(lipgloss.Color("141")).Bold(true)
+	cItem := lipgloss.NewStyle().Foreground(lipgloss.Color("222"))
+	cNote := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
+	cVal := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
+	cArrow := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render("➔ ")
+
+	fmtMob := func(name string, nameWidth int, hp, atk, def, spd int, growth, extra string) string {
+		nameStr := cMob.Render(padRight(name, nameWidth))
+		statsStr := fmt.Sprintf(
+			"%s %s | %s %s | %s %s | %s %s",
+			cHp.Render("HP"), cVal.Render(fmt.Sprintf("%-2d", hp)),
+			cAtk.Render("ATK"), cVal.Render(fmt.Sprintf("%-2d", atk)),
+			cDef.Render("DEF"), cVal.Render(fmt.Sprintf("%-1d", def)),
+			cSpd.Render("СКОР"), cVal.Render(fmt.Sprintf("%-2d", spd)),
+		)
+		tail := cNote.Render(fmt.Sprintf("| Рост: %s", growth))
+		if extra != "" {
+			tail += " " + extra
+		}
+		return fmt.Sprintf("   • %s: %s %s\n", nameStr, statsStr, tail)
+	}
+
+	var sb strings.Builder
+	sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("220")).Bold(true).Render("═══ КОДЕКС ЗНАНИЙ И БАЗА ДАННЫХ DCCAG [I] ═══\n\n"))
+
+	sb.WriteString(cSec.Render("1. ЦИКЛИЧЕСКИЕ БИОМЫ ПОДЗЕМЕЛЬЯ:") + "\n")
+	sb.WriteString(fmt.Sprintf(" • %s: Базовые монстры, сырость и гниль.\n", cSub.Render("Этажи 1, 6, 11... (Гнилые Катакомбы)")))
+	sb.WriteString(fmt.Sprintf(" • %s: Слизни, утопленники, ящеры (-2 к скорости отряда).\n", cSub.Render("Этажи 2, 7, 12... (Затопленные Гроты)")))
+	sb.WriteString(fmt.Sprintf(" • %s: Пепельные бесы, орки, саламандры (+урон огнем).\n", cSub.Render("Этажи 3, 8, 13... (Пепельные Недра)")))
+	sb.WriteString(fmt.Sprintf(" • %s: Големы, гаргульи (+3 MP к стоимости навыков).\n", cSub.Render("Этажи 4, 9, 14... (Кристальный Лабиринт)")))
+	sb.WriteString(fmt.Sprintf(" • %s: Демоны, Рыцари Смерти, Дракон (+10%% стресса).\n\n", cSub.Render("Этажи 5, 10, 15... (Трон Бездны)")))
+
+	sb.WriteString(cSec.Render("2. МОНСТРЫ И ПРОГРЕССИЯ ХАРАКТЕРИСТИК:") + "\n")
+	sb.WriteString(cNote.Render("   (Масштабирование: рост базы от этажа и множитель круга сложности)") + "\n\n")
+
+	sb.WriteString(cSub.Render(" [Гнилые Катакомбы]") + "\n")
+	sb.WriteString(fmtMob("Чумная крыса", 14, 14, 5, 0, 8, "+15% HP, +10% ATK", ""))
+	sb.WriteString(fmtMob("Гоблин", 14, 17, 7, 1, 8, "+15% HP, +12% ATK", ""))
+	sb.WriteString(fmtMob("Скелет", 14, 22, 8, 3, 8, "+18% HP, +15% ATK", subtleStyle.Render("(Блок 20%)")))
+	sb.WriteString("\n")
+
+	sb.WriteString(cSub.Render(" [Затопленные Гроты]") + "\n")
+	sb.WriteString(fmtMob("Болотный слизень", 16, 26, 9, 1, 9, "+20% HP, +12% ATK", stressStyle.Render("(+10 Стр)")))
+	sb.WriteString(fmtMob("Утопленник", 16, 34, 11, 2, 9, "+20% HP, +16% ATK", stressStyle.Render("(+10 Стр)")))
+	sb.WriteString(fmtMob("Болотный ящер", 16, 30, 12, 3, 9, "+18% HP, +18% ATK", accentStyle.Render("(Криты)")))
+	sb.WriteString("\n")
+
+	sb.WriteString(cSub.Render(" [Пепельные Недра]") + "\n")
+	sb.WriteString(fmtMob("Пепельный бес", 14, 36, 13, 2, 10, "+22% HP, +20% ATK", fireStyle.Render("(Опаление)")))
+	sb.WriteString(fmtMob("Орк-берсерк", 14, 46, 15, 4, 10, "+25% HP, +22% ATK", fireStyle.Render("(Ярость)")))
+	sb.WriteString(fmtMob("Саламандра", 14, 40, 16, 3, 10, "+22% HP, +25% ATK", fireStyle.Render("(Ярость)")))
+	sb.WriteString("\n")
+
+	sb.WriteString(cSub.Render(" [Кристальный Лабиринт]") + "\n")
+	sb.WriteString(fmtMob("Гаргулья", 17, 52, 17, 6, 11, "+25% HP, +22% ATK", subtleStyle.Render("(Блок 20%)")))
+	sb.WriteString(fmtMob("Кристальный голем", 17, 60, 18, 7, 11, "+30% HP, +20% ATK", subtleStyle.Render("(Блок 20%)")))
+	sb.WriteString(fmtMob("Фантом", 17, 44, 19, 2, 11, "+20% HP, +28% ATK", stressStyle.Render("(+18 Стр)")))
+	sb.WriteString("\n")
+
+	sb.WriteString(cSub.Render(" [Трон Бездны & Владыки]") + "\n")
+	sb.WriteString(fmtMob("Демон Бездны", 16, 66, 21, 5, 12, "+30% HP, +25% ATK", stressStyle.Render("(+18 Стр)")))
+	sb.WriteString(fmtMob("Рыцарь Смерти", 16, 76, 22, 7, 12, "+32% HP, +28% ATK", dangerStyle.Render("(Вампиризм)")))
+	sb.WriteString(fmt.Sprintf("   • %s: %s 70+(Lvl*15) | %s 14+(Lvl*2) | %s\n",
+		cBoss.Render("Вождь Орков (БОСС)"), cHp.Render("HP"), cAtk.Render("ATK"), cNote.Render("Призывает двух прислужников")))
+	sb.WriteString(fmt.Sprintf("   • %s: %s 260+(Lvl*20) | %s 25+Lvl | %s\n\n",
+		cBoss.Render("Пепельный Дракон (БОСС)"), cHp.Render("HP"), cAtk.Render("ATK"), fireStyle.Render("Дыхание по всей группе")))
+
+	sb.WriteString(cSec.Render("3. АФФИКСЫ И МОДИФИКАТОРЫ ВРАГОВ:") + "\n")
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", fireStyle.Render("🔥 Огненный"), cNote.Render("+3 к базовой атаке; опаляет бойца на +4 урона")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", stressStyle.Render("☣️ Ядовитый"), cNote.Render("Отравляет раны: -3 чистого здоровья и +14 стресса")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", fountStyle.Render("❄️ Ледяной"), cNote.Render("Замедляет инициативу группы и сковывает действия")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", subtleStyle.Render("🪨 Каменный"), cNote.Render("+3 к защите (DEF), +12 к максимальному здоровью")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n\n", dangerStyle.Render("🩸 Вампир"), cNote.Render("Крадет здоровье: исцеляет себе 50% нанесенного урона")))
+
+	sb.WriteString(cSec.Render("4. ТАБЛИЦА СНАРЯЖЕНИЯ ПО ТИРАМ (Т1 ➔ Т4):") + "\n")
+	sb.WriteString(cNote.Render("   (Материалы: Железо x1 | Сталь x2 | Мифрил x3 | Адамант x4. Заточка: +2/ур)") + "\n\n")
+
+	sb.WriteString(cSub.Render(" [ТАНК - Тяжелые пластины и бастионные щиты]") + "\n")
+	sb.WriteString(fmt.Sprintf("   • Оружие: %s Гладиус (%s:3, Блок:2) %s%s Палаш (%s:5, Блок:4) %s%s Моргенштерн (%s:7, Блок:6) %s%s Бастионный меч (%s:9, Блок:8)\n",
+		cTier.Render("Т1"), cAtk.Render("Atk"), cArrow, cTier.Render("Т2"), cAtk.Render("Atk"), cArrow, cTier.Render("Т3"), cAtk.Render("Atk"), cArrow, cTier.Render("Т4"), cAtk.Render("Atk")))
+	sb.WriteString(fmt.Sprintf("   • Шлем:   %s Топфхельм (%s:2, Блок:1) %s%s Салад (%s:4, Блок:2) %s%s Армет (%s:6, Блок:3) %s%s Бацинет (%s:8, Блок:4)\n",
+		cTier.Render("Т1"), cDef.Render("Def"), cArrow, cTier.Render("Т2"), cDef.Render("Def"), cArrow, cTier.Render("Т3"), cDef.Render("Def"), cArrow, cTier.Render("Т4"), cDef.Render("Def")))
+	sb.WriteString(fmt.Sprintf("   • Доспех: %s Бригантина (%s:4, %s:+10) %s%s Полудоспех (%s:7, %s:+20) %s%s Готический (%s:10, %s:+30) %s%s Бастионный (%s:13, %s:+40)\n",
+		cTier.Render("Т1"), cDef.Render("Def"), cHp.Render("HP"), cArrow, cTier.Render("Т2"), cDef.Render("Def"), cHp.Render("HP"), cArrow, cTier.Render("Т3"), cDef.Render("Def"), cHp.Render("HP"), cArrow, cTier.Render("Т4"), cDef.Render("Def"), cHp.Render("HP")))
+	sb.WriteString(fmt.Sprintf("   • Поножи: %s Наголенники (%s:2, %s:+5) %s%s Шарнирные (%s:4, %s:+10) %s%s Латные (%s:6, %s:+15) %s%s Протекторы (%s:8, %s:+20)\n\n",
+		cTier.Render("Т1"), cDef.Render("Def"), cHp.Render("HP"), cArrow, cTier.Render("Т2"), cDef.Render("Def"), cHp.Render("HP"), cArrow, cTier.Render("Т3"), cDef.Render("Def"), cHp.Render("HP"), cArrow, cTier.Render("Т4"), cDef.Render("Def"), cHp.Render("HP")))
+
+	sb.WriteString(cSub.Render(" [ВОИН - Двуручное рубящее оружие]") + "\n")
+	sb.WriteString(fmt.Sprintf("   • Оружие: %s Эспадон (%s:5, Крит:1) %s%s Клеймор (%s:8, Крит:2) %s%s Топор (%s:11, Крит:3) %s%s Фальшион (%s:14, Крит:4)\n",
+		cTier.Render("Т1"), cAtk.Render("Atk"), cArrow, cTier.Render("Т2"), cAtk.Render("Atk"), cArrow, cTier.Render("Т3"), cAtk.Render("Atk"), cArrow, cTier.Render("Т4"), cAtk.Render("Atk")))
+	sb.WriteString(fmt.Sprintf("   • Шлем:   %s Норманнский (%s:2, Крит:1) %s%s Бацинет (%s:4, Крит:1) %s%s Барбют (%s:6, Крит:1) %s%s Шишак (%s:8, Крит:1)\n",
+		cTier.Render("Т1"), cDef.Render("Def"), cArrow, cTier.Render("Т2"), cDef.Render("Def"), cArrow, cTier.Render("Т3"), cDef.Render("Def"), cArrow, cTier.Render("Т4"), cDef.Render("Def")))
+	sb.WriteString(fmt.Sprintf("   • Доспех: %s Хауберк (%s:3, %s:+8) %s%s Кираса (%s:5, %s:+16) %s%s Чешуйчатый (%s:7, %s:+24) %s%s Нагрудник (%s:9, %s:+32)\n",
+		cTier.Render("Т1"), cDef.Render("Def"), cHp.Render("HP"), cArrow, cTier.Render("Т2"), cDef.Render("Def"), cHp.Render("HP"), cArrow, cTier.Render("Т3"), cDef.Render("Def"), cHp.Render("HP"), cArrow, cTier.Render("Т4"), cDef.Render("Def"), cHp.Render("HP")))
+	sb.WriteString(fmt.Sprintf("   • Поножи: %s Чешуйчатые (%s:2) %s%s Чулки (%s:4) %s%s Пластины (%s:6) %s%s Бригантинные (%s:8)\n\n",
+		cTier.Render("Т1"), cDef.Render("Def"), cArrow, cTier.Render("Т2"), cDef.Render("Def"), cArrow, cTier.Render("Т3"), cDef.Render("Def"), cArrow, cTier.Render("Т4"), cDef.Render("Def")))
+
+	sb.WriteString(cSub.Render(" [РАЗБОЙНИК - Клинки скрытности]") + "\n")
+	sb.WriteString(fmt.Sprintf("   • Оружие: %s Ножи (%s:4, Крит:2) %s%s Стилеты (%s:6, Крит:4) %s%s Кинжалы (%s:8, Крит:6) %s%s Кортики (%s:10, Крит:8)\n",
+		cTier.Render("Т1"), cAtk.Render("Atk"), cArrow, cTier.Render("Т2"), cAtk.Render("Atk"), cArrow, cTier.Render("Т3"), cAtk.Render("Atk"), cArrow, cTier.Render("Т4"), cAtk.Render("Atk")))
+	sb.WriteString(fmt.Sprintf("   • Шлем:   %s Маска (%s:1, Крит:1) %s%s Капюшон (%s:3, Крит:1) %s%s Бандана (%s:5, Крит:1) %s%s Скрытность (%s:7, Крит:1)\n",
+		cTier.Render("Т1"), cDef.Render("Def"), cArrow, cTier.Render("Т2"), cDef.Render("Def"), cArrow, cTier.Render("Т3"), cDef.Render("Def"), cArrow, cTier.Render("Т4"), cDef.Render("Def")))
+	sb.WriteString(fmt.Sprintf("   • Доспех: %s Колет (%s:2, Крит:1) %s%s Гамбезон (%s:4, Крит:2) %s%s Куртка (%s:6, Крит:3) %s%s Плащ (%s:8, Крит:4)\n",
+		cTier.Render("Т1"), cDef.Render("Def"), cArrow, cTier.Render("Т2"), cDef.Render("Def"), cArrow, cTier.Render("Т3"), cDef.Render("Def"), cArrow, cTier.Render("Т4"), cDef.Render("Def")))
+	sb.WriteString(fmt.Sprintf("   • Поножи: %s Краги (%s:1) %s%s Гетры (%s:3) %s%s Мягкие (%s:5) %s%s Клёпаные (%s:7)\n\n",
+		cTier.Render("Т1"), cDef.Render("Def"), cArrow, cTier.Render("Т2"), cDef.Render("Def"), cArrow, cTier.Render("Т3"), cDef.Render("Def"), cArrow, cTier.Render("Т4"), cDef.Render("Def")))
+
+	sb.WriteString(cSub.Render(" [МАГ - Эфирные проводники и ритуальные мантии]") + "\n")
+	sb.WriteString(fmt.Sprintf("   • Оружие: %s Трость (%s:6, MP:+10) %s%s Посох (%s:9, MP:+20) %s%s Жезл (%s:12, MP:+30) %s%s Архимагический (%s:15, MP:+40)\n",
+		cTier.Render("Т1"), cAtk.Render("Atk"), cArrow, cTier.Render("Т2"), cAtk.Render("Atk"), cArrow, cTier.Render("Т3"), cAtk.Render("Atk"), cArrow, cTier.Render("Т4"), cAtk.Render("Atk")))
+	sb.WriteString(fmt.Sprintf("   • Шлем:   %s Шляпа (%s:1, MP:+8) %s%s Обруч (%s:3, MP:+14) %s%s Диадема (%s:5, MP:+20) %s%s Капюшон (%s:7, MP:+26)\n",
+		cTier.Render("Т1"), cDef.Render("Def"), cArrow, cTier.Render("Т2"), cDef.Render("Def"), cArrow, cTier.Render("Т3"), cDef.Render("Def"), cArrow, cTier.Render("Т4"), cDef.Render("Def")))
+	sb.WriteString(fmt.Sprintf("   • Доспех: %s Роба (%s:2, MP:+15) %s%s Мантия (%s:4, MP:+25) %s%s Ритуальное (%s:6, MP:+35) %s%s Астральное (%s:8, MP:+45)\n",
+		cTier.Render("Т1"), cDef.Render("Def"), cArrow, cTier.Render("Т2"), cDef.Render("Def"), cArrow, cTier.Render("Т3"), cDef.Render("Def"), cArrow, cTier.Render("Т4"), cDef.Render("Def")))
+	sb.WriteString(fmt.Sprintf("   • Поножи: %s Обмотки (%s:1, MP:+6) %s%s Шёлковые (%s:3, MP:+10) %s%s Ленты (%s:5, MP:+14) %s%s Зачарованные (%s:7, MP:+18)\n\n",
+		cTier.Render("Т1"), cDef.Render("Def"), cArrow, cTier.Render("Т2"), cDef.Render("Def"), cArrow, cTier.Render("Т3"), cDef.Render("Def"), cArrow, cTier.Render("Т4"), cDef.Render("Def")))
+
+	sb.WriteString(cSub.Render(" [КЛИРИК - Освященное оружие и облачения]") + "\n")
+	sb.WriteString(fmt.Sprintf("   • Оружие: %s Дубина (%s:4, MP:+8) %s%s Молот (%s:6, MP:+14) %s%s Шестопёр (%s:8, MP:+20) %s%s Булава (%s:10, MP:+26)\n",
+		cTier.Render("Т1"), cAtk.Render("Atk"), cArrow, cTier.Render("Т2"), cAtk.Render("Atk"), cArrow, cTier.Render("Т3"), cAtk.Render("Atk"), cArrow, cTier.Render("Т4"), cAtk.Render("Atk")))
+	sb.WriteString(fmt.Sprintf("   • Шлем:   %s Митра (%s:2, Рез:5%%) %s%s Койф (%s:4, Рез:10%%) %s%s Капеллина (%s:6, Рез:15%%) %s%s Обруч (%s:8, Рез:20%%)\n",
+		cTier.Render("Т1"), cDef.Render("Def"), cArrow, cTier.Render("Т2"), cDef.Render("Def"), cArrow, cTier.Render("Т3"), cDef.Render("Def"), cArrow, cTier.Render("Т4"), cDef.Render("Def")))
+	sb.WriteString(fmt.Sprintf("   • Доспех: %s Сутано (%s:3, Рез:10%%) %s%s Инквизитор (%s:5, Рез:15%%) %s%s Пресвитерская (%s:7, Рез:20%%) %s%s Священный (%s:9, Рез:25%%)\n",
+		cTier.Render("Т1"), cDef.Render("Def"), cArrow, cTier.Render("Т2"), cDef.Render("Def"), cArrow, cTier.Render("Т3"), cDef.Render("Def"), cArrow, cTier.Render("Т4"), cDef.Render("Def")))
+	sb.WriteString(fmt.Sprintf("   • Поножи: %s Кольчужные (%s:2, %s:+6) %s%s Наголенники (%s:4, %s:+12) %s%s Сапоги (%s:6, %s:+18) %s%s Наколенники (%s:8, %s:+24)\n\n",
+		cTier.Render("Т1"), cDef.Render("Def"), cHp.Render("HP"), cArrow, cTier.Render("Т2"), cDef.Render("Def"), cHp.Render("HP"), cArrow, cTier.Render("Т3"), cDef.Render("Def"), cHp.Render("HP"), cArrow, cTier.Render("Т4"), cDef.Render("Def"), cHp.Render("HP")))
+
+	sb.WriteString(cSec.Render("5. РЕЛИКВИИ, СУМКИ И ГОРОДСКИЕ СЛУЖБЫ:") + "\n")
+	sb.WriteString(fmt.Sprintf(" • %s: Золото до +45%%, но враги наносят больше урона.\n", cItem.Render("Компас Алчности")))
+	sb.WriteString(fmt.Sprintf(" • %s: При гибели бойца живые получают +3 Atk за ур. реликвии.\n", cItem.Render("Корона Мученика")))
+	sb.WriteString(fmt.Sprintf(" • %s: Сопротивление стрессу всей группы до 60%%.\n", cItem.Render("Священный Грааль")))
+	sb.WriteString(fmt.Sprintf(" • %s: 5 слотов ➔ 8 ➔ 12 ➔ 16 ➔ 20 ➔ 25 слотов.\n", cItem.Render("Уровни сумок")))
+	sb.WriteString(fmt.Sprintf(" • %s: При нехватке золота на воскрешение павших хоронят у реки.\n\n", cItem.Render("Погребение в Церкви")))
+
+	sb.WriteString(cNote.Render("[I / Esc / S] Закрыть кодекс  |  [↑/↓ / PgUp / PgDn] Прокрутка"))
+
+	wrappedText := lipgloss.NewStyle().Width(innerW).Render(sb.String())
+	lines := strings.Split(wrappedText, "\n")
+
+	maxVisibleLines := max(10, m.TermHeight-8)
+	maxScroll := max(0, len(lines)-maxVisibleLines)
+	if m.StatsScroll > maxScroll {
+		m.StatsScroll = maxScroll
+	}
+	if m.StatsScroll < 0 {
+		m.StatsScroll = 0
+	}
+
+	endIdx := min(len(lines), m.StatsScroll+maxVisibleLines)
+	visibleLines := lines[m.StatsScroll:endIdx]
+	renderedContent := strings.Join(visibleLines, "\n")
+
+	box := statsBoxStyle.Width(boxW).Render(renderedContent)
+	w := max(100, m.TermWidth)
+	h := max(30, m.TermHeight)
+	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, box)
+}
+
+func (m Model) renderArmoryScreen() string {
+	var sb strings.Builder
+
+	header := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true).Render("═══ АРСЕНАЛ ОТРЯДА И АЛХИМИЧЕСКИЕ МУТАЦИИ [E] ═══")
+	sb.WriteString(header + "\n\n")
+
+	renderSlotInfo := func(slotName string, it *EquipItem) string {
+		if it == nil {
+			return fmt.Sprintf("   • %-7s: %s\n", slotName, subtleStyle.Render("Пусто"))
+		}
+		matStr := lipgloss.NewStyle().Foreground(lipgloss.Color("245")).Render(fmt.Sprintf("[%s, x%d]", it.Material.Name, it.Material.BonusMult))
+
+		modStr := ""
+		if it.Prefix != nil {
+			modStr += fmt.Sprintf(" | %s (+%d %s)", it.Prefix.Name, it.Prefix.Bonus, it.Prefix.Element)
+		}
+		if it.Suffix != nil {
+			modStr += fmt.Sprintf(" | %s (+%d %s)", it.Suffix.Name, it.Suffix.Bonus, it.Suffix.Effect)
+		}
+
+		statLabel := "Защ"
+		if it.Slot == SlotWeapon {
+			statLabel = "Атк"
+		}
+
+		upg := ""
+		if it.UpgradeLevel > 0 {
+			upg = fmt.Sprintf(" +%d", it.UpgradeLevel)
+		}
+
+		return fmt.Sprintf("   • %-7s: %s%s %s -> Итого: %s %d%s\n",
+			slotName, goldStyle.Render(it.BaseName), upg, matStr, statLabel, it.TotalStat(), subtleStyle.Render(modStr))
+	}
+
+	for _, h := range m.Party {
+		status := healStyle.Render("[В СТРОЮ]")
+		if h.IsDead {
+			status = dangerStyle.Render("[МЕРТВ]")
+		}
+
+		heroTitle := h.FullName()
+		if h.Title != "" {
+			heroTitle = titleStyle.Render(heroTitle)
+		}
+
+		atkBonus := (h.ElixirCount + 1) / 2 * 2
+		hpBonus := (h.ElixirCount / 2) * 12
+		elixirInfo := subtleStyle.Render("Эликсиры не применялись")
+		if h.ElixirCount > 0 {
+			elixirInfo = accentStyle.Render(fmt.Sprintf("Выпито эликсиров: %d шт. (Бонус: +%d Atk, +%d MaxHP)", h.ElixirCount, atkBonus, hpBonus))
+		}
+
+		potInfo := "Нет"
+		if h.Potion != nil {
+			potInfo = fmt.Sprintf("%s %s (Сила: %d)", h.Potion.Symbol, getPotionName(*h.Potion), h.Potion.Power)
+		}
+
+		sb.WriteString(fmt.Sprintf("👤 %s (%s) %s\n", heroTitle, h.Class, status))
+		sb.WriteString(fmt.Sprintf("   🧪 Алхимия: %s | В поясе: %s\n", elixirInfo, potionStyle.Render(potInfo)))
+		sb.WriteString(renderSlotInfo("Оружие", h.Weapon))
+		sb.WriteString(renderSlotInfo("Шлем", h.Head))
+		sb.WriteString(renderSlotInfo("Доспех", h.Chest))
+		sb.WriteString(renderSlotInfo("Поножи", h.Legs))
+		sb.WriteString("\n")
+	}
+
+	sb.WriteString(subtleStyle.Render("[E/Esc] Закрыть арсенал  |  [Space] Пауза  |  [Q] Выход"))
+
+	box := statsBoxStyle.Render(sb.String())
+	w := max(100, m.TermWidth)
+	h := max(30, m.TermHeight)
+	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, box)
+}
+
+func (m Model) renderTownHub(viewW, viewH int) string {
+	bMarket := "[ ⚖️ РЫНОК ]"
+	bGuild := "[ ⚔️ ГИЛЬДИЯ ]"
+	bAlchemist := "[ 🧪 АЛХИМИК ]"
+	bSmithy := "[ ⚒️ КУЗНИЦА ]"
+	bInvest := "[ 🏛️ МАГИСТРАТ ]"
+	bChurch := "[ ⛪ ЦЕРКОВЬ ]"
+	bTavern := "[ 🍻 ТАВЕРНА ]"
+
+	switch m.TownPhase {
+	case TownPhaseSellLoot, TownPhaseUpgradeBag:
+		bMarket = accentStyle.Render("►[ ⚖️ РЫНОК ]◄")
+	case TownPhaseGuild:
+		bGuild = accentStyle.Render("►[ ⚔️ ГИЛЬДИЯ ]◄")
+	case TownPhaseAlchemist:
+		bAlchemist = accentStyle.Render("►[ 🧪 АЛХИМИК ]◄")
+	case TownPhaseSmithy:
+		bSmithy = accentStyle.Render("►[ ⚒️ КУЗНИЦА ]◄")
+	case TownPhaseInvest:
+		bInvest = accentStyle.Render("►[ 🏛️ МАГИСТРАТ ]◄")
+	case TownPhaseChurch:
+		bChurch = accentStyle.Render("►[ ⛪ ЦЕРКОВЬ ]◄")
+	case TownPhaseTavern:
+		bTavern = accentStyle.Render("►[ 🍻 ТАВЕРНА ]◄")
+	}
+
+	maxLineLen := max(20, viewW-2)
+	centerIn := func(s string) string {
+		visibleLen := lipgloss.Width(s)
+		if visibleLen >= maxLineLen {
+			return s
+		}
+		padding := (maxLineLen - visibleLen) / 2
+		return strings.Repeat(" ", padding) + s
+	}
+
+	rawLines := []string{
+		centerIn(townArtStyle.Render("═══ СТОЛИЧНЫЙ КВАРТАЛ (ПРИВАЛ) ═══")),
+		"",
+		centerIn(fmt.Sprintf("%s   %s   %s", bMarket, bGuild, bAlchemist)),
+		centerIn("════════════════════════════════════"),
+		centerIn(fmt.Sprintf("%s   %s   %s   %s", bSmithy, bInvest, bChurch, bTavern)),
+		"",
+		subtleStyle.Render(strings.Repeat("─", maxLineLen)),
+		questStyle.Render("ДЕЙСТВИЕ: ") + shortenItemName(m.TownDialog, maxLineLen-10),
+		subtleStyle.Render(strings.Repeat("─", maxLineLen)),
+		subtleStyle.Render(shortenItemName("Эликсиры, заточка арсенала, алхимия...", maxLineLen)),
+	}
+
+	var res []string
+	padTop := max(0, (viewH-len(rawLines))/2)
+	for i := 0; i < padTop; i++ {
+		res = append(res, "")
+	}
+	res = append(res, rawLines...)
+	for len(res) < viewH {
+		res = append(res, "")
+	}
+	if len(res) > viewH {
+		res = res[:viewH]
+	}
+	return strings.Join(res, "\n")
+}
+
+func (m Model) renderMap(viewW, viewH int) string {
+	if m.InTown {
+		return m.renderTownHub(viewW, viewH)
+	}
+
+	biome := getBiome(m.Floor)
+	customWall := lipgloss.NewStyle().Foreground(biome.WallColor).Render("#")
+	customFloor := lipgloss.NewStyle().Foreground(biome.FloorColor).Render(string(biome.FloorRune))
+
+	startX := m.PartyPos.X - viewW/2
+	startY := m.PartyPos.Y - viewH/2
+
+	if startX+viewW > m.MapWidth {
+		startX = m.MapWidth - viewW
+	}
+	if startY+viewH > m.MapHeight {
+		startY = m.MapHeight - viewH
+	}
+	if startX < 0 {
+		startX = 0
+	}
+	if startY < 0 {
+		startY = 0
+	}
+
+	var sb strings.Builder
+	for y := 0; y < viewH; y++ {
+		mapY := startY + y
+		for x := 0; x < viewW; x++ {
+			mapX := startX + x
+			if mapX >= m.MapWidth || mapY >= m.MapHeight {
+				sb.WriteString(" ")
+				continue
+			}
+
+			if mapX == m.PartyPos.X && mapY == m.PartyPos.Y {
+				sb.WriteString(partyStyle.Render("@"))
+				continue
+			}
+			if !m.Explored[mapY][mapX] {
+				sb.WriteString(" ")
+				continue
+			}
+			pos := Point{mapX, mapY}
+			if pack, exists := m.Packs[pos]; exists {
+				first := pack.GetFirstLiving()
+				if first != nil {
+					sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color(first.Color)).Bold(true).Render(string(first.Glyph)))
+				} else {
+					sb.WriteString(customFloor)
+				}
+				continue
+			}
+			switch m.Grid[mapY][mapX] {
+			case TileWall:
+				sb.WriteString(customWall)
+			case TileFloor:
+				sb.WriteString(customFloor)
+			case TileChest:
+				sb.WriteString(goldStyle.Render("$"))
+			case TileRelic:
+				sb.WriteString(relicTileStyle.Render("*"))
+			case TileAltar:
+				sb.WriteString(altarStyle.Render("_"))
+			case TileFountain:
+				sb.WriteString(fountStyle.Render("~"))
+			case TileTrappedChest:
+				sb.WriteString(trappedChestStyle.Render("T"))
+			case TileBarrel:
+				sb.WriteString(barrelStyle.Render("o"))
+			case TileStairs:
+				sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("45")).Bold(true).Render(">"))
+			case TileExit:
+				sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("45")).Bold(true).Render("<"))
+			default:
+				sb.WriteRune(rune(m.Grid[mapY][mapX]))
+			}
+		}
+		if y < viewH-1 {
+			sb.WriteString("\n")
+		}
+	}
+	return sb.String()
+}
+
+func (m Model) renderHeroCard(h *Hero, cardWidth int) string {
+	isActiveTurn := false
+	if m.Combat != nil && len(m.Combat.TurnQueue) > 0 {
+		idx := m.Combat.TurnIdx
+		if idx >= len(m.Combat.TurnQueue) {
+			idx = 0
+		}
+		if m.Combat.TurnQueue[idx].Type == CombatantHero && m.Combat.TurnQueue[idx].HeroRef == h {
+			isActiveTurn = true
+		}
+	}
+
+	var sb strings.Builder
+	innerWidth := max(18, cardWidth-4)
+
+	nameRaw := h.FullName()
+	nameRunes := []rune(nameRaw)
+	if len(nameRunes) > innerWidth {
+		nameRaw = string(nameRunes[:innerWidth-1]) + "…"
+	}
+	nameStr := nameRaw
+	if h.Title != "" {
+		nameStr = titleStyle.Render(nameRaw)
+	}
+
+	clsStr := string(h.Class)
+	if innerWidth < 22 && len([]rune(clsStr)) > 3 {
+		clsStr = string([]rune(clsStr)[:3])
+	}
+	classFormatted := subtleStyle.Render("(" + clsStr + ")")
+
+	potSlot := subtleStyle.Render("[·]")
+	if h.Potion != nil {
+		potSlot = fmt.Sprintf("[%s]", h.Potion.Symbol)
+	}
+
+	buffSlot := subtleStyle.Render("[-]")
+	switch {
+	case h.Affliction != AfflictionNone:
+		buffSlot = stressStyle.Render("[👁]")
+	case h.IsGuarding:
+		buffSlot = healStyle.Render("[🛡]")
+	case h.IsBerserk:
+		buffSlot = fireStyle.Render("[⚔ ]")
+	case h.IsStealthed:
+		buffSlot = accentStyle.Render("[🗡]")
+	case h.IsCharged:
+		buffSlot = accentStyle.Render("[🔮]")
+	case h.IsAura:
+		buffSlot = fountStyle.Render("[✨]")
+	}
+
+	turnSlot := subtleStyle.Render("[ ]")
+	if isActiveTurn {
+		turnSlot = accentStyle.Render("[⚡]")
+	}
+
+	if h.IsDead {
+		sb.WriteString(fmt.Sprintf("%s\n", nameStr))
+		sb.WriteString(fmt.Sprintf("%s %s\n", classFormatted, dangerStyle.Render("[☠️ ПАЛ]")))
+		sb.WriteString(subtleStyle.Render(shortenItemName(h.CauseOfDeath, innerWidth)) + "\n")
+		sb.WriteString(fmt.Sprintf("Этаж: %d\n", m.Floor))
+		sb.WriteString(subtleStyle.Render("[Ждет замены]"))
+	} else {
+		sb.WriteString(fmt.Sprintf("%s\n", nameStr))
+		sb.WriteString(fmt.Sprintf("%s %s %s %s\n", classFormatted, potSlot, buffSlot, turnSlot))
+
+		barLen := max(2, (innerWidth-18)/2)
+		hpBar := renderBar(h.HP, h.MaxHP, barLen, lipgloss.Color("82"), lipgloss.Color("238"))
+		mpBar := renderBar(h.MP, h.MaxMP, barLen, lipgloss.Color("39"), lipgloss.Color("238"))
+		sb.WriteString(fmt.Sprintf("HP:%s%2d MP:%s%2d\n", hpBar, h.HP, mpBar, h.MP))
+
+		stressColor := lipgloss.Color("135")
+		if h.Stress >= 140 {
+			stressColor = lipgloss.Color("196")
+		}
+		stressBar := renderBar(h.Stress, 200, barLen, stressColor, lipgloss.Color("238"))
+		sb.WriteString(fmt.Sprintf("СТ:%s%3d ⚔%-2d 🛡%-2d\n", stressBar, h.Stress, h.TotalAtk(), h.TotalDef()))
+
+		slotLen := max(4, (innerWidth-6)/2)
+		formatEquipSlot := func(item *EquipItem, maxLen int) string {
+			if item == nil {
+				return "-"
+			}
+			name := shortenItemName(item.BaseName, maxLen)
+			if item.UpgradeLevel > 0 {
+				return fmt.Sprintf("+%d%s", item.UpgradeLevel, shortenItemName(item.BaseName, maxLen-2))
+			}
+			return name
+		}
+
+		wName := padRight(formatEquipSlot(h.Weapon, slotLen), slotLen)
+		hName := padRight(formatEquipSlot(h.Head, slotLen), slotLen)
+		chName := padRight(formatEquipSlot(h.Chest, slotLen), slotLen)
+		lName := padRight(formatEquipSlot(h.Legs, slotLen), slotLen)
+
+		equipBlock := fmt.Sprintf("⚔%s 🪖%s\n🛡%s 🥾%s", wName, hName, chName, lName)
+		sb.WriteString(subtleStyle.Render(equipBlock))
+	}
+
+	style := heroCardStyle.Width(innerWidth)
+	if h.IsDead {
+		style = heroCardDead.Width(innerWidth)
+	} else if isActiveTurn {
+		style = heroCardActive.Width(innerWidth)
+	}
+	return style.Render(sb.String())
+}
+
+func (m Model) renderPartyBanner(cardWidth int) string {
+	innerWidth := max(18, cardWidth-4)
+	var sb strings.Builder
+	sb.WriteString(goldStyle.Render("👑 ОТРЯД И РЕЛИКВИЯ") + "\n")
+	relicName := "Нет"
+	relicDesc := "Реликвия не найдена"
+	if m.Relic != nil {
+		relicName = m.Relic.Name
+		relicDesc = m.Relic.Description
+	}
+	sb.WriteString(fmt.Sprintf("Реликвия: %s\n", shortenItemName(relicName, innerWidth-10)))
+	sb.WriteString(subtleStyle.Render(shortenItemName(relicDesc, innerWidth)) + "\n")
+	sb.WriteString(fmt.Sprintf("🎒 Мешки: %d/%d слотов\n", len(m.Bag), m.currentBagCapacity()))
+	legacyPart := int(float64(m.Gold) * LegacyTaxRate)
+	sb.WriteString(healStyle.Render(fmt.Sprintf("🏛️ Наследие: +%dG", legacyPart)))
+
+	return lipgloss.NewStyle().
+		Width(innerWidth).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("62")).
+		Padding(0, 1).
+		Render(sb.String())
+}
+
+func (m Model) renderRightContentLines(innerRightW, maxLines int) []string {
+	var lines []string
+	if m.Combat != nil {
+		barrelNotice := ""
+		if m.Combat.HasBarrel {
+			barrelNotice = " [🛢️ ПОРОХ]"
+		}
+		lines = append(lines, dangerStyle.Render(shortenItemName("ВРАЖЕСКАЯ СТАЯ"+barrelNotice+":", innerRightW-2)))
+		lines = append(lines, subtleStyle.Render(strings.Repeat("─", innerRightW-2)))
+
+		availRows := max(1, maxLines-len(lines))
+		displayed := 0
+		for _, mob := range m.Combat.Pack.Members {
+			if displayed >= availRows {
+				break
+			}
+
+			statusWidth := 7
+			stText := fmt.Sprintf("%d/%d", mob.HP, mob.MaxHP)
+			stColor := lipgloss.Color("245")
+			if mob.IsDead {
+				stText = "УБИТ"
+				stColor = lipgloss.Color("239")
+			}
+			stBadge := lipgloss.NewStyle().Foreground(stColor).Render(padRight(fmt.Sprintf("[%s]", stText), statusWidth))
+
+			barLen := 3
+			if innerRightW > 36 {
+				barLen = 4
+			}
+			mobBar := renderBar(mob.HP, mob.MaxHP, barLen, lipgloss.Color("196"), lipgloss.Color("238"))
+
+			affIcon := getAffixIcon(mob.Affix)
+			if affIcon != "" {
+				affIcon += " "
+			}
+
+			prefix := fmt.Sprintf("• %s", affIcon)
+			fixedW := lipgloss.Width(prefix) + 1 + lipgloss.Width(mobBar) + 1 + lipgloss.Width(stBadge)
+			availName := max(3, innerRightW-fixedW)
+			mobName := shortenItemName(mob.Name, availName)
+			namePadded := padRight(mobName, availName)
+
+			lines = append(lines, fmt.Sprintf("%s%s %s %s", prefix, namePadded, mobBar, stBadge))
+			displayed++
+		}
+
+		if len(m.Combat.Pack.Members) > displayed && len(lines) < maxLines {
+			lines = append(lines, subtleStyle.Render(fmt.Sprintf("... и ещё %d", len(m.Combat.Pack.Members)-displayed)))
+		}
+	} else if m.InTown {
+		lines = append(lines, townArtStyle.Render("СТОЛИЧНОЕ УПРАВЛЕНИЕ:"))
+		lines = append(lines, subtleStyle.Render(strings.Repeat("─", innerRightW-2)))
+		lines = append(lines, fmt.Sprintf("Кузница Ур.%-2d  | Церковь Ур.%-2d", m.Legacy.SmithyLevel, m.Legacy.ChurchLevel))
+		lines = append(lines, fmt.Sprintf("Таверна Ур.%-2d  | Алхимик", m.Legacy.TavernLevel))
+		lines = append(lines, "")
+		lines = append(lines, subtleStyle.Render(shortenItemName("Эликсиры, заточка, освящение.", innerRightW-2)))
+	} else {
+		lines = append(lines, accentStyle.Render("РАЗВЕДКА ТЕРРИТОРИИ:"))
+		lines = append(lines, subtleStyle.Render(strings.Repeat("─", innerRightW-2)))
+		lines = append(lines, fmt.Sprintf("Сделано шагов:   %d", m.Stats.TotalSteps))
+		lines = append(lines, fmt.Sprintf("Сундуков найдено: %d", m.Stats.ChestsOpened))
+	}
+	return lines
+}
+
+func (m Model) renderRightContent(innerRightW, infoInnerH int) string {
+	lines := m.renderRightContentLines(innerRightW, infoInnerH)
+	for len(lines) < infoInnerH {
+		lines = append(lines, "")
+	}
+	if len(lines) > infoInnerH {
+		lines = lines[:infoInnerH]
+	}
+	return strings.Join(lines, "\n")
+}
+
+func (m Model) View() string {
+	if m.State == StateMenu {
+		return m.renderMenuScreen()
+	}
+	if m.State == StateDefeat {
+		return m.renderStatsScreen("ПОРАЖЕНИЕ: ВЕСЬ ОТРЯД ПАЛ ВО ТЬМЕ...", lipgloss.Color("196"))
+	}
+	if m.State == StateStatsManual {
+		return m.renderStatsScreen("ЭКИПИРОВКА, НАСЛЕДИЕ И КНИГА ПАМЯТИ", lipgloss.Color("214"))
+	}
+	if m.State == StateInfoBook {
+		return m.renderInfoBookScreen()
+	}
+	if m.State == StateArmory {
+		return m.renderArmoryScreen()
+	}
+
+	termW := max(70, m.TermWidth)
+	termH := max(20, m.TermHeight)
+	usableW := termW - 2
+
+	cardsPerRow := 3
+	if usableW >= 150 || (termH < 34 && usableW >= 115) {
+		cardsPerRow = 6
+	} else if usableW < 90 {
+		cardsPerRow = 2
+	}
+
+	singleCardWidth := (usableW - (cardsPerRow-1)*1) / cardsPerRow
+	numRows := (6 + cardsPerRow - 1) / cardsPerRow
+
+	var cards []string
+	for _, h := range m.Party {
+		cards = append(cards, m.renderHeroCard(h, singleCardWidth))
+	}
+	cards = append(cards, m.renderPartyBanner(singleCardWidth))
+
+	var cardRowElements []string
+	for i := 0; i < len(cards); i += cardsPerRow {
+		end := min(len(cards), i+cardsPerRow)
+		cardRowElements = append(cardRowElements, lipgloss.JoinHorizontal(lipgloss.Top, cards[i:end]...))
+	}
+	middleTier := lipgloss.JoinVertical(lipgloss.Left, cardRowElements...)
+
+	cardsHeight := numRows * 8
+	maxLogs := 5
+	if termH < 32 {
+		maxLogs = 3
+	}
+	if termH < 26 {
+		maxLogs = 2
+	}
+	fixedBottomHeight := maxLogs + 4
+
+	availableTopH := max(6, termH-cardsHeight-fixedBottomHeight)
+
+	sideW := int(float64(usableW) * 0.34)
+	if sideW < 28 {
+		sideW = 28
+	}
+	if sideW > 46 {
+		sideW = 46
+	}
+	mapBoxW := max(32, usableW-sideW-1)
+
+	viewW := max(10, mapBoxW-4)
+	viewH := max(4, availableTopH-2)
+
+	mapStr := m.renderMap(viewW, viewH)
+	leftMapBox := lipgloss.NewStyle().
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("63")).
+		Width(mapBoxW - 2).
+		Height(viewH).
+		Render(mapStr)
+
+	innerRightW := max(22, sideW-4)
+	biome := getBiome(m.Floor)
+	floorTag := fmt.Sprintf("ЭТАЖ %d: %s", m.Floor, biome.Name)
+	if m.InTown {
+		floorTag = fmt.Sprintf("ЭТАЖ %d: [Лагерь]", m.Floor)
+	}
+
+	questTitleShort := shortenItemName(m.CurrentQuest.Title, innerRightW-12)
+	var statusBadge string
+	if m.CurrentQuest.Completed {
+		statusBadge = healStyle.Render("[СДАТЬ]")
+	} else {
+		statusBadge = subtleStyle.Render(fmt.Sprintf("[%d/%d]", m.CurrentQuest.Current, m.CurrentQuest.TargetCount))
+	}
+	questLine := padRight(fmt.Sprintf("📜 %s %s", questTitleShort, statusBadge), innerRightW-4)
+
+	var rightPane string
+	if availableTopH >= 13 {
+		floorBoxContent := fmt.Sprintf(
+			"🏰 %s\n%s",
+			titleStyle.Render(shortenItemName(floorTag, innerRightW-4)),
+			subtleStyle.Render(shortenItemName("Опасность: "+biome.EnvHazard, innerRightW-4)),
+		)
+		floorBox := lipgloss.NewStyle().
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("214")).
+			Width(innerRightW).
+			Height(2).
+			Render(floorBoxContent)
+
+		statusContent := fmt.Sprintf(
+			"💰 Казна: %s\n%s",
+			goldStyle.Render(fmt.Sprintf("%dG", m.Gold)),
+			questLine,
+		)
+		statusBox := lipgloss.NewStyle().
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("39")).
+			Width(innerRightW).
+			Height(2).
+			Render(statusContent)
+
+		infoInnerH := max(3, availableTopH-10)
+		rightInfoBox := lipgloss.NewStyle().
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("63")).
+			Width(innerRightW).
+			Height(infoInnerH).
+			Render(m.renderRightContent(innerRightW, infoInnerH))
+
+		rightPane = lipgloss.JoinVertical(lipgloss.Left, rightInfoBox, statusBox, floorBox)
+	} else {
+		compactH := max(4, availableTopH-2)
+		var lines []string
+		lines = append(lines, fmt.Sprintf("🏰 %s | 💰 %s", titleStyle.Render(shortenItemName(floorTag, 14)), goldStyle.Render(fmt.Sprintf("%dG", m.Gold))))
+		lines = append(lines, fmt.Sprintf("📜 %s", questLine))
+		lines = append(lines, subtleStyle.Render(strings.Repeat("─", innerRightW-2)))
+		lines = append(lines, m.renderRightContentLines(innerRightW, compactH-3)...)
+
+		rightPane = lipgloss.NewStyle().
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("63")).
+			Width(innerRightW).
+			Height(compactH).
+			Render(strings.Join(lines, "\n"))
+	}
+
+	topTier := lipgloss.JoinHorizontal(lipgloss.Top, leftMapBox, " ", rightPane)
+
+	var logs strings.Builder
+	logs.WriteString(lipgloss.NewStyle().Bold(true).Render("ХРОНИКИ ЭКСПЕДИЦИИ:\n"))
+	logSlice := m.Logs
+	if len(logSlice) > maxLogs {
+		logSlice = logSlice[len(logSlice)-maxLogs:]
+	}
+	for i := 0; i < maxLogs; i++ {
+		if i < len(logSlice) {
+			logs.WriteString(fmt.Sprintf("> %s\n", shortenItemName(logSlice[i], termW-8)))
+		} else {
+			logs.WriteString("\n")
+		}
+	}
+
+	controls := subtleStyle.Render("[Space] Пауза  |  [E] Арсенал  |  [I] Кодекс  |  [S] Слава  |  [+/-] Скорость  |  [Q] Выход")
+
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		topTier,
+		middleTier,
+		strings.TrimRight(logs.String(), "\n"),
+		controls,
+	)
+}
+
+func main() {
+	flag.Parse()
+
+	m := initialModel()
+	p := tea.NewProgram(&m, tea.WithAltScreen())
+	finalModel, err := p.Run()
+	if err != nil {
+		fmt.Printf("Ошибка запуска: %v\n", err)
+		os.Exit(1)
+	}
+
+	if *debugReportFlag {
+		if fm, ok := finalModel.(*Model); ok {
+			fm.accumulateDebugReport()
+		} else if fmVal, ok := finalModel.(Model); ok {
+			fmVal.accumulateDebugReport()
+		}
+		saveDebugReportToFile()
+	}
+}
