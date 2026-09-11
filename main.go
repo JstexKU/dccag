@@ -158,23 +158,10 @@ func shortenItemName(name string, maxLen int) string {
 		"Медитации", "Мед.",
 		"Ярости", "Яр.",
 		"Титана", "Тит.",
-		"Двуручный", "2Р-",
-		"Адамантит", "Адам.",
-		"Драконья кость", "Драк.",
-		"Ростовой щит", "Р.щит",
-		"Башенный щит", "Б.щит",
-		"Осадный щит", "О.щит",
-		"готический доспех", "гот.доспех",
-		"бастионный доспех", "баст.доспех",
-		"полудоспех", "полудосп.",
-		"протекторы", "протект.",
-		"наголенники", "нагол.",
-		"Священническое", "Свящ.",
-		"Священническая", "Свящ.",
-		"Инквизитора", "Инкв.",
-		"Кристаллический", "Крист.",
-		"Архимагический", "Архимаг.",
-		"Зачарованные", "Зачар.",
+		"Железн.", "Жел.",
+		"Стальн.", "Стал.",
+		"Мифрил.", "Мифр.",
+		"Адамант.", "Адам.",
 	)
 	res := replacer.Replace(name)
 	runes := []rune(res)
@@ -490,15 +477,16 @@ const (
 
 type MaterialTier struct {
 	Name      string
+	Adj       string
 	BonusMult int
 	ValueMult int
 }
 
 var Materials = []MaterialTier{
-	{Name: "Железо", BonusMult: 1, ValueMult: 1},
-	{Name: "Сталь", BonusMult: 2, ValueMult: 2},
-	{Name: "Мифрил", BonusMult: 3, ValueMult: 4},
-	{Name: "Адамант", BonusMult: 4, ValueMult: 7},
+	{Name: "Железо", Adj: "Железн.", BonusMult: 1, ValueMult: 1},
+	{Name: "Сталь", Adj: "Стальн.", BonusMult: 2, ValueMult: 2},
+	{Name: "Мифрил", Adj: "Мифрил.", BonusMult: 3, ValueMult: 4},
+	{Name: "Адамант", Adj: "Адамант.", BonusMult: 4, ValueMult: 7},
 }
 
 type EquipItem struct {
@@ -536,7 +524,7 @@ func (e *EquipItem) DisplayName() string {
 	if e.Prefix != nil {
 		parts = append(parts, e.Prefix.Name)
 	}
-	parts = append(parts, e.BaseName)
+	parts = append(parts, e.Material.Adj, e.BaseName)
 	if e.UpgradeLevel > 0 {
 		parts = append(parts, fmt.Sprintf("+%d", e.UpgradeLevel))
 	}
@@ -751,12 +739,12 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 		cat = ArmorHeavy
 		switch slot {
 		case SlotWeapon:
-			names := []string{"Гладиус и Ростовой щит", "Палаш и Башенный щит", "Моргенштерн и Осадный щит", "Бастионный меч и Павеза"}
+			names := []string{"Гладиус с баклером", "Палаш с щитом", "Моргенштерн с павезой", "Бастионный меч"}
 			name = names[tier]
 			baseStat = 3 + tier*2
 			blockBonus = 2 + tier*2
 		case SlotChest:
-			names := []string{"Тяжелая бригантина", "Латный полудоспех", "Рыцарский готический доспех", "Полный бастионный доспех"}
+			names := []string{"Бригантина", "Полудоспех", "Кираса бастиона", "Панцирь цитадели"}
 			name = names[tier]
 			baseStat = 4 + tier*3
 			bonusHP = 10 + tier*10
@@ -766,7 +754,7 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 			baseStat = 2 + tier*2
 			blockBonus = 1 + tier
 		case SlotLegs:
-			names := []string{"Латные наголенники", "Шарнирные поножи", "Латные поножи", "Тяжелые протекторы"}
+			names := []string{"Наголенники", "Шарнирные поножи", "Латные поножи", "Протекторы цитадели"}
 			name = names[tier]
 			baseStat = 2 + tier*2
 			bonusHP = 5 + tier*5
@@ -776,22 +764,22 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 		cat = ArmorHeavy
 		switch slot {
 		case SlotWeapon:
-			names := []string{"Эспадон", "Двуручный клеймор", "Боевой топор", "Тяжелый фальшион"}
+			names := []string{"Эспадон", "Клеймор", "Боевой топор", "Фальшион"}
 			name = names[tier]
 			baseStat = 5 + tier*3
 			critBonus = 1 + tier
 		case SlotChest:
-			names := []string{"Кольчужный хауберк", "Шарнирная кираса", "Чешуйчатый доспех", "Латный нагрудник"}
+			names := []string{"Хауберк", "Кираса ярости", "Чешуйчатый доспех", "Нагрудник витязя"}
 			name = names[tier]
 			baseStat = 3 + tier*2
 			bonusHP = 8 + tier*8
 		case SlotHead:
-			names := []string{"Норманнский шлем", "Открытый бацинет", "Барбют", "Стальной шишак"}
+			names := []string{"Норманнский шлем", "Бацинет", "Барбют", "Шишак"}
 			name = names[tier]
 			baseStat = 2 + tier*2
 			critBonus = 1
 		case SlotLegs:
-			names := []string{"Чешуйчатые наголенники", "Кольчужные чулки", "Латные пластины", "Бригантинные поножи"}
+			names := []string{"Чешуйчатые гетры", "Чулки", "Пластины", "Поножи витязя"}
 			name = names[tier]
 			baseStat = 2 + tier*2
 		}
@@ -805,17 +793,17 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 			baseStat = 4 + tier*2
 			critBonus = 2 + tier*2
 		case SlotChest:
-			names := []string{"Кожаный колет", "Стеганый гамбезон", "Клёпаная куртка", "Ассасинский плащ"}
+			names := []string{"Колет", "Гамбезон", "Куртка теневика", "Плащ ассасина"}
 			name = names[tier]
 			baseStat = 2 + tier*2
 			critBonus = 1 + tier
 		case SlotHead:
-			names := []string{"Тканевая маска", "Кожаный капюшон", "Разбойничья бандана", "Капюшон скрытности"}
+			names := []string{"Тканевая маска", "Капюшон", "Бандана", "Маска теней"}
 			name = names[tier]
 			baseStat = 1 + tier*2
 			critBonus = 1
 		case SlotLegs:
-			names := []string{"Кожаные краги", "Плотные гетры", "Мягкие кожаные поножи", "Клёпаные наголенники"}
+			names := []string{"Краги", "Плотные гетры", "Мягкие сапоги", "Поножи бесшумности"}
 			name = names[tier]
 			baseStat = 1 + tier*2
 		}
@@ -824,22 +812,22 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 		cat = ArmorLight
 		switch slot {
 		case SlotWeapon:
-			names := []string{"Рунная трость", "Студенческий посох", "Кристаллический жезл", "Архимагический посох"}
+			names := []string{"Рунная трость", "Посох искр", "Кристаллический жезл", "Архимагический скипетр"}
 			name = names[tier]
 			baseStat = 6 + tier*3
 			bonusMP = 10 + tier*10
 		case SlotChest:
-			names := []string{"Студенческая роба", "Магическая мантия", "Ритуальное облачение", "Астральное одеяние"}
+			names := []string{"Роба ученика", "Мантия чародея", "Одеяние эфира", "Астральная мантия"}
 			name = names[tier]
 			baseStat = 2 + tier*2
 			bonusMP = 15 + tier*10
 		case SlotHead:
-			names := []string{"Остроконечная шляпа", "Ученический обруч", "Чародейская диадема", "Капюшон магистра"}
+			names := []string{"Остроконечная шляпа", "Обруч магии", "Диадема фокуса", "Капюшон магистра"}
 			name = names[tier]
 			baseStat = 1 + tier*2
 			bonusMP = 8 + tier*6
 		case SlotLegs:
-			names := []string{"Тканевые обмотки", "Шёлковые поножи", "Защитные ленты", "Зачарованные набедренники"}
+			names := []string{"Обмотки", "Шёлковые поножи", "Ленты левитации", "Штаны чародея"}
 			name = names[tier]
 			baseStat = 1 + tier*2
 			bonusMP = 6 + tier*4
@@ -849,22 +837,22 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 		cat = ArmorMedium
 		switch slot {
 		case SlotWeapon:
-			names := []string{"Окованная дубина", "Боевой молот", "Шестопёр", "Булава и Книжник"}
+			names := []string{"Окованная дубина", "Боевой молот", "Шестопёр", "Булава света"}
 			name = names[tier]
 			baseStat = 4 + tier*2
 			bonusMP = 8 + tier*6
 		case SlotChest:
-			names := []string{"Священническое сутано", "Доспех Инквизитора", "Пресвитерская кираса", "Священный доспех"}
+			names := []string{"Сутана", "Кираса инквизитора", "Пресвитерский панцирь", "Священный доспех"}
 			name = names[tier]
 			baseStat = 3 + tier*2
 			stressRes = 10 + tier*5
 		case SlotHead:
-			names := []string{"Священническая митра", "Койф", "Капеллина", "Обруч правосудия"}
+			names := []string{"Митра", "Койф", "Капеллина", "Венец правосудия"}
 			name = names[tier]
 			baseStat = 2 + tier*2
 			stressRes = 5 + tier*5
 		case SlotLegs:
-			names := []string{"Кольчужные поножи", "Священнические наголенники", "Инквизиторские сапоги", "Стальные наколенники"}
+			names := []string{"Наголенники веры", "Сапоги паломника", "Инквизиторские сапоги", "Наколенники света"}
 			name = names[tier]
 			baseStat = 2 + tier*2
 			bonusHP = 6 + tier*6
@@ -1516,6 +1504,7 @@ type Model struct {
 	SpeedMs          int
 	TownDelayMs      int
 	StatsScroll      int
+	LogScroll        int
 	RestartCountdown int
 	CurrentQuest     AutoQuest
 	Relic            *PartyRelic
@@ -1655,6 +1644,7 @@ func initialModelWithLegacy(legacy TownLegacy) Model {
 		SpeedMs:          260,
 		TownDelayMs:      2200,
 		StatsScroll:      0,
+		LogScroll:        0,
 		RestartCountdown: 10,
 		CurrentQuest:     generateAutoQuest(1),
 		Relic:            &activeRelic,
@@ -1840,9 +1830,10 @@ func (m *Model) revealFog() {
 
 func (m *Model) addLog(msg string) {
 	m.Logs = append(m.Logs, msg)
-	if len(m.Logs) > 5 {
-		m.Logs = m.Logs[len(m.Logs)-5:]
+	if len(m.Logs) > 100 {
+		m.Logs = m.Logs[len(m.Logs)-100:]
 	}
+	m.LogScroll = 0
 }
 
 func (m *Model) needsHealing() bool {
@@ -3323,7 +3314,6 @@ func (m *Model) stepTown() {
 		spentAlch := 0
 		potsBought := 0
 
-		// 1. Покупка постоянных эликсиров мутаций
 		var living []*Hero
 		for _, h := range m.Party {
 			if !h.IsDead {
@@ -3360,7 +3350,6 @@ func (m *Model) stepTown() {
 			}
 		}
 
-		// 2. Дозакупка расходных зелий в пояс
 		for _, h := range m.Party {
 			if h.IsDead || h.Potion != nil {
 				continue
@@ -3485,6 +3474,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "e":
 			if m.State == StatePlaying {
 				m.State = StateArmory
+				m.StatsScroll = 0
 			} else if m.State == StateArmory {
 				m.State = StatePlaying
 				return m, tickCmd(m.SpeedMs)
@@ -3495,20 +3485,36 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tickCmd(m.SpeedMs)
 			}
 		case "up", "k":
-			if (m.State == StateStatsManual || m.State == StateDefeat || m.State == StateInfoBook) && m.StatsScroll > 0 {
-				m.StatsScroll--
+			if m.State == StatePlaying {
+				if m.LogScroll < len(m.Logs)-3 {
+					m.LogScroll++
+				}
+			} else if m.State == StateStatsManual || m.State == StateDefeat || m.State == StateInfoBook || m.State == StateArmory {
+				if m.StatsScroll > 0 {
+					m.StatsScroll--
+				}
 			}
 		case "down", "j":
-			if (m.State == StateStatsManual || m.State == StateDefeat || m.State == StateInfoBook) && m.StatsScroll < 500 {
-				m.StatsScroll++
+			if m.State == StatePlaying {
+				if m.LogScroll > 0 {
+					m.LogScroll--
+				}
+			} else if m.State == StateStatsManual || m.State == StateDefeat || m.State == StateInfoBook || m.State == StateArmory {
+				if m.StatsScroll < 500 {
+					m.StatsScroll++
+				}
 			}
 		case "pgup":
-			if m.State == StateStatsManual || m.State == StateDefeat || m.State == StateInfoBook {
-				m.StatsScroll = max(0, m.StatsScroll-5)
+			if m.State == StatePlaying {
+				m.LogScroll = min(len(m.Logs)-3, m.LogScroll+5)
+			} else if m.State == StateStatsManual || m.State == StateDefeat || m.State == StateInfoBook || m.State == StateArmory {
+				m.StatsScroll = max(0, m.StatsScroll-6)
 			}
 		case "pgdown":
-			if m.State == StateStatsManual || m.State == StateDefeat || m.State == StateInfoBook {
-				m.StatsScroll += 5
+			if m.State == StatePlaying {
+				m.LogScroll = max(0, m.LogScroll-5)
+			} else if m.State == StateStatsManual || m.State == StateDefeat || m.State == StateInfoBook || m.State == StateArmory {
+				m.StatsScroll += 6
 			}
 		case "+", "=":
 			if m.SpeedMs > 60 {
@@ -3631,7 +3637,7 @@ func (m Model) renderStatsScreen(title string, titleColor lipgloss.Color) string
 		sb.WriteString(countdownStr + "\n")
 	}
 
-	sb.WriteString(subtleStyle.Render("\n[↑/↓] Прокрутка | [R] Перезапуск | [S] Назад | [Q] Выход"))
+	sb.WriteString(subtleStyle.Render("\n[↑/↓/PgUp/PgDn] Прокрутка | [R] Перезапуск | [S] Назад | [Q] Выход"))
 
 	fullText := sb.String()
 	lines := strings.Split(fullText, "\n")
@@ -3657,8 +3663,8 @@ func (m Model) renderStatsScreen(title string, titleColor lipgloss.Color) string
 
 func (m Model) renderInfoBookScreen() string {
 	boxW := m.TermWidth - 8
-	if boxW > 104 {
-		boxW = 104
+	if boxW > 108 {
+		boxW = 108
 	}
 	if boxW < 60 {
 		boxW = 60
@@ -3718,6 +3724,18 @@ func (m Model) renderInfoBookScreen() string {
 	sb.WriteString(fmtMob("Болотный ящер", 16, 30, 12, 3, 9, "+18% HP, +18% ATK", accentStyle.Render("(Криты)")))
 	sb.WriteString("\n")
 
+	sb.WriteString(cSub.Render(" [Пепельные Недра]") + "\n")
+	sb.WriteString(fmtMob("Пепельный бес", 14, 36, 13, 2, 10, "+22% HP, +20% ATK", fireStyle.Render("(Опаление)")))
+	sb.WriteString(fmtMob("Орк-берсерк", 14, 46, 15, 4, 10, "+25% HP, +22% ATK", fireStyle.Render("(Ярость)")))
+	sb.WriteString(fmtMob("Саламандра", 14, 40, 16, 3, 10, "+22% HP, +25% ATK", fireStyle.Render("(Ярость)")))
+	sb.WriteString("\n")
+
+	sb.WriteString(cSub.Render(" [Кристальный Лабиринт]") + "\n")
+	sb.WriteString(fmtMob("Гаргулья", 17, 52, 17, 6, 11, "+25% HP, +22% ATK", subtleStyle.Render("(Блок 20%)")))
+	sb.WriteString(fmtMob("Кристальный голем", 17, 60, 18, 7, 11, "+30% HP, +20% ATK", subtleStyle.Render("(Блок 20%)")))
+	sb.WriteString(fmtMob("Фантом", 17, 44, 19, 2, 11, "+20% HP, +28% ATK", stressStyle.Render("(+18 Стр)")))
+	sb.WriteString("\n")
+
 	sb.WriteString(cSub.Render(" [Трон Бездны & Владыки]") + "\n")
 	sb.WriteString(fmtMob("Демон Бездны", 16, 66, 21, 5, 12, "+30% HP, +25% ATK", stressStyle.Render("(+18 Стр)")))
 	sb.WriteString(fmtMob("Рыцарь Смерти", 16, 76, 22, 7, 12, "+32% HP, +28% ATK", dangerStyle.Render("(Вампиризм)")))
@@ -3731,12 +3749,58 @@ func (m Model) renderInfoBookScreen() string {
 	sb.WriteString(fmt.Sprintf(" • %s: %s\n", subtleStyle.Render("🪨 Каменный"), cNote.Render("+3 к защите (DEF), +12 к максимальному здоровью")))
 	sb.WriteString(fmt.Sprintf(" • %s: %s\n\n", dangerStyle.Render("🩸 Вампир"), cNote.Render("Крадет здоровье: исцеляет себе 50% нанесенного урона")))
 
-	sb.WriteString(cSec.Render("4. ТАБЛИЦА СНАРЯЖЕНИЯ ПО ТИРАМ (Т1 ➔ Т4):") + "\n")
-	sb.WriteString(cSub.Render(" [ТАНК - Тяжелые пластины и бастионные щиты]") + "\n")
-	sb.WriteString(fmt.Sprintf("   • Оружие: %s Гладиус (%s:3, Блок:2) %s%s Бастионный меч (%s:9, Блок:8)\n",
-		cTier.Render("Т1"), cAtk.Render("Atk"), cArrow, cTier.Render("Т4"), cAtk.Render("Atk")))
-	sb.WriteString(fmt.Sprintf("   • Доспех: %s Бригантина (%s:4, %s:+10) %s%s Бастионный (%s:13, %s:+40)\n\n",
-		cTier.Render("Т1"), cDef.Render("Def"), cHp.Render("HP"), cArrow, cTier.Render("Т4"), cDef.Render("Def"), cHp.Render("HP")))
+	sb.WriteString(cSec.Render("4. ТАБЛИЦА СНАРЯЖЕНИЯ (МАТЕРИАЛЫ И БАЗОВЫЕ ТИПЫ):") + "\n")
+	sb.WriteString(cNote.Render("   (Материалы: Железн. x1 | Стальн. x2 | Мифрил. x3 | Адамант. x4. Заточка: +2/ур)") + "\n\n")
+
+	sb.WriteString(cSub.Render(" [ТАНК - Бастионное снаряжение]") + "\n")
+	sb.WriteString(fmt.Sprintf("   • Оружие: %s Гладиус (%s:3) %s%s Палаш %s%s Моргенштерн %s%s Бастионный меч (%s:9, Блок:8)\n",
+		cTier.Render("Т1"), cAtk.Render("Atk"), cArrow, cTier.Render("Т2"), cArrow, cTier.Render("Т3"), cArrow, cTier.Render("Т4"), cAtk.Render("Atk")))
+	sb.WriteString(fmt.Sprintf("   • Доспех: %s Бригантина (%s:4) %s%s Полудоспех %s%s Кираса бастиона %s%s Панцирь цитадели (%s:13, %s:+40)\n",
+		cTier.Render("Т1"), cDef.Render("Def"), cArrow, cTier.Render("Т2"), cArrow, cTier.Render("Т3"), cArrow, cTier.Render("Т4"), cDef.Render("Def"), cHp.Render("HP")))
+	sb.WriteString(fmt.Sprintf("   • Шлем:   %s Топфхельм %s%s Салад %s%s Армет %s%s Бацинет бастиона (%s:8, Блок:4)\n",
+		cTier.Render("Т1"), cArrow, cTier.Render("Т2"), cArrow, cTier.Render("Т3"), cArrow, cTier.Render("Т4"), cDef.Render("Def")))
+	sb.WriteString(fmt.Sprintf("   • Поножи: %s Наголенники %s%s Шарнирные поножи %s%s Латные поножи %s%s Протекторы цитадели (%s:8, %s:+20)\n\n",
+		cTier.Render("Т1"), cArrow, cTier.Render("Т2"), cArrow, cTier.Render("Т3"), cArrow, cTier.Render("Т4"), cDef.Render("Def"), cHp.Render("HP")))
+
+	sb.WriteString(cSub.Render(" [ВОИН - Оружие прорыва и латы]") + "\n")
+	sb.WriteString(fmt.Sprintf("   • Оружие: %s Эспадон (%s:5) %s%s Клеймор %s%s Боевой топор %s%s Фальшион (%s:14, Крит:4)\n",
+		cTier.Render("Т1"), cAtk.Render("Atk"), cArrow, cTier.Render("Т2"), cArrow, cTier.Render("Т3"), cArrow, cTier.Render("Т4"), cAtk.Render("Atk")))
+	sb.WriteString(fmt.Sprintf("   • Доспех: %s Хауберк (%s:3) %s%s Кираса ярости %s%s Чешуйчатый доспех %s%s Нагрудник витязя (%s:9, %s:+32)\n",
+		cTier.Render("Т1"), cDef.Render("Def"), cArrow, cTier.Render("Т2"), cArrow, cTier.Render("Т3"), cArrow, cTier.Render("Т4"), cDef.Render("Def"), cHp.Render("HP")))
+	sb.WriteString(fmt.Sprintf("   • Шлем:   %s Норманнский шлем %s%s Бацинет %s%s Барбют %s%s Шишак (%s:8, Крит:1)\n",
+		cTier.Render("Т1"), cArrow, cTier.Render("Т2"), cArrow, cTier.Render("Т3"), cArrow, cTier.Render("Т4"), cDef.Render("Def")))
+	sb.WriteString(fmt.Sprintf("   • Поножи: %s Чешуйчатые гетры %s%s Чулки %s%s Пластины %s%s Поножи витязя (%s:8)\n\n",
+		cTier.Render("Т1"), cArrow, cTier.Render("Т2"), cArrow, cTier.Render("Т3"), cArrow, cTier.Render("Т4"), cDef.Render("Def")))
+
+	sb.WriteString(cSub.Render(" [РАЗБОЙНИК - Клинки скрытности и легкая кожа]") + "\n")
+	sb.WriteString(fmt.Sprintf("   • Оружие: %s Охотничьи ножи (%s:4) %s%s Парные стилеты %s%s Кинжалы %s%s Воровские кортики (%s:10, Крит:8)\n",
+		cTier.Render("Т1"), cAtk.Render("Atk"), cArrow, cTier.Render("Т2"), cArrow, cTier.Render("Т3"), cArrow, cTier.Render("Т4"), cAtk.Render("Atk")))
+	sb.WriteString(fmt.Sprintf("   • Доспех: %s Колет (%s:2) %s%s Гамбезон %s%s Куртка теневика %s%s Плащ ассасина (%s:8, Крит:4)\n",
+		cTier.Render("Т1"), cDef.Render("Def"), cArrow, cTier.Render("Т2"), cArrow, cTier.Render("Т3"), cArrow, cTier.Render("Т4"), cDef.Render("Def")))
+	sb.WriteString(fmt.Sprintf("   • Шлем:   %s Тканевая маска %s%s Капюшон %s%s Бандана %s%s Маска теней (%s:7, Крит:1)\n",
+		cTier.Render("Т1"), cArrow, cTier.Render("Т2"), cArrow, cTier.Render("Т3"), cArrow, cTier.Render("Т4"), cDef.Render("Def")))
+	sb.WriteString(fmt.Sprintf("   • Поножи: %s Краги %s%s Плотные гетры %s%s Мягкие сапоги %s%s Поножи бесшумности (%s:7)\n\n",
+		cTier.Render("Т1"), cArrow, cTier.Render("Т2"), cArrow, cTier.Render("Т3"), cArrow, cTier.Render("Т4"), cDef.Render("Def")))
+
+	sb.WriteString(cSub.Render(" [МАГ - Эфирные проводники и мантии]") + "\n")
+	sb.WriteString(fmt.Sprintf("   • Оружие: %s Рунная трость (%s:6) %s%s Посох искр %s%s Жезл %s%s Архимагический скипетр (%s:15, MP:+40)\n",
+		cTier.Render("Т1"), cAtk.Render("Atk"), cArrow, cTier.Render("Т2"), cArrow, cTier.Render("Т3"), cArrow, cTier.Render("Т4"), cAtk.Render("Atk")))
+	sb.WriteString(fmt.Sprintf("   • Доспех: %s Роба ученика (%s:2) %s%s Мантия чародея %s%s Одеяние эфира %s%s Астральная мантия (%s:8, MP:+45)\n",
+		cTier.Render("Т1"), cDef.Render("Def"), cArrow, cTier.Render("Т2"), cArrow, cTier.Render("Т3"), cArrow, cTier.Render("Т4"), cDef.Render("Def")))
+	sb.WriteString(fmt.Sprintf("   • Шлем:   %s Остроконечная шляпа %s%s Обруч магии %s%s Диадема фокуса %s%s Капюшон магистра (%s:7, MP:+26)\n",
+		cTier.Render("Т1"), cArrow, cTier.Render("Т2"), cArrow, cTier.Render("Т3"), cArrow, cTier.Render("Т4"), cDef.Render("Def")))
+	sb.WriteString(fmt.Sprintf("   • Поножи: %s Обмотки %s%s Шёлковые поножи %s%s Ленты левитации %s%s Штаны чародея (%s:7, MP:+18)\n\n",
+		cTier.Render("Т1"), cArrow, cTier.Render("Т2"), cArrow, cTier.Render("Т3"), cArrow, cTier.Render("Т4"), cDef.Render("Def")))
+
+	sb.WriteString(cSub.Render(" [КЛИРИК - Освященное оружие и облачения]") + "\n")
+	sb.WriteString(fmt.Sprintf("   • Оружие: %s Окованная дубина (%s:4) %s%s Боевой молот %s%s Шестопёр %s%s Булава света (%s:10, MP:+26)\n",
+		cTier.Render("Т1"), cAtk.Render("Atk"), cArrow, cTier.Render("Т2"), cArrow, cTier.Render("Т3"), cArrow, cTier.Render("Т4"), cAtk.Render("Atk")))
+	sb.WriteString(fmt.Sprintf("   • Доспех: %s Сутана (%s:3) %s%s Кираса инквизитора %s%s Пресвитерский панцирь %s%s Священный доспех (%s:9, Рез:25%%)\n",
+		cTier.Render("Т1"), cDef.Render("Def"), cArrow, cTier.Render("Т2"), cArrow, cTier.Render("Т3"), cArrow, cTier.Render("Т4"), cDef.Render("Def")))
+	sb.WriteString(fmt.Sprintf("   • Шлем:   %s Митра %s%s Койф %s%s Капеллина %s%s Венец правосудия (%s:8, Рез:20%%)\n",
+		cTier.Render("Т1"), cArrow, cTier.Render("Т2"), cArrow, cTier.Render("Т3"), cArrow, cTier.Render("Т4"), cDef.Render("Def")))
+	sb.WriteString(fmt.Sprintf("   • Поножи: %s Наголенники веры %s%s Сапоги паломника %s%s Инквизиторские сапоги %s%s Наколенники света (%s:8, %s:+24)\n\n",
+		cTier.Render("Т1"), cArrow, cTier.Render("Т2"), cArrow, cTier.Render("Т3"), cArrow, cTier.Render("Т4"), cDef.Render("Def"), cHp.Render("HP")))
 
 	sb.WriteString(cSec.Render("5. РЕЛИКВИИ, СУМКИ И ГОРОДСКИЕ СЛУЖБЫ:") + "\n")
 	sb.WriteString(fmt.Sprintf(" • %s: Золото до +45%%, но враги наносят больше урона.\n", cItem.Render("Компас Алчности")))
@@ -3744,7 +3808,7 @@ func (m Model) renderInfoBookScreen() string {
 	sb.WriteString(fmt.Sprintf(" • %s: Сопротивление стрессу всей группы до 60%%.\n", cItem.Render("Священный Грааль")))
 	sb.WriteString(fmt.Sprintf(" • %s: 5 слотов ➔ 8 ➔ 12 ➔ 16 ➔ 20 ➔ 25 слотов.\n\n", cItem.Render("Уровни сумок")))
 
-	sb.WriteString(cNote.Render("[I / Esc / S] Закрыть кодекс  |  [↑/↓ / PgUp / PgDn] Прокрутка"))
+	sb.WriteString(cNote.Render("[↑/↓/PgUp/PgDn] Прокрутка  |  [I / Esc / S] Закрыть кодекс"))
 
 	wrappedText := lipgloss.NewStyle().Width(innerW).Render(sb.String())
 	lines := strings.Split(wrappedText, "\n")
@@ -3834,9 +3898,25 @@ func (m Model) renderArmoryScreen() string {
 		sb.WriteString("\n")
 	}
 
-	sb.WriteString(subtleStyle.Render("[E/Esc] Закрыть арсенал  |  [Space] Пауза  |  [Q] Выход"))
+	sb.WriteString(subtleStyle.Render("[↑/↓/PgUp/PgDn] Прокрутка  |  [E/Esc] Закрыть арсенал  |  [Space] Пауза  |  [Q] Выход"))
 
-	box := statsBoxStyle.Render(sb.String())
+	fullText := sb.String()
+	lines := strings.Split(fullText, "\n")
+
+	maxVisibleLines := max(10, m.TermHeight-8)
+	maxScroll := max(0, len(lines)-maxVisibleLines)
+	if m.StatsScroll > maxScroll {
+		m.StatsScroll = maxScroll
+	}
+	if m.StatsScroll < 0 {
+		m.StatsScroll = 0
+	}
+
+	endIdx := min(len(lines), m.StatsScroll+maxVisibleLines)
+	visibleLines := lines[m.StatsScroll:endIdx]
+	renderedContent := strings.Join(visibleLines, "\n")
+
+	box := statsBoxStyle.Render(renderedContent)
 	w := max(100, m.TermWidth)
 	h := max(30, m.TermHeight)
 	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, box)
@@ -4350,20 +4430,32 @@ func (m Model) View() string {
 	topTier := lipgloss.JoinHorizontal(lipgloss.Top, leftMapBox, " ", rightPane)
 
 	var logs strings.Builder
-	logs.WriteString(lipgloss.NewStyle().Bold(true).Render("ХРОНИКИ ЭКСПЕДИЦИИ:\n"))
-	logSlice := m.Logs
-	if len(logSlice) > maxLogs {
-		logSlice = logSlice[len(logSlice)-maxLogs:]
+	scrollInfo := ""
+	if m.LogScroll > 0 {
+		scrollInfo = fmt.Sprintf(" (Архив: -%d)", m.LogScroll)
 	}
+	logs.WriteString(lipgloss.NewStyle().Bold(true).Render("ХРОНИКИ ЭКСПЕДИЦИИ" + scrollInfo + ":\n"))
+
+	totalLogs := len(m.Logs)
+	endIdx := totalLogs - m.LogScroll
+	if endIdx > totalLogs {
+		endIdx = totalLogs
+	}
+	if endIdx < maxLogs {
+		endIdx = min(totalLogs, maxLogs)
+	}
+	startIdx := max(0, endIdx-maxLogs)
+
 	for i := 0; i < maxLogs; i++ {
-		if i < len(logSlice) {
-			logs.WriteString(fmt.Sprintf("> %s\n", shortenItemName(logSlice[i], termW-8)))
+		curIdx := startIdx + i
+		if curIdx < endIdx && curIdx < totalLogs {
+			logs.WriteString(fmt.Sprintf("> %s\n", shortenItemName(m.Logs[curIdx], termW-8)))
 		} else {
 			logs.WriteString("\n")
 		}
 	}
 
-	controls := subtleStyle.Render("[Space] Пауза  |  [F] Побег  |  [+/-] Скор.  |  [1/2] Темп  |  [E] Арсенал  |  [I] Кодекс  |  [S] Слава  |  [Q] Выход")
+	controls := subtleStyle.Render("[Space] Пауза  |  [↑/↓] Логи  |  [F] Побег  |  [+/-] Скор.  |  [1/2] Темп  |  [E] Арсенал  |  [I] Кодекс  |  [S] Слава  |  [Q] Выход")
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
