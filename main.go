@@ -2278,7 +2278,7 @@ func (m *Model) SelectTarget() *Hero {
 		if !h.IsDead {
 			w := h.Role.AggroWeight
 			if h.HP < h.MaxHP/3 {
-				w += 20 // Раненые привлекают агрессию
+				w += 20
 			}
 			candidates = append(candidates, h)
 			totalWeight += w
@@ -2312,7 +2312,7 @@ func (m *Model) ApplyDamage(target *Hero, rawDmg int) (actual *Hero, finalDmg in
 				mitigation := 0.8
 				if guard.Class == ClassTank {
 					chance = 65
-					mitigation = 0.55 // Танк гасит 45% урона щитом
+					mitigation = 0.55
 				}
 
 				if rand.Intn(100) < chance {
@@ -2504,7 +2504,6 @@ func (m *Model) executeCombatTurn() {
 
 	biome := getBiome(m.Floor)
 
-	// Механика ярости (Enrage) затяжного боя
 	enrageMult := 1.0
 	if m.Combat.Round > 20 {
 		globalDebugReport.EnrageProcs++
@@ -2531,7 +2530,7 @@ func (m *Model) executeCombatTurn() {
 
 		targetMob := m.Combat.Pack.GetLowestHPFocus()
 
-		// 1. ТАНК: Стойка + Удар щитом
+		// 1. ТАНК
 		if h.Class == ClassTank {
 			if h.MP >= skillCost && !h.IsGuarding {
 				h.MP -= skillCost
@@ -2556,7 +2555,7 @@ func (m *Model) executeCombatTurn() {
 			}
 		}
 
-		// 2. ВОИН: Ярость + Рассечение
+		// 2. ВОИН
 		if h.Class == ClassWarrior {
 			if h.MP >= skillCost && !h.IsBerserk {
 				h.MP -= skillCost
@@ -2583,7 +2582,7 @@ func (m *Model) executeCombatTurn() {
 			}
 		}
 
-		// 3. РАЗБОЙНИК: Скрытность + Отравленный клинок
+		// 3. РАЗБОЙНИК
 		if h.Class == ClassRogue {
 			if h.MP >= skillCost && !h.IsStealthed {
 				h.MP -= skillCost
@@ -2605,7 +2604,7 @@ func (m *Model) executeCombatTurn() {
 			}
 		}
 
-		// 4. КЛИРИК: исцеление + Аура + Священная кара
+		// 4. КЛИРИК
 		if h.Class == ClassCleric {
 			var criticalAlly *Hero
 			for _, ally := range m.Party {
@@ -2619,7 +2618,7 @@ func (m *Model) executeCombatTurn() {
 				h.MP -= skillCost
 				hAmt := rand.Intn(10) + 16 + (m.Floor * 3)
 				if m.Combat.Round > 20 {
-					hAmt /= 2 // В фазе Ярости отхил режется
+					hAmt /= 2
 				}
 				criticalAlly.HP += hAmt
 				if criticalAlly.HP > criticalAlly.MaxHP {
@@ -2651,7 +2650,7 @@ func (m *Model) executeCombatTurn() {
 			}
 		}
 
-		// 5. МАГ: подрыв бочек + Огненная буря + Фокус по элите
+		// 5. МАГ
 		if h.Class == ClassMage {
 			if m.Combat.HasBarrel && h.MP >= skillCost {
 				h.MP -= skillCost
@@ -2703,7 +2702,6 @@ func (m *Model) executeCombatTurn() {
 				m.checkAndAwardTitle(h)
 				return
 			} else {
-				// Разделение целей: маг фокусит сильнейшего врага
 				if eliteMob := m.Combat.Pack.GetHighestHPFocus(); eliteMob != nil {
 					targetMob = eliteMob
 				}
@@ -2838,7 +2836,6 @@ func (m *Model) executeCombatTurn() {
 			return
 		}
 
-		// Выбор цели на основе агро
 		victim := m.SelectTarget()
 		if victim == nil {
 			return
@@ -2864,7 +2861,6 @@ func (m *Model) executeCombatTurn() {
 			rawDmg = int(float64(rawDmg) * 0.6)
 		}
 
-		// Сглаживание урона при скоплении монстров
 		if m.Combat.Pack.LivingCount() >= 4 {
 			rawDmg = int(float64(rawDmg) * 0.78)
 		}
@@ -2876,7 +2872,6 @@ func (m *Model) executeCombatTurn() {
 
 		inDmg := max(3, int(float64(rawDmg)*m.Relic.EnemyDmgMod*enrageMult))
 
-		// Перехват урона танком/защитником
 		actualHero, dealtDmg, guarded := m.ApplyDamage(victim, inDmg)
 
 		if guarded {
@@ -3100,7 +3095,7 @@ func (m *Model) getRandomLivingHero() *Hero {
 	return living[rand.Intn(len(living))]
 }
 
-// --- Новый пайплайн Столицы с бюджетированием ---
+// --- Пайплайн Столицы с бюджетированием и мутациями ---
 
 func (m *Model) stepTown() {
 	switch m.TownPhase {
@@ -3328,6 +3323,44 @@ func (m *Model) stepTown() {
 		spentAlch := 0
 		potsBought := 0
 
+		// 1. Покупка постоянных эликсиров мутаций
+		var living []*Hero
+		for _, h := range m.Party {
+			if !h.IsDead {
+				living = append(living, h)
+			}
+		}
+		sort.Slice(living, func(i, j int) bool {
+			return living[i].ElixirCount < living[j].ElixirCount
+		})
+
+		for len(living) > 0 {
+			targetHero := living[0]
+			elixirCost := CalculatePotionCost(180+(targetHero.ElixirCount*40), m.Floor)
+			if alchBudget >= elixirCost && m.Gold >= elixirCost {
+				m.Gold -= elixirCost
+				alchBudget -= elixirCost
+				spentAlch += elixirCost
+				targetHero.ElixirCount++
+
+				if targetHero.ElixirCount%2 == 1 {
+					targetHero.BaseAtk += 2
+					m.addLog(accentStyle.Render(fmt.Sprintf("⚗️ [Алхимик] %s выпил «Эликсир Силы» (+2 Atk, всего: %d) за %dG!", targetHero.Name, targetHero.ElixirCount, elixirCost)))
+				} else {
+					targetHero.MaxHP += 12
+					targetHero.HP += 12
+					m.addLog(healStyle.Render(fmt.Sprintf("⚗️ [Алхимик] %s выпил «Эликсир Жизни» (+12 HP, всего: %d) за %dG!", targetHero.Name, targetHero.ElixirCount, elixirCost)))
+				}
+				potsBought++
+				sort.Slice(living, func(i, j int) bool {
+					return living[i].ElixirCount < living[j].ElixirCount
+				})
+			} else {
+				break
+			}
+		}
+
+		// 2. Дозакупка расходных зелий в пояс
 		for _, h := range m.Party {
 			if h.IsDead || h.Potion != nil {
 				continue
@@ -3351,7 +3384,7 @@ func (m *Model) stepTown() {
 
 		if spentAlch > 0 {
 			globalDebugReport.GoldSpentBreakdown["Алхимия и зелья"] += spentAlch
-			m.addLog(potionStyle.Render(fmt.Sprintf("🧪 [Алхимик] Пополнено зелий: %d шт. (-%dG)!", potsBought, spentAlch)))
+			m.addLog(potionStyle.Render(fmt.Sprintf("🧪 [Алхимик] Всего приобретено снадобий и мутаций на %dG.", spentAlch)))
 		}
 		m.TownPhase = TownPhaseDepart
 
@@ -3466,7 +3499,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.StatsScroll--
 			}
 		case "down", "j":
-			if m.State == StateStatsManual || m.State == StateDefeat || m.State == StateInfoBook {
+			if (m.State == StateStatsManual || m.State == StateDefeat || m.State == StateInfoBook) && m.StatsScroll < 500 {
 				m.StatsScroll++
 			}
 		case "pgup":
@@ -3780,13 +3813,20 @@ func (m Model) renderArmoryScreen() string {
 			heroTitle = titleStyle.Render(heroTitle)
 		}
 
+		atkBonus := ((h.ElixirCount + 1) / 2) * 2
+		hpBonus := (h.ElixirCount / 2) * 12
+		elixirInfo := subtleStyle.Render("Эликсиры не применялись")
+		if h.ElixirCount > 0 {
+			elixirInfo = accentStyle.Render(fmt.Sprintf("Выпито эликсиров: %d шт. (Бонус: +%d Atk, +%d MaxHP)", h.ElixirCount, atkBonus, hpBonus))
+		}
+
 		potInfo := "Нет"
 		if h.Potion != nil {
 			potInfo = fmt.Sprintf("%s %s (Сила: %d)", h.Potion.Symbol, getPotionName(*h.Potion), h.Potion.Power)
 		}
 
 		sb.WriteString(fmt.Sprintf("👤 %s (%s, Агро: %d) %s\n", heroTitle, h.Class, h.Role.AggroWeight, status))
-		sb.WriteString(fmt.Sprintf("   🧪 В поясе: %s\n", potionStyle.Render(potInfo)))
+		sb.WriteString(fmt.Sprintf("   🧪 Алхимия: %s | В поясе: %s\n", elixirInfo, potionStyle.Render(potInfo)))
 		sb.WriteString(renderSlotInfo("Оружие", h.Weapon))
 		sb.WriteString(renderSlotInfo("Шлем", h.Head))
 		sb.WriteString(renderSlotInfo("Доспех", h.Chest))
@@ -4323,7 +4363,7 @@ func (m Model) View() string {
 		}
 	}
 
-	controls := subtleStyle.Render("[Space] Пауза  |  [F] Побег  |  [1/2] Скорость  |  [E] Арсенал  |  [I] Кодекс  |  [S] Слава  |  [Q] Выход")
+	controls := subtleStyle.Render("[Space] Пауза  |  [F] Побег  |  [+/-] Скор.  |  [1/2] Темп  |  [E] Арсенал  |  [I] Кодекс  |  [S] Слава  |  [Q] Выход")
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
