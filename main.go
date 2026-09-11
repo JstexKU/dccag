@@ -3918,6 +3918,18 @@ func (m Model) renderInfoBookScreen() string {
 	sb.WriteString(fmtMob("Болотный ящер", 16, 30, 12, 3, 9, "+18% HP, +18% ATK", accentStyle.Render("(Криты)")))
 	sb.WriteString("\n")
 
+	sb.WriteString(cSub.Render(" [Пепельные Недра]") + "\n")
+	sb.WriteString(fmtMob("Пепельный бес", 14, 36, 13, 2, 10, "+22% HP, +20% ATK", fireStyle.Render("(Опаление)")))
+	sb.WriteString(fmtMob("Орк-берсерк", 14, 46, 15, 4, 10, "+25% HP, +22% ATK", fireStyle.Render("(Ярость)")))
+	sb.WriteString(fmtMob("Саламандра", 14, 40, 16, 3, 10, "+22% HP, +25% ATK", fireStyle.Render("(Ярость)")))
+	sb.WriteString("\n")
+
+	sb.WriteString(cSub.Render(" [Кристальный Лабиринт]") + "\n")
+	sb.WriteString(fmtMob("Гаргулья", 17, 52, 17, 6, 11, "+25% HP, +22% ATK", subtleStyle.Render("(Блок 20%)")))
+	sb.WriteString(fmtMob("Кристальный голем", 17, 60, 18, 7, 11, "+30% HP, +20% ATK", subtleStyle.Render("(Блок 20%)")))
+	sb.WriteString(fmtMob("Фантом", 17, 44, 19, 2, 11, "+20% HP, +28% ATK", stressStyle.Render("(+18 Стр)")))
+	sb.WriteString("\n")
+
 	sb.WriteString(cSub.Render(" [Трон Бездны & Владыки]") + "\n")
 	sb.WriteString(fmtMob("Демон Бездны", 16, 66, 21, 5, 12, "+30% HP, +25% ATK", stressStyle.Render("(+18 Стр)")))
 	sb.WriteString(fmtMob("Рыцарь Смерти", 16, 76, 22, 7, 12, "+32% HP, +28% ATK", dangerStyle.Render("(Вампиризм)")))
@@ -3998,9 +4010,13 @@ func (m Model) renderInfoBookScreen() string {
 	sb.WriteString(fmt.Sprintf(" • %s (База 210G): +20 MaxHP (Приоритет: Танк, Воин)\n", healStyle.Render("Кровь Титана")))
 	sb.WriteString(fmt.Sprintf(" • %s (База 200G): +14 MaxMP, +1 Atk (Приоритет: Маг, Клирик)\n", fountStyle.Render("Флюид Эфира")))
 	sb.WriteString(fmt.Sprintf(" • %s (База 240G): +2 Def, +6 HP (Приоритет: Танк, Клирик)\n\n", healStyle.Render("Эликсир Бастиона")))
-	sb.WriteString(cNote.Render("   (Цены имеют мягкий потолок; отряд равномерно прокачивает всех бойцов)"))
 
-	sb.WriteString(cNote.Render("\n[↑/↓/PgUp/PgDn] Прокрутка  |  [I / Esc / S] Закрыть кодекс"))
+	sb.WriteString(cSec.Render("7. РЕЛИКВИИ И АРТЕФАКТЫ ПОДЗЕМЕЛЬЯ:") + "\n")
+	sb.WriteString(fmt.Sprintf(" • %s: Увеличивает добычу золота до +45%%, но враги бьют больнее.\n", cItem.Render("Компас Алчности")))
+	sb.WriteString(fmt.Sprintf(" • %s: При гибели героя все выжившие получают +3 Atk за каждый уровень реликвии.\n", cItem.Render("Корона Мученика")))
+	sb.WriteString(fmt.Sprintf(" • %s: Пассивно снижает весь получаемый отрядом стресс вплоть до 60%%.\n\n", cItem.Render("Священный Грааль")))
+
+	sb.WriteString(cNote.Render("[↑/↓/PgUp/PgDn] Прокрутка  |  [I / Esc / S] Закрыть кодекс"))
 
 	wrappedText := lipgloss.NewStyle().Width(innerW).Render(sb.String())
 	lines := strings.Split(wrappedText, "\n")
