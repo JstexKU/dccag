@@ -1316,7 +1316,11 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 		return pack
 	}
 
-	packSize := rand.Intn(3) + 3
+	maxExtra := floor / 8
+	if maxExtra > 3 {
+		maxExtra = 3
+	}
+	packSize := rand.Intn(3) + 3 + maxExtra
 	affixes := []MonsterAffix{AffixNone, AffixFire, AffixPoison, AffixFrost, AffixStone, AffixVampiric}
 
 	for i := 1; i <= packSize; i++ {
@@ -1620,6 +1624,7 @@ type Model struct {
 	InTown           bool
 	TownPhase        TownPhase
 	TownDialog       string
+	TownHistory      []string
 	Combat           *ActiveCombat
 	Logs             []string
 	AutoMode         bool
@@ -1765,6 +1770,7 @@ func initialModelWithLegacy(legacy TownLegacy) Model {
 		InTown:           false,
 		TownPhase:        TownPhaseSellLoot,
 		TownDialog:       "Отряд вошел через ворота Столицы на привал.",
+		TownHistory:      []string{},
 		Combat:           nil,
 		Logs:             []string{"[Хроники] Отряд ступил во мрак подземелья dccag."},
 		AutoMode:         true,
@@ -1961,6 +1967,14 @@ func (m *Model) addLog(msg string) {
 		m.Logs = m.Logs[len(m.Logs)-100:]
 	}
 	m.LogScroll = 0
+}
+
+func (m *Model) logTownAction(icon, building, desc string) {
+	entry := fmt.Sprintf("%s %-11s: %s", icon, building, desc)
+	m.TownHistory = append(m.TownHistory, entry)
+	if len(m.TownHistory) > 6 {
+		m.TownHistory = m.TownHistory[len(m.TownHistory)-6:]
+	}
 }
 
 func (m *Model) distributePartyExp(expAmt int) {
@@ -2991,16 +3005,23 @@ func (m *Model) executeCombatTurn() {
 
 		m.checkAndDrinkPotions(victim)
 
+		isRanged := (mob.Type == MobImp || mob.Type == MobPhantom || mob.Type == MobVoidDemon || mob.Type == MobDragon)
+		if isRanged {
+			m.addLog(fireStyle.Render(fmt.Sprintf("🎯 [%s] проводит дальнобойную атаку по позициям %s!", mob.Name, victim.Name)))
+		} else {
+			m.addLog(subtleStyle.Render(fmt.Sprintf("🏃 [%s] сближается вплотную для ближнего боя с %s.", mob.Name, victim.Name)))
+		}
+
 		mobRoll := rand.Intn(20) + 1
 		mobHit := mobRoll + (mob.Atk / 3)
 		heroAC := 10 + victim.TotalDef()
 
 		if mobRoll == 1 {
-			m.addLog(healStyle.Render(fmt.Sprintf("🛡️ %s парировал выпад [%s]!", victim.Name, mob.Name)))
+			m.addLog(healStyle.Render(fmt.Sprintf("🛡️ %s ловко увернулся от выпада [%s]!", victim.Name, mob.Name)))
 			return
 		}
 		if mobHit < heroAC && mobRoll < 19 {
-			m.addLog(subtleStyle.Render(fmt.Sprintf("🛡️ Доспехи %s выдержали удар.", victim.Name)))
+			m.addLog(subtleStyle.Render(fmt.Sprintf("🛡️ Доспехи %s полностью поглотили удар [%s].", victim.Name, mob.Name)))
 			return
 		}
 
@@ -3009,23 +3030,36 @@ func (m *Model) executeCombatTurn() {
 			rawDmg = int(float64(rawDmg) * 0.6)
 		}
 
-		if m.Combat.Pack.LivingCount() >= 4 {
+		livingCount := m.Combat.Pack.LivingCount()
+		if livingCount >= 6 {
+			rawDmg = int(float64(rawDmg) * 0.65)
+		} else if livingCount >= 4 {
 			rawDmg = int(float64(rawDmg) * 0.78)
 		}
 
 		if mobRoll >= 19 {
 			rawDmg = int(float64(rawDmg) * 1.5)
 			m.addStress(victim, 25)
+			m.addLog(dangerStyle.Render(fmt.Sprintf("⚡ КРИТИЧЕСКИЙ УДАР от [%s] по %s!", mob.Name, victim.Name)))
 		}
 
 		inDmg := max(3, int(float64(rawDmg)*m.Relic.EnemyDmgMod*enrageMult))
 
-		actualHero, dealtDmg, guarded := m.ApplyDamage(victim, inDmg)
+		actualHero := victim
+		guarded := false
+		var dealtDmg int
+
+		if !isRanged {
+			actualHero, dealtDmg, guarded = m.ApplyDamage(victim, inDmg)
+		} else {
+			victim.HP -= inDmg
+			dealtDmg = inDmg
+		}
 
 		if guarded {
-			m.addLog(healStyle.Render(fmt.Sprintf("🛡️ %s ПРИКРЫЛ СОБОЙ %s, приняв %d урона!", actualHero.Name, victim.Name, dealtDmg)))
+			m.addLog(healStyle.Render(fmt.Sprintf("🛡️ %s ПРИКРЫЛ СОБОЙ %s от удара [%s], приняв %d урона!", actualHero.Name, victim.Name, mob.Name, dealtDmg)))
 		} else {
-			m.addLog(dangerStyle.Render(fmt.Sprintf("🩸 [%s] нанес %d урона %s!", mob.Name, dealtDmg, actualHero.Name)))
+			m.addLog(dangerStyle.Render(fmt.Sprintf("💥 [%s] нанес %d урона по %s!", mob.Name, dealtDmg, actualHero.Name)))
 		}
 
 		actualHero.Feats.DamageTaken += dealtDmg
@@ -3035,7 +3069,7 @@ func (m *Model) executeCombatTurn() {
 			actualHero.HP = 0
 			actualHero.CauseOfDeath = fmt.Sprintf("Сражен монстром [%s]", mob.Name)
 			m.recordFallenHero(actualHero)
-			m.addLog(dangerStyle.Render(fmt.Sprintf("☠️ %s пал в бою от удара [%s]!", actualHero.Name, mob.Name)))
+			m.addLog(dangerStyle.Render(fmt.Sprintf("☠️ %s пал в бою от фатального удара [%s]!", actualHero.Name, mob.Name)))
 			for _, ally := range m.Party {
 				if !ally.IsDead {
 					m.addStress(ally, 20)
@@ -3256,6 +3290,7 @@ func (m *Model) stepTown() {
 			m.Gold += soldGold
 			m.Stats.TotalGoldEarned += soldGold
 			m.addLog(goldStyle.Render(fmt.Sprintf("⚖️ [Рынок] Трофеи проданы на +%dG.", soldGold)))
+			m.logTownAction("⚖️", "Рынок", fmt.Sprintf("Проданы трофеи на +%dG. Дух укреплен (-40 стресса)", soldGold))
 		}
 		m.Bag = []EquipItem{}
 
@@ -3267,7 +3302,6 @@ func (m *Model) stepTown() {
 				}
 			}
 		}
-		m.addLog(healStyle.Render("🏰 [Город] Безопасные стены Столицы восстановили дух отряда."))
 		m.TownPhase = TownPhaseMagistrate
 
 	case TownPhaseMagistrate:
@@ -3300,6 +3334,7 @@ func (m *Model) stepTown() {
 			}
 			m.addLog(titleStyle.Render(fmt.Sprintf("🏛️ [Магистрат] Отчислено %dG на развитие города («%s» Ур.%d)!",
 				investAmt, targetBld.Name, targetBld.Level+1)))
+			m.logTownAction("🏛️", "Магистрат", fmt.Sprintf("Инвестировано %dG («%s» улучшена до Ур.%d)", investAmt, targetBld.Name, targetBld.Level+1))
 		}
 		m.TownPhase = TownPhaseUpgradeBag
 
@@ -3312,6 +3347,7 @@ func (m *Model) stepTown() {
 				globalDebugReport.GoldSpentBreakdown["Улучшение сумок"] += nextBag.Cost
 				m.BagLevel++
 				m.addLog(goldStyle.Render(fmt.Sprintf("🎒 [Кожевник] Куплен %s (Вместимость: %d слотов) за %dG!", nextBag.Name, nextBag.Capacity, nextBag.Cost)))
+				m.logTownAction("🎒", "Кожевник", fmt.Sprintf("Приобретен %s (-%dG, %d слотов)", nextBag.Name, nextBag.Cost, nextBag.Capacity))
 			}
 		}
 		m.TownPhase = TownPhaseChurch
@@ -3344,6 +3380,7 @@ func (m *Model) stepTown() {
 					h.Affliction = AfflictionNone
 				}
 				m.addLog(fountStyle.Render(fmt.Sprintf("⛪ [Церковь] Служба исцеления проведена (-%dG, поднято: %d)!", blessCost, revived)))
+				m.logTownAction("⛪", "Церковь", fmt.Sprintf("Литургия исцеления: поднято %d бойцов, снят стресс (-%dG)", revived, blessCost))
 			}
 		}
 		m.TownPhase = TownPhaseTavern
@@ -3360,6 +3397,7 @@ func (m *Model) stepTown() {
 				}
 			}
 			m.addLog(healStyle.Render(fmt.Sprintf("🍻 [Таверна] Полноценный отдых (-%dG). Отряд полон сил.", tavernCost)))
+			m.logTownAction("🍻", "Таверна", fmt.Sprintf("Ночлег в комнатах (-%dG). HP и MP восстановлены", tavernCost))
 		} else {
 			barnCost := max(5, tavernCost/4)
 			if m.Gold >= barnCost {
@@ -3373,6 +3411,7 @@ func (m *Model) stepTown() {
 				}
 			}
 			m.addLog(dangerStyle.Render("🏚️ [Сарай] Казна истощена! Ночлег в сарае (45% сил)."))
+			m.logTownAction("🏚️", "Таверна", "Казна пуста! Ночлег в сарае (восстановлено 45% сил)")
 		}
 		m.TownPhase = TownPhaseGuild
 
@@ -3383,6 +3422,7 @@ func (m *Model) stepTown() {
 			m.Stats.TotalGoldEarned += reward
 			m.Stats.QuestsCompleted++
 			m.addLog(questStyle.Render(fmt.Sprintf("📜 [Гильдия] Контракт закрыт: +%dG!", reward)))
+			m.logTownAction("📜", "Гильдия", fmt.Sprintf("Закрыт контракт: получена награда +%dG", reward))
 			m.CurrentQuest = generateAutoQuest(m.Floor)
 		}
 
@@ -3397,10 +3437,12 @@ func (m *Model) stepTown() {
 					globalDebugReport.GoldSpentBreakdown["Найм ветеранов"] += recruitCost
 					m.Party[i] = createHero(newClass, m.Floor, m.Legacy.SmithyLevel)
 					m.addLog(healStyle.Render(fmt.Sprintf("⚔️ [Гильдия] Нанят ветеран %s (%s, Ур.%d) за %dG!", m.Party[i].Name, newClass, m.Party[i].Level, recruitCost)))
+					m.logTownAction("⚔️", "Гильдия", fmt.Sprintf("Нанят ветеран %s (%s, Ур.%d) за %dG", m.Party[i].Name, newClass, m.Party[i].Level, recruitCost))
 				} else {
 					m.Party[i] = createHero(newClass, 1, 0)
 					m.Party[i].Title = "Ополченец"
 					m.addLog(subtleStyle.Render(fmt.Sprintf("🤝 [Гильдия] Ополченец %s (%s) встал в строй бесплатно.", m.Party[i].Name, newClass)))
+					m.logTownAction("🤝", "Гильдия", fmt.Sprintf("Ополченец %s (%s) принят на службу без оплаты", m.Party[i].Name, newClass))
 				}
 			}
 		}
@@ -3462,6 +3504,7 @@ func (m *Model) stepTown() {
 		if totalSpent > 0 {
 			globalDebugReport.GoldSpentBreakdown["Кузница (заточки)"] += totalSpent
 			m.addLog(goldStyle.Render(fmt.Sprintf("⚒️ [Кузнец] Заточено снаряжения: %d шт. (-%dG)!", upgradesCount, totalSpent)))
+			m.logTownAction("⚒️", "Кузница", fmt.Sprintf("Заточено предметов: %d шт. (-%dG)", upgradesCount, totalSpent))
 		}
 		m.TownPhase = TownPhaseAlchemist
 
@@ -3568,10 +3611,12 @@ func (m *Model) stepTown() {
 
 		if spentAlch > 0 {
 			globalDebugReport.GoldSpentBreakdown["Алхимия и зелья"] += spentAlch
+			m.logTownAction("🧪", "Алхимик", fmt.Sprintf("Сварены мутации и зелья на сумму %dG", spentAlch))
 		}
 		m.TownPhase = TownPhaseDepart
 
 	case TownPhaseDepart:
+		m.TownHistory = []string{}
 		m.InTown = false
 		m.PathHistory = []Point{}
 		m.LoopDetectCount = 0
@@ -4131,67 +4176,69 @@ func (m Model) renderArmoryScreen() string {
 }
 
 func (m Model) renderTownHub(viewW, viewH int) string {
-	bMarket := "[ ⚖️ РЫНОК ]"
-	bGuild := "[ ⚔️ ГИЛЬДИЯ ]"
-	bAlchemist := "[ 🧪 АЛХИМИК ]"
-	bSmithy := "[ ⚒️ КУЗНИЦА ]"
-	bInvest := "[ 🏛️ МАГИСТРАТ ]"
-	bChurch := "[ ⛪ ЦЕРКОВЬ ]"
-	bTavern := "[ 🍻 ТАВЕРНА ]"
+	cActive := lipgloss.NewStyle().Foreground(lipgloss.Color("226")).Bold(true)
+	cIdle := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
+	cBorder := lipgloss.NewStyle().Foreground(lipgloss.Color("63"))
+	cHeader := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
 
-	switch m.TownPhase {
-	case TownPhaseSellLoot, TownPhaseUpgradeBag:
-		bMarket = accentStyle.Render("►[ ⚖️ РЫНОК ]◄")
-	case TownPhaseGuild:
-		bGuild = accentStyle.Render("►[ ⚔️ ГИЛЬДИЯ ]◄")
-	case TownPhaseAlchemist:
-		bAlchemist = accentStyle.Render("►[ 🧪 АЛХИМИК ]◄")
-	case TownPhaseSmithy:
-		bSmithy = accentStyle.Render("►[ ⚒️ КУЗНИЦА ]◄")
-	case TownPhaseMagistrate:
-		bInvest = accentStyle.Render("►[ 🏛️ МАГИСТРАТ ]◄")
-	case TownPhaseChurch:
-		bChurch = accentStyle.Render("►[ ⛪ ЦЕРКОВЬ ]◄")
-	case TownPhaseTavern:
-		bTavern = accentStyle.Render("►[ 🍻 ТАВЕРНА ]◄")
+	fmtBld := func(phase TownPhase, icon, name string, lvl int) string {
+		isActive := m.TownPhase == phase
+		lvlStr := ""
+		if lvl > 0 {
+			lvlStr = fmt.Sprintf(" (Ур.%d)", lvl)
+		}
+
+		label := fmt.Sprintf("%s %s%s", icon, name, lvlStr)
+		if isActive {
+			return cActive.Render(fmt.Sprintf("►[%s]◄", label))
+		}
+		return cIdle.Render(fmt.Sprintf(" [%s] ", label))
 	}
 
-	maxLineLen := max(20, viewW-2)
-	centerIn := func(s string) string {
-		visibleLen := lipgloss.Width(s)
-		if visibleLen >= maxLineLen {
+	bMarket := fmtBld(TownPhaseSellLoot, "⚖️", "Рынок", 0)
+	bMagistrate := fmtBld(TownPhaseMagistrate, "🏛️", "Магистрат", 0)
+	bBag := fmtBld(TownPhaseUpgradeBag, "🎒", "Кожевник", m.BagLevel+1)
+	bChurch := fmtBld(TownPhaseChurch, "⛪", "Церковь", m.Legacy.ChurchLevel)
+	bTavern := fmtBld(TownPhaseTavern, "🍻", "Таверна", m.Legacy.TavernLevel)
+	bGuild := fmtBld(TownPhaseGuild, "⚔️", "Гильдия", 0)
+	bSmithy := fmtBld(TownPhaseSmithy, "⚒️", "Кузница", m.Legacy.SmithyLevel)
+	bAlchemist := fmtBld(TownPhaseAlchemist, "🧪", "Алхимик", 0)
+
+	maxW := max(36, viewW-2)
+	center := func(s string) string {
+		w := lipgloss.Width(s)
+		if w >= maxW {
 			return s
 		}
-		padding := (maxLineLen - visibleLen) / 2
-		return strings.Repeat(" ", padding) + s
+		pad := (maxW - w) / 2
+		return strings.Repeat(" ", pad) + s
 	}
 
-	rawLines := []string{
-		centerIn(townArtStyle.Render("═══ СТОЛИЧНЫЙ КВАРТАЛ (ПРИВАЛ) ═══")),
-		"",
-		centerIn(fmt.Sprintf("%s   %s   %s", bMarket, bGuild, bAlchemist)),
-		centerIn("════════════════════════════════════"),
-		centerIn(fmt.Sprintf("%s   %s   %s   %s", bSmithy, bInvest, bChurch, bTavern)),
-		"",
-		subtleStyle.Render(strings.Repeat("─", maxLineLen)),
-		questStyle.Render("ДЕЙСТВИЕ: ") + shortenItemName(m.TownDialog, maxLineLen-10),
-		subtleStyle.Render(strings.Repeat("─", maxLineLen)),
-		subtleStyle.Render(shortenItemName("Квотирование казны: мутации, экипировка, отдых.", maxLineLen)),
+	var sb strings.Builder
+	sb.WriteString(center(cHeader.Render("═══ СТОЛИЧНЫЙ КВАРТАЛ И СЛУЖБЫ ═══")) + "\n\n")
+	sb.WriteString(center(fmt.Sprintf("%s  %s  %s", bMarket, bMagistrate, bBag)) + "\n")
+	sb.WriteString(center(fmt.Sprintf("%s  %s  %s", bChurch, bTavern, bGuild)) + "\n")
+	sb.WriteString(center(fmt.Sprintf("%s  %s", bSmithy, bAlchemist)) + "\n\n")
+
+	sb.WriteString(cBorder.Render(strings.Repeat("─", maxW)) + "\n")
+	sb.WriteString(questStyle.Render(" ЖУРНАЛ ДЕЙСТВИЙ ОТРЯДА В ГОРОДЕ:\n"))
+
+	if len(m.TownHistory) == 0 {
+		sb.WriteString(subtleStyle.Render("   • Отряд проходит через городские ворота на привал...\n"))
+	} else {
+		for _, act := range m.TownHistory {
+			sb.WriteString(fmt.Sprintf("   • %s\n", shortenItemName(act, maxW-6)))
+		}
 	}
 
-	var res []string
-	padTop := max(0, (viewH-len(rawLines))/2)
-	for i := 0; i < padTop; i++ {
-		res = append(res, "")
+	lines := strings.Split(sb.String(), "\n")
+	if len(lines) > viewH {
+		lines = lines[:viewH]
 	}
-	res = append(res, rawLines...)
-	for len(res) < viewH {
-		res = append(res, "")
+	for len(lines) < viewH {
+		lines = append(lines, "")
 	}
-	if len(res) > viewH {
-		res = res[:viewH]
-	}
-	return strings.Join(res, "\n")
+	return strings.Join(lines, "\n")
 }
 
 func (m Model) renderMap(viewW, viewH int) string {
