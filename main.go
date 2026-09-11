@@ -251,6 +251,79 @@ func createPotion(pType PotionType, size PotionSize, floor int) Potion {
 	return Potion{Type: pType, Size: size, Power: power, Cost: cost, Symbol: symbol}
 }
 
+// --- Мутации Алхимика ---
+type MutationType string
+
+const (
+	MutChimera MutationType = "Химера (Все)"
+	MutFury    MutationType = "Ярость (Atk)"
+	MutTitan   MutationType = "Титан (HP)"
+	MutAether  MutationType = "Эфир (MP)"
+	MutBastion MutationType = "Бастион (Def)"
+)
+
+type HeroMutations struct {
+	ChimeraCount int
+	FuryCount    int
+	TitanCount   int
+	AetherCount  int
+	BastionCount int
+}
+
+func (m HeroMutations) Total() int {
+	return m.ChimeraCount + m.FuryCount + m.TitanCount + m.AetherCount + m.BastionCount
+}
+
+func GetClassMutationPreference(class HeroClass, m HeroMutations) MutationType {
+	switch class {
+	case ClassTank:
+		if m.TitanCount <= m.BastionCount {
+			return MutTitan
+		}
+		if m.BastionCount < 3 {
+			return MutBastion
+		}
+		return MutChimera
+	case ClassWarrior:
+		if m.FuryCount <= m.TitanCount {
+			return MutFury
+		}
+		return MutTitan
+	case ClassRogue:
+		if m.FuryCount <= m.ChimeraCount*2 {
+			return MutFury
+		}
+		return MutChimera
+	case ClassMage:
+		if m.AetherCount <= m.FuryCount {
+			return MutAether
+		}
+		return MutFury
+	case ClassCleric:
+		if m.AetherCount <= m.BastionCount {
+			return MutAether
+		}
+		if m.BastionCount <= m.ChimeraCount {
+			return MutBastion
+		}
+		return MutChimera
+	default:
+		return MutChimera
+	}
+}
+
+func CalculateMutationCost(basePrice, floor, heroMutationsCount int) int {
+	floorMult := 1.0 + (float64(floor) * 0.07)
+	heroMult := 1.0 + (float64(heroMutationsCount) * 0.12)
+	cost := int(float64(basePrice) * floorMult * heroMult)
+
+	hardCap := basePrice * 6
+	if cost > hardCap {
+		cost = hardCap
+	}
+	return cost
+}
+
 // --- Биомы ---
 type BiomeType string
 
@@ -573,6 +646,8 @@ type Hero struct {
 	Title        string
 	Class        HeroClass
 	Role         CombatRole
+	Level        int
+	Exp          int
 	MaxHP        int
 	HP           int
 	MaxMP        int
@@ -591,7 +666,7 @@ type Hero struct {
 	CauseOfDeath string
 	SkillName    string
 	SkillCost    int
-	ElixirCount  int
+	Mutations    HeroMutations
 	Feats        HeroHeroics
 
 	Weapon *EquipItem
@@ -600,6 +675,53 @@ type Hero struct {
 	Legs   *EquipItem
 
 	Potion *Potion
+}
+
+func (h *Hero) NextLevelExp() int {
+	return h.Level*100 + (h.Level * h.Level * 25)
+}
+
+func (h *Hero) GainExp(amt int) bool {
+	h.Exp += amt
+	leveledUp := false
+	for h.Exp >= h.NextLevelExp() {
+		h.Exp -= h.NextLevelExp()
+		h.Level++
+		leveledUp = true
+
+		switch h.Class {
+		case ClassTank:
+			h.MaxHP += 12
+			h.MaxMP += 2
+			h.BaseAtk += 1
+			if h.Level%2 == 0 {
+				h.BaseDef += 1
+			}
+		case ClassWarrior:
+			h.MaxHP += 8
+			h.MaxMP += 3
+			h.BaseAtk += 2
+			if h.Level%3 == 0 {
+				h.BaseDef += 1
+			}
+		case ClassRogue:
+			h.MaxHP += 5
+			h.MaxMP += 4
+			h.BaseAtk += 2
+		case ClassMage:
+			h.MaxHP += 4
+			h.MaxMP += 8
+			h.BaseAtk += 3
+		case ClassCleric:
+			h.MaxHP += 6
+			h.MaxMP += 6
+			h.BaseAtk += 1
+		}
+
+		h.HP = h.MaxHP
+		h.MP = h.MaxMP
+	}
+	return leveledUp
 }
 
 func (h *Hero) AddTreasure()       { h.Feats.TreasureFound++ }
@@ -1537,10 +1659,9 @@ func menuTickCmd() tea.Cmd {
 }
 
 func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
-	extraHP := (floor - 1) * 6
-	extraAtk := (floor - 1) * 2
+	targetLevel := max(1, floor/2)
 
-	maxHP := 45 + extraHP
+	maxHP := 45
 	baseDef := 2
 	speed := 10
 	skillName := "Удар"
@@ -1549,35 +1670,35 @@ func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
 
 	switch class {
 	case ClassTank:
-		maxHP = 65 + extraHP
+		maxHP = 65
 		baseDef = 4
 		speed = 8
 		skillName = "Стойка"
 		skillCost = 8
 		maxMP = 30
 	case ClassWarrior:
-		maxHP = 50 + extraHP
+		maxHP = 50
 		baseDef = 2
 		speed = 10
 		skillName = "Ярость"
 		skillCost = 10
 		maxMP = 25
 	case ClassRogue:
-		maxHP = 38 + extraHP
+		maxHP = 38
 		baseDef = 1
 		speed = 15
 		skillName = "Тень"
 		skillCost = 12
 		maxMP = 35
 	case ClassMage:
-		maxHP = 30 + extraHP
+		maxHP = 30
 		baseDef = 0
 		speed = 11
 		skillName = "Заряд"
 		skillCost = 15
 		maxMP = 45
 	case ClassCleric:
-		maxHP = 36 + extraHP
+		maxHP = 36
 		baseDef = 2
 		speed = 9
 		skillName = "Аура"
@@ -1589,16 +1710,22 @@ func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
 		Name:      getRandomName(),
 		Class:     class,
 		Role:      GetClassRole(class),
+		Level:     1,
+		Exp:       0,
 		MaxHP:     maxHP,
 		HP:        maxHP,
 		MaxMP:     maxMP,
 		MP:        maxMP,
-		BaseAtk:   6 + extraAtk + smithyLvl,
+		BaseAtk:   6 + smithyLvl,
 		BaseDef:   baseDef,
 		Speed:     speed,
 		SkillName: skillName,
 		SkillCost: skillCost,
 		IsDead:    false,
+	}
+
+	for h.Level < targetLevel {
+		h.GainExp(h.NextLevelExp())
 	}
 
 	itemFloor := max(1, floor)
@@ -1834,6 +1961,29 @@ func (m *Model) addLog(msg string) {
 		m.Logs = m.Logs[len(m.Logs)-100:]
 	}
 	m.LogScroll = 0
+}
+
+func (m *Model) distributePartyExp(expAmt int) {
+	var living []*Hero
+	for _, h := range m.Party {
+		if !h.IsDead {
+			living = append(living, h)
+		}
+	}
+	if len(living) == 0 {
+		return
+	}
+
+	expPerHero := expAmt / len(living)
+	if expPerHero < 1 {
+		expPerHero = 1
+	}
+
+	for _, h := range living {
+		if h.GainExp(expPerHero) {
+			m.addLog(healStyle.Render(fmt.Sprintf("⭐ [УРОВЕНЬ] %s достиг Ур.%d! Характеристики возросли!", h.Name, h.Level)))
+		}
+	}
 }
 
 func (m *Model) needsHealing() bool {
@@ -2541,6 +2691,7 @@ func (m *Model) executeCombatTurn() {
 					targetMob.HP = 0
 					targetMob.IsDead = true
 					h.Feats.Kills++
+					m.distributePartyExp(targetMob.Exp)
 				}
 				return
 			}
@@ -2564,6 +2715,7 @@ func (m *Model) executeCombatTurn() {
 							mob.HP = 0
 							mob.IsDead = true
 							h.Feats.Kills++
+							m.distributePartyExp(mob.Exp)
 						}
 						hitCount++
 					}
@@ -2590,6 +2742,7 @@ func (m *Model) executeCombatTurn() {
 					targetMob.HP = 0
 					targetMob.IsDead = true
 					h.Feats.Kills++
+					m.distributePartyExp(targetMob.Exp)
 				}
 				return
 			}
@@ -2636,6 +2789,7 @@ func (m *Model) executeCombatTurn() {
 					targetMob.HP = 0
 					targetMob.IsDead = true
 					h.Feats.Kills++
+					m.distributePartyExp(targetMob.Exp)
 				}
 				return
 			}
@@ -2658,6 +2812,7 @@ func (m *Model) executeCombatTurn() {
 							mob.HP = 0
 							mob.IsDead = true
 							h.Feats.Kills++
+							m.distributePartyExp(mob.Exp)
 							g := int(float64(mob.Exp) * m.Relic.GoldMult * 2)
 							m.Gold += g
 							m.Stats.TotalGoldEarned += g
@@ -2682,6 +2837,7 @@ func (m *Model) executeCombatTurn() {
 							mob.HP = 0
 							mob.IsDead = true
 							h.Feats.Kills++
+							m.distributePartyExp(mob.Exp)
 							g := int(float64(mob.Exp) * m.Relic.GoldMult * 2)
 							m.Gold += g
 							m.Stats.TotalGoldEarned += g
@@ -2803,6 +2959,7 @@ func (m *Model) executeCombatTurn() {
 			targetMob.HP = 0
 			targetMob.IsDead = true
 			h.Feats.Kills++
+			m.distributePartyExp(targetMob.Exp)
 			g := int(float64(targetMob.Exp) * m.Relic.GoldMult * 2)
 			m.Gold += g
 			m.Stats.TotalGoldEarned += g
@@ -3239,7 +3396,7 @@ func (m *Model) stepTown() {
 					m.Gold -= recruitCost
 					globalDebugReport.GoldSpentBreakdown["Найм ветеранов"] += recruitCost
 					m.Party[i] = createHero(newClass, m.Floor, m.Legacy.SmithyLevel)
-					m.addLog(healStyle.Render(fmt.Sprintf("⚔️ [Гильдия] Нанят ветеран %s (%s) за %dG!", m.Party[i].Name, newClass, recruitCost)))
+					m.addLog(healStyle.Render(fmt.Sprintf("⚔️ [Гильдия] Нанят ветеран %s (%s, Ур.%d) за %dG!", m.Party[i].Name, newClass, m.Party[i].Level, recruitCost)))
 				} else {
 					m.Party[i] = createHero(newClass, 1, 0)
 					m.Party[i].Title = "Ополченец"
@@ -3312,39 +3469,78 @@ func (m *Model) stepTown() {
 		budget := AllocateBudget(m.Gold)
 		alchBudget := budget.Alchemy
 		spentAlch := 0
-		potsBought := 0
 
-		var living []*Hero
-		for _, h := range m.Party {
-			if !h.IsDead {
-				living = append(living, h)
-			}
-		}
-		sort.Slice(living, func(i, j int) bool {
-			return living[i].ElixirCount < living[j].ElixirCount
-		})
-
-		for len(living) > 0 {
-			targetHero := living[0]
-			elixirCost := CalculatePotionCost(180+(targetHero.ElixirCount*40), m.Floor)
-			if alchBudget >= elixirCost && m.Gold >= elixirCost {
-				m.Gold -= elixirCost
-				alchBudget -= elixirCost
-				spentAlch += elixirCost
-				targetHero.ElixirCount++
-
-				if targetHero.ElixirCount%2 == 1 {
-					targetHero.BaseAtk += 2
-					m.addLog(accentStyle.Render(fmt.Sprintf("⚗️ [Алхимик] %s выпил «Эликсир Силы» (+2 Atk, всего: %d) за %dG!", targetHero.Name, targetHero.ElixirCount, elixirCost)))
-				} else {
-					targetHero.MaxHP += 12
-					targetHero.HP += 12
-					m.addLog(healStyle.Render(fmt.Sprintf("⚗️ [Алхимик] %s выпил «Эликсир Жизни» (+12 HP, всего: %d) за %dG!", targetHero.Name, targetHero.ElixirCount, elixirCost)))
+		for alchBudget > 0 {
+			var candidates []*Hero
+			for _, h := range m.Party {
+				if !h.IsDead {
+					candidates = append(candidates, h)
 				}
-				potsBought++
-				sort.Slice(living, func(i, j int) bool {
-					return living[i].ElixirCount < living[j].ElixirCount
-				})
+			}
+			if len(candidates) == 0 {
+				break
+			}
+
+			sort.Slice(candidates, func(i, j int) bool {
+				return candidates[i].Mutations.Total() < candidates[j].Mutations.Total()
+			})
+			target := candidates[0]
+
+			pref := GetClassMutationPreference(target.Class, target.Mutations)
+			baseCost := 220
+			switch pref {
+			case MutChimera:
+				baseCost = 260
+			case MutBastion:
+				baseCost = 240
+			case MutFury:
+				baseCost = 220
+			case MutTitan:
+				baseCost = 210
+			case MutAether:
+				baseCost = 200
+			}
+
+			cost := CalculateMutationCost(baseCost, m.Floor, target.Mutations.Total())
+			if alchBudget >= cost && m.Gold >= cost {
+				m.Gold -= cost
+				alchBudget -= cost
+				spentAlch += cost
+
+				switch pref {
+				case MutChimera:
+					target.Mutations.ChimeraCount++
+					target.MaxHP += 8
+					target.HP += 8
+					target.MaxMP += 5
+					target.MP += 5
+					target.BaseAtk += 1
+					target.BaseDef += 1
+					m.addLog(accentStyle.Render(fmt.Sprintf("⚗️ %s принял [Сыворотку Химеры] (+8 HP, +5 MP, +1 Atk, +1 Def) за %dG!", target.Name, cost)))
+				case MutFury:
+					target.Mutations.FuryCount++
+					target.BaseAtk += 3
+					target.MaxHP += 2
+					target.HP += 2
+					m.addLog(fireStyle.Render(fmt.Sprintf("⚗️ %s принял [Эссенцию Ярости] (+3 Atk, +2 HP) за %dG!", target.Name, cost)))
+				case MutTitan:
+					target.Mutations.TitanCount++
+					target.MaxHP += 20
+					target.HP += 20
+					m.addLog(healStyle.Render(fmt.Sprintf("⚗️ %s принял [Кровь Титана] (+20 HP) за %dG!", target.Name, cost)))
+				case MutAether:
+					target.Mutations.AetherCount++
+					target.MaxMP += 14
+					target.MP += 14
+					target.BaseAtk += 1
+					m.addLog(fountStyle.Render(fmt.Sprintf("⚗️ %s принял [Флюид Эфира] (+14 MP, +1 Atk) за %dG!", target.Name, cost)))
+				case MutBastion:
+					target.Mutations.BastionCount++
+					target.BaseDef += 2
+					target.MaxHP += 6
+					target.HP += 6
+					m.addLog(healStyle.Render(fmt.Sprintf("⚗️ %s принял [Эликсир Бастиона] (+2 Def, +6 HP) за %dG!", target.Name, cost)))
+				}
 			} else {
 				break
 			}
@@ -3367,13 +3563,11 @@ func (m *Model) stepTown() {
 				alchBudget -= cand.Cost
 				spentAlch += cand.Cost
 				h.Potion = &cand
-				potsBought++
 			}
 		}
 
 		if spentAlch > 0 {
 			globalDebugReport.GoldSpentBreakdown["Алхимия и зелья"] += spentAlch
-			m.addLog(potionStyle.Render(fmt.Sprintf("🧪 [Алхимик] Всего приобретено снадобий и мутаций на %dG.", spentAlch)))
 		}
 		m.TownPhase = TownPhaseDepart
 
@@ -3579,11 +3773,11 @@ func (m Model) renderMenuScreen() string {
 	sb.WriteString("Ваша задача — провести отряд сквозь БЕСКОНЕЧНЫЕ этажи опаснейших биомов.\n\n")
 
 	sb.WriteString(questStyle.Render("ОСОБЕННОСТИ ИГРЫ:\n"))
-	sb.WriteString(" • Безопасные стены Столицы снимают стресс и восстанавливают отряд.\n")
+	sb.WriteString(" • Система уровней и опыта: отряд прокачивает базовые характеристики в боях.\n")
+	sb.WriteString(" • 5 специализированных алхимических мутаций под конкретные классовые роли.\n")
 	sb.WriteString(" • Тактическая модель агро: танки прикрывают магов и клириков щитом.\n")
 	sb.WriteString(" • Квотирование казны: сбалансированное развитие города и защита от переплат.\n")
-	sb.WriteString(" • Мягкое отступление: тактический маневр [F] без ударов в спину.\n")
-	sb.WriteString(" • Бесконечное подземелье: циклические биомы и боссы каждые 10 этажей.\n\n")
+	sb.WriteString(" • Мягкое отступление: тактический маневр [F] без ударов в спину.\n\n")
 
 	sb.WriteString(dangerStyle.Render(fmt.Sprintf("⏳ Автоматический старт экспедиции через: %d сек...\n\n", m.MenuCountdown)))
 	sb.WriteString(healStyle.Render("[ENTER] или [SPACE] — Начать экспедицию немедленно\n"))
@@ -3616,8 +3810,8 @@ func (m Model) renderStatsScreen(title string, titleColor lipgloss.Color) string
 			if h.Title != "" {
 				heroName = titleStyle.Render(heroName)
 			}
-			sb.WriteString(fmt.Sprintf(" • %-20s (%-9s) [%s] (Atk:%2d | Def:%2d)\n",
-				heroName, h.Class, healStyle.Render("ВЫЖИЛ"), h.TotalAtk(), h.TotalDef()))
+			sb.WriteString(fmt.Sprintf(" • %-20s (%-9s, Ур.%2d) [%s] (Atk:%2d | Def:%2d)\n",
+				heroName, h.Class, h.Level, healStyle.Render("ВЫЖИЛ"), h.TotalAtk(), h.TotalDef()))
 		}
 	}
 	sb.WriteString("\n")
@@ -3724,18 +3918,6 @@ func (m Model) renderInfoBookScreen() string {
 	sb.WriteString(fmtMob("Болотный ящер", 16, 30, 12, 3, 9, "+18% HP, +18% ATK", accentStyle.Render("(Криты)")))
 	sb.WriteString("\n")
 
-	sb.WriteString(cSub.Render(" [Пепельные Недра]") + "\n")
-	sb.WriteString(fmtMob("Пепельный бес", 14, 36, 13, 2, 10, "+22% HP, +20% ATK", fireStyle.Render("(Опаление)")))
-	sb.WriteString(fmtMob("Орк-берсерк", 14, 46, 15, 4, 10, "+25% HP, +22% ATK", fireStyle.Render("(Ярость)")))
-	sb.WriteString(fmtMob("Саламандра", 14, 40, 16, 3, 10, "+22% HP, +25% ATK", fireStyle.Render("(Ярость)")))
-	sb.WriteString("\n")
-
-	sb.WriteString(cSub.Render(" [Кристальный Лабиринт]") + "\n")
-	sb.WriteString(fmtMob("Гаргулья", 17, 52, 17, 6, 11, "+25% HP, +22% ATK", subtleStyle.Render("(Блок 20%)")))
-	sb.WriteString(fmtMob("Кристальный голем", 17, 60, 18, 7, 11, "+30% HP, +20% ATK", subtleStyle.Render("(Блок 20%)")))
-	sb.WriteString(fmtMob("Фантом", 17, 44, 19, 2, 11, "+20% HP, +28% ATK", stressStyle.Render("(+18 Стр)")))
-	sb.WriteString("\n")
-
 	sb.WriteString(cSub.Render(" [Трон Бездны & Владыки]") + "\n")
 	sb.WriteString(fmtMob("Демон Бездны", 16, 66, 21, 5, 12, "+30% HP, +25% ATK", stressStyle.Render("(+18 Стр)")))
 	sb.WriteString(fmtMob("Рыцарь Смерти", 16, 76, 22, 7, 12, "+32% HP, +28% ATK", dangerStyle.Render("(Вампиризм)")))
@@ -3802,13 +3984,23 @@ func (m Model) renderInfoBookScreen() string {
 	sb.WriteString(fmt.Sprintf("   • Поножи: %s Наголенники веры %s%s Сапоги паломника %s%s Инквизиторские сапоги %s%s Наколенники света (%s:8, %s:+24)\n\n",
 		cTier.Render("Т1"), cArrow, cTier.Render("Т2"), cArrow, cTier.Render("Т3"), cArrow, cTier.Render("Т4"), cDef.Render("Def"), cHp.Render("HP")))
 
-	sb.WriteString(cSec.Render("5. РЕЛИКВИИ, СУМКИ И ГОРОДСКИЕ СЛУЖБЫ:") + "\n")
-	sb.WriteString(fmt.Sprintf(" • %s: Золото до +45%%, но враги наносят больше урона.\n", cItem.Render("Компас Алчности")))
-	sb.WriteString(fmt.Sprintf(" • %s: При гибели бойца живые получают +3 Atk за ур. реликвии.\n", cItem.Render("Корона Мученика")))
-	sb.WriteString(fmt.Sprintf(" • %s: Сопротивление стрессу всей группы до 60%%.\n", cItem.Render("Священный Грааль")))
-	sb.WriteString(fmt.Sprintf(" • %s: 5 слотов ➔ 8 ➔ 12 ➔ 16 ➔ 20 ➔ 25 слотов.\n\n", cItem.Render("Уровни сумок")))
+	sb.WriteString(cSec.Render("5. ПРОГРЕССИЯ УРОВНЕЙ И КЛАССОВЫЙ ОПЫТ (XP):") + "\n")
+	sb.WriteString(" • Опыт от убитых врагов делится поровну между всеми живыми героями.\n")
+	sb.WriteString(" • Прирост Танка: +12 HP, +2 MP, +1 Atk, +1 Def каждые 2 ур.\n")
+	sb.WriteString(" • Прирост Воина: +8 HP, +3 MP, +2 Atk, +1 Def каждые 3 ур.\n")
+	sb.WriteString(" • Прирост Разбойника: +5 HP, +4 MP, +2 Atk.\n")
+	sb.WriteString(" • Прирост Мага: +4 HP, +8 MP, +3 Atk.\n")
+	sb.WriteString(" • Прирост Клирика: +6 HP, +6 MP, +1 Atk.\n\n")
 
-	sb.WriteString(cNote.Render("[↑/↓/PgUp/PgDn] Прокрутка  |  [I / Esc / S] Закрыть кодекс"))
+	sb.WriteString(cSec.Render("6. АЛХИМИЧЕСКИЕ МУТАЦИИ И ПРИОРИТЕТЫ:") + "\n")
+	sb.WriteString(fmt.Sprintf(" • %s (База 260G): +8 HP, +5 MP, +1 Atk, +1 Def (Универсально)\n", accentStyle.Render("Сыворотка Химеры")))
+	sb.WriteString(fmt.Sprintf(" • %s (База 220G): +3 Atk, +2 HP (Приоритет: Разбойник, Воин, Маг)\n", fireStyle.Render("Эссенция Ярости")))
+	sb.WriteString(fmt.Sprintf(" • %s (База 210G): +20 MaxHP (Приоритет: Танк, Воин)\n", healStyle.Render("Кровь Титана")))
+	sb.WriteString(fmt.Sprintf(" • %s (База 200G): +14 MaxMP, +1 Atk (Приоритет: Маг, Клирик)\n", fountStyle.Render("Флюид Эфира")))
+	sb.WriteString(fmt.Sprintf(" • %s (База 240G): +2 Def, +6 HP (Приоритет: Танк, Клирик)\n\n", healStyle.Render("Эликсир Бастиона")))
+	sb.WriteString(cNote.Render("   (Цены имеют мягкий потолок; отряд равномерно прокачивает всех бойцов)"))
+
+	sb.WriteString(cNote.Render("\n[↑/↓/PgUp/PgDn] Прокрутка  |  [I / Esc / S] Закрыть кодекс"))
 
 	wrappedText := lipgloss.NewStyle().Width(innerW).Render(sb.String())
 	lines := strings.Split(wrappedText, "\n")
@@ -3877,11 +4069,10 @@ func (m Model) renderArmoryScreen() string {
 			heroTitle = titleStyle.Render(heroTitle)
 		}
 
-		atkBonus := ((h.ElixirCount + 1) / 2) * 2
-		hpBonus := (h.ElixirCount / 2) * 12
-		elixirInfo := subtleStyle.Render("Эликсиры не применялись")
-		if h.ElixirCount > 0 {
-			elixirInfo = accentStyle.Render(fmt.Sprintf("Выпито эликсиров: %d шт. (Бонус: +%d Atk, +%d MaxHP)", h.ElixirCount, atkBonus, hpBonus))
+		mutStr := subtleStyle.Render("Нет")
+		if h.Mutations.Total() > 0 {
+			mutStr = accentStyle.Render(fmt.Sprintf("Всего: %d [Хим:%d Яр:%d Тит:%d Эфир:%d Баст:%d]",
+				h.Mutations.Total(), h.Mutations.ChimeraCount, h.Mutations.FuryCount, h.Mutations.TitanCount, h.Mutations.AetherCount, h.Mutations.BastionCount))
 		}
 
 		potInfo := "Нет"
@@ -3889,8 +4080,9 @@ func (m Model) renderArmoryScreen() string {
 			potInfo = fmt.Sprintf("%s %s (Сила: %d)", h.Potion.Symbol, getPotionName(*h.Potion), h.Potion.Power)
 		}
 
-		sb.WriteString(fmt.Sprintf("👤 %s (%s, Агро: %d) %s\n", heroTitle, h.Class, h.Role.AggroWeight, status))
-		sb.WriteString(fmt.Sprintf("   🧪 Алхимия: %s | В поясе: %s\n", elixirInfo, potionStyle.Render(potInfo)))
+		sb.WriteString(fmt.Sprintf("👤 %s (%s, Ур.%d, XP:%d/%d, Агро: %d) %s\n",
+			heroTitle, h.Class, h.Level, h.Exp, h.NextLevelExp(), h.Role.AggroWeight, status))
+		sb.WriteString(fmt.Sprintf("   🧪 Мутации: %s | В поясе: %s\n", mutStr, potionStyle.Render(potInfo)))
 		sb.WriteString(renderSlotInfo("Оружие", h.Weapon))
 		sb.WriteString(renderSlotInfo("Шлем", h.Head))
 		sb.WriteString(renderSlotInfo("Доспех", h.Chest))
@@ -3968,7 +4160,7 @@ func (m Model) renderTownHub(viewW, viewH int) string {
 		subtleStyle.Render(strings.Repeat("─", maxLineLen)),
 		questStyle.Render("ДЕЙСТВИЕ: ") + shortenItemName(m.TownDialog, maxLineLen-10),
 		subtleStyle.Render(strings.Repeat("─", maxLineLen)),
-		subtleStyle.Render(shortenItemName("Квотирование казны: экипировка, отдых, алхимия.", maxLineLen)),
+		subtleStyle.Render(shortenItemName("Квотирование казны: мутации, экипировка, отдых.", maxLineLen)),
 	}
 
 	var res []string
@@ -4086,7 +4278,7 @@ func (m Model) renderHeroCard(h *Hero, cardWidth int) string {
 	var sb strings.Builder
 	innerWidth := max(18, cardWidth-4)
 
-	nameRaw := h.FullName()
+	nameRaw := fmt.Sprintf("%s L%d", h.FullName(), h.Level)
 	nameRunes := []rune(nameRaw)
 	if len(nameRunes) > innerWidth {
 		nameRaw = string(nameRunes[:innerWidth-1]) + "…"
