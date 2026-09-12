@@ -6,36 +6,30 @@ import (
 )
 
 func generateRelic(level int) PartyRelic {
-	relicTypes := []string{"Компас Алчности", "Корона Мученика", "Священный Грааль"}
-	chosen := relicTypes[rand.Intn(len(relicTypes))]
+	relicKeys := []string{"greed_compass", "martyr_crown", "holy_grail"}
+	chosen := relicKeys[rand.Intn(len(relicKeys))]
 
-	prefix := "Потускневший"
-	if level == 2 {
-		prefix = "Освященный"
-	} else if level == 3 {
-		prefix = "Древний"
-	}
-
-	fullName := fmt.Sprintf("%s %s (Ур.%d)", prefix, chosen, level)
+	nameKey := fmt.Sprintf("relic.%s.name.%d", chosen, level)
+	descKey := fmt.Sprintf("relic.%s.desc", chosen)
 
 	switch chosen {
-	case "Компас Алчности":
+	case "greed_compass":
 		gMult := 1.15 + (float64(level) * 0.10)
 		dmgMod := 1.15 - (float64(level) * 0.03)
 		return PartyRelic{
-			Name: fullName, Level: level, GoldMult: gMult, EnemyDmgMod: dmgMod, MartyrFury: false,
-			Description: fmt.Sprintf("+%.0f%% золота, урон врагов %.2fx", (gMult-1)*100, dmgMod),
+			NameKey: nameKey, Level: level, GoldMult: gMult, EnemyDmgMod: dmgMod, MartyrFury: false,
+			DescKey: descKey,
 		}
-	case "Корона Мученика":
+	case "martyr_crown":
 		return PartyRelic{
-			Name: fullName, Level: level, GoldMult: 1.0, EnemyDmgMod: 1.0, MartyrFury: true,
-			Description: fmt.Sprintf("При гибели живые получают +%d Atk", level*3),
+			NameKey: nameKey, Level: level, GoldMult: 1.0, EnemyDmgMod: 1.0, MartyrFury: true,
+			DescKey: descKey,
 		}
 	default:
 		res := 15 + (level * 15)
 		return PartyRelic{
-			Name: fullName, Level: level, GoldMult: 1.0, EnemyDmgMod: 1.0, MartyrFury: false, StressRes: res,
-			Description: fmt.Sprintf("Снижает стресс отряда на %d%%", res),
+			NameKey: nameKey, Level: level, GoldMult: 1.0, EnemyDmgMod: 1.0, MartyrFury: false, StressRes: res,
+			DescKey: descKey,
 		}
 	}
 }
@@ -62,40 +56,39 @@ func generateAutoQuest(curFloor int) AutoQuest {
 		count := rand.Intn(3) + 3
 		return AutoQuest{
 			Type: QuestHuntMonster, TargetMob: target, TargetCount: count,
-			Title: fmt.Sprintf("Охота: %s", target), Description: fmt.Sprintf("Истребить %d [%s]", count, target),
+			TitleKey: "quest.hunt.title", DescKey: "quest.hunt.desc",
 			RewardGold: count * (20 + curFloor*5),
 		}
 	case QuestOpenChests:
 		count := rand.Intn(2) + 2
 		return AutoQuest{
 			Type: QuestOpenChests, TargetCount: count,
-			Title: "Сбор сокровищ", Description: fmt.Sprintf("Вскрыть %d сундуков", count),
+			TitleKey: "quest.chest.title", DescKey: "quest.chest.desc",
 			RewardGold: count * (30 + curFloor*3),
 		}
 	case QuestReachFloor:
 		tf := curFloor + 1
 		return AutoQuest{
 			Type: QuestReachFloor, TargetCount: tf,
-			Title:       fmt.Sprintf("Освоение глубин: Этаж %d", tf),
-			Description: fmt.Sprintf("Подготовиться и спуститься на этаж %d", tf),
-			RewardGold:  tf * 50,
+			TitleKey: "quest.floor.title", DescKey: "quest.floor.desc",
+			RewardGold: tf * 50,
 		}
 	case QuestFindRelic:
 		return AutoQuest{
 			Type: QuestFindRelic, TargetCount: 1,
-			Title: "Поиск Реликвии", Description: "Найти древний реликварий в глубинах",
+			TitleKey: "quest.relic.title", DescKey: "quest.relic.desc",
 			RewardGold: 100 + curFloor*15,
 		}
 	case QuestEscapeTrap:
 		return AutoQuest{
 			Type: QuestEscapeTrap, TargetCount: 1,
-			Title: "Побег из засады", Description: "Исследовать запечатанный зал и найти выход",
+			TitleKey: "quest.escape.title", DescKey: "quest.escape.desc",
 			RewardGold: 110 + curFloor*20,
 		}
 	default:
 		return AutoQuest{
 			Type: QuestUseAltar, TargetCount: 1,
-			Title: "Кровавый пакт", Description: "Принести жертву у Алтаря",
+			TitleKey: "quest.altar.title", DescKey: "quest.altar.desc",
 			RewardGold: 80 + curFloor*15,
 		}
 	}
@@ -476,8 +469,9 @@ func (m *Model) addStress(h *Hero, amt int) {
 			h.Affliction = AfflictionVirtuous
 			h.Stress = 0
 			h.HP = h.MaxHP
-			m.addLog(healStyle.Render(fmt.Sprintf("🌟 [ВООДУШЕВЛЕНИЕ] %s %s страх и %s второе дыхание!",
-				h.FullName(), h.Verb("превозмог", "превозмогла"), h.Verb("обрел", "обрела"))))
+			verb1 := TVerb(m.Lang, h.Gender, "превозмог", "превозмогла", "conquered")
+			verb2 := TVerb(m.Lang, h.Gender, "обрел", "обрела", "gained")
+			m.addLog(healStyle.Render(T(m.Lang, "dungeon.log.virtue", h.FullName(m.Lang), verb1, verb2)))
 			for _, ally := range m.Party {
 				if !ally.IsDead {
 					ally.Stress = max(0, ally.Stress-30)
@@ -486,8 +480,9 @@ func (m *Model) addStress(h *Hero, amt int) {
 		} else {
 			affs := []AfflictionType{AfflictionParanoid, AfflictionSelfish, AfflictionManiac}
 			h.Affliction = affs[rand.Intn(len(affs))]
-			m.addLog(stressStyle.Render(fmt.Sprintf("👁️ [ПСИХОЗ] %s %s: %s!",
-				h.FullName(), h.Verb("сломлен", "сломлена"), h.Affliction)))
+			verb := TVerb(m.Lang, h.Gender, "сломлен", "сломлена", "broken")
+			affName := T(m.Lang, "affliction."+string(h.Affliction))
+			m.addLog(stressStyle.Render(T(m.Lang, "dungeon.log.affliction", h.FullName(m.Lang), verb, affName)))
 		}
 	}
 
@@ -495,9 +490,9 @@ func (m *Model) addStress(h *Hero, amt int) {
 		h.Stress = 200
 		if h.HP <= 1 {
 			h.HP = 0
-			h.CauseOfDeath = fmt.Sprintf("Сердечный приступ (%s)", h.Affliction)
+			h.CauseOfDeath = T(m.Lang, "dungeon.death.heart_attack", T(m.Lang, "affliction."+string(h.Affliction)))
 			m.recordFallenHero(h)
-			m.addLog(dangerStyle.Render(fmt.Sprintf("💔 [ИНФАРКТ] Сердце %s разорвалось от безумия! Смерть!", h.Name)))
+			m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.heart_attack_death", h.DisplayName(m.Lang))))
 			for _, ally := range m.Party {
 				if !ally.IsDead {
 					ally.Stress += 25
@@ -508,8 +503,8 @@ func (m *Model) addStress(h *Hero, amt int) {
 
 		h.HP = 1
 		h.Stress = 160
-		m.addLog(dangerStyle.Render(fmt.Sprintf("💔 [СЕРДЕЧНЫЙ ПРИСТУП] %s %s за сердце! HP упало до 1!",
-			h.FullName(), h.Verb("схватился", "схватилась"))))
+		verb := TVerb(m.Lang, h.Gender, "схватился", "схватилась", "clutched")
+		m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.heart_attack", h.FullName(m.Lang), verb)))
 		for _, ally := range m.Party {
 			if !ally.IsDead && ally != h {
 				ally.Stress += 15
@@ -549,17 +544,21 @@ func (m *Model) checkAndDrinkPotions(h *Hero) {
 		}
 
 		if shouldDrink {
+			verb := TVerb(m.Lang, h.Gender, "выпил", "выпила", "drank")
+			pName := getPotionName(*p, m.Lang)
+			hName := h.DisplayName(m.Lang)
 			switch p.Type {
 			case PotionHP:
 				h.HP = min(h.MaxHP, h.HP+p.Power)
-				m.addLog(potionStyle.Render(fmt.Sprintf("🧪 %s %s [%s] (+%d HP)!", h.Name, h.Verb("выпил", "выпила"), getPotionName(*p), p.Power)))
+				m.addLog(potionStyle.Render(T(m.Lang, "dungeon.log.potion_hp", hName, verb, pName, p.Power)))
 			case PotionMP:
 				h.MP = min(h.MaxMP, h.MP+p.Power)
-				m.addLog(potionStyle.Render(fmt.Sprintf("🧪 %s %s [%s] (+%d MP)!", h.Name, h.Verb("выпил", "выпила"), getPotionName(*p), p.Power)))
+				m.addLog(potionStyle.Render(T(m.Lang, "dungeon.log.potion_mp", hName, verb, pName, p.Power)))
 			case PotionStress:
 				h.Stress = max(0, h.Stress-p.Power)
 				h.Affliction = AfflictionNone
-				m.addLog(potionStyle.Render(fmt.Sprintf("🧪 %s %s [%s] (-%d стресса)!", h.Name, h.Verb("принял", "приняла"), getPotionName(*p), p.Power)))
+				verbStress := TVerb(m.Lang, h.Gender, "принял", "приняла", "took")
+				m.addLog(potionStyle.Render(T(m.Lang, "dungeon.log.potion_stress", hName, verbStress, pName, p.Power)))
 			}
 		} else {
 			remainingPotions = append(remainingPotions, p)
@@ -569,69 +568,70 @@ func (m *Model) checkAndDrinkPotions(h *Hero) {
 }
 
 func (m *Model) checkAndAwardTitle(h *Hero) {
-	if h.Title != "" && h.Title != "Ополченец" {
+	if h.TitleKey != "" && h.TitleKey != "title.militia" {
 		return
 	}
 
-	newTitle := ""
+	newTitleKey := ""
 	switch {
 	case h.Feats.BossKills >= 3:
-		newTitle = h.Verb("Истребитель чудовищ", "Истребительница чудовищ")
+		newTitleKey = "title.slayer_of_beasts"
 	case h.Feats.BossKills >= 1:
-		newTitle = h.Verb("Драконоборец", "Драконоборица")
+		newTitleKey = "title.dragonslayer"
 	case h.Feats.NearDeathEscapes >= 6:
-		newTitle = h.Verb("Проклятый удачей", "Проклятая удачей")
+		newTitleKey = "title.luck_cursed"
 	case h.Feats.NearDeathEscapes >= 3:
-		newTitle = h.Verb("Бессмертный", "Бессмертная")
+		newTitleKey = "title.immortal"
 	case h.Feats.TreasureFound >= 5:
-		newTitle = h.Verb("Искатель кладов", "Искательница кладов")
+		newTitleKey = "title.treasure_seeker"
 	case h.Feats.SecretsRevealed >= 4:
-		newTitle = h.Verb("Хранитель тайн", "Хранительница тайн")
+		newTitleKey = "title.secret_keeper"
 	case h.Class == ClassTank && h.Feats.Blocks >= 10:
-		newTitle = "Непробиваемый"
+		newTitleKey = "title.impenetrable"
 	case h.Class == ClassTank && h.Feats.AggroPulled >= 8:
-		newTitle = "Грозовой щит"
+		newTitleKey = "title.storm_shield"
 	case h.Class == ClassTank && h.Feats.DamageTaken >= 75:
-		newTitle = "Стена"
+		newTitleKey = "title.the_wall"
 	case h.Class == ClassWarrior && h.Feats.Kills >= 12:
-		newTitle = "Кровавый клинок"
+		newTitleKey = "title.blood_blade"
 	case h.Class == ClassWarrior && h.Feats.Kills >= 5:
-		newTitle = h.Verb("Палач", "Палач")
+		newTitleKey = "title.executioner"
 	case h.Class == ClassWarrior && h.Feats.DamageDealt >= 90:
-		newTitle = "Топор"
+		newTitleKey = "title.axe"
 	case h.Class == ClassWarrior && h.Feats.CriticalStrikes >= 4:
-		newTitle = "Разрыватель рядов"
+		newTitleKey = "title.rank_cleaver"
 	case h.Class == ClassRogue && h.Feats.CritsLanded >= 6:
-		newTitle = "Призрачный удар"
+		newTitleKey = "title.phantom_strike"
 	case h.Class == ClassRogue && h.Feats.CritsLanded >= 3:
-		newTitle = "Тень"
+		newTitleKey = "title.shadow"
 	case h.Class == ClassRogue && h.Feats.Kills >= 4:
-		newTitle = "Клинок"
+		newTitleKey = "title.blade"
 	case h.Class == ClassRogue && h.Feats.Backstabs >= 5:
-		newTitle = "Нож за спиной"
+		newTitleKey = "title.knife_in_the_back"
 	case h.Class == ClassRogue && h.Feats.LootStolen >= 3:
-		newTitle = "Ловкая рука"
+		newTitleKey = "title.deft_hand"
 	case h.Class == ClassMage && h.Feats.DamageDealt >= 150:
-		newTitle = "Буревестник"
+		newTitleKey = "title.stormbringer"
 	case h.Class == ClassMage && h.Feats.DamageDealt >= 90:
-		newTitle = "Пепел"
+		newTitleKey = "title.cinder"
 	case h.Class == ClassMage && h.Feats.CCDuration >= 40:
-		newTitle = "Оковы пустоты"
+		newTitleKey = "title.chains_of_the_void"
 	case h.Class == ClassMage && h.Feats.ManaBursts >= 3:
-		newTitle = "Вспышка"
+		newTitleKey = "title.flash"
 	case h.Class == ClassCleric && h.Feats.HealsGiven >= 120:
-		newTitle = "Благодать"
+		newTitleKey = "title.grace"
 	case h.Class == ClassCleric && h.Feats.HealsGiven >= 70:
-		newTitle = h.Verb("Святой", "Святая")
+		newTitleKey = "title.holy"
 	case h.Class == ClassCleric && h.Feats.Revives >= 3:
-		newTitle = h.Verb("Воскреситель", "Воскресительница")
+		newTitleKey = "title.resurrector"
 	case h.Class == ClassCleric && h.Feats.DoTsRemoved >= 4:
-		newTitle = h.Verb("Очиститель", "Очистительница")
+		newTitleKey = "title.purifier"
 	}
 
-	if newTitle != "" {
-		h.Title = newTitle
-		m.addLog(titleStyle.Render(fmt.Sprintf("👑 [СЛАВА] %s %s титул «%s»!", h.Name, h.Verb("заслужил", "заслужила"), newTitle)))
+	if newTitleKey != "" {
+		h.TitleKey = newTitleKey
+		verb := TVerb(m.Lang, h.Gender, "заслужил", "заслужила", "earned")
+		m.addLog(titleStyle.Render(T(m.Lang, "dungeon.log.title_awarded", h.DisplayName(m.Lang), verb, T(m.Lang, newTitleKey))))
 	}
 }
 
@@ -651,13 +651,16 @@ func (m *Model) handleAltar() {
 		target.BaseAtk += 2
 		m.addStress(target, 15)
 
+		hName := target.DisplayName(m.Lang)
 		if target.HP <= 0 {
 			target.HP = 0
-			target.CauseOfDeath = "Принесен в жертву Алтарю"
+			target.CauseOfDeath = T(m.Lang, "dungeon.death.altar")
 			m.recordFallenHero(target)
-			m.addLog(dangerStyle.Render(fmt.Sprintf("🩸 %s %s жертвой Алтаря!", target.Name, target.Verb("пал", "пала"))))
+			verb := TVerb(m.Lang, target.Gender, "пал", "пала", "fell")
+			m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.altar_death", hName, verb)))
 		} else {
-			m.addLog(altarStyle.Render(fmt.Sprintf("🩸 %s %s %d HP (+2 Atk)!", target.Name, target.Verb("пожертвовал", "пожертвовала"), bloodCost)))
+			verb := TVerb(m.Lang, target.Gender, "пожертвовал", "пожертвовала", "sacrificed")
+			m.addLog(altarStyle.Render(T(m.Lang, "dungeon.log.altar_success", hName, verb, bloodCost)))
 		}
 	}
 }
@@ -677,7 +680,7 @@ func (m *Model) handleFountain() {
 			h.IsAura = false
 		}
 	}
-	m.addLog(fountStyle.Render("💧 [Источник] Здоровье, мана и рассудок отряда восстановлены!"))
+	m.addLog(fountStyle.Render(T(m.Lang, "dungeon.log.fountain")))
 }
 
 func (m *Model) handleTrappedChest() {
@@ -709,10 +712,10 @@ func (m *Model) handleTrappedChest() {
 			m.checkAndAwardTitle(lh)
 		}
 		rareItem := generateItemForClass(targetClass, m.Floor+1)
-		m.addLog(goldStyle.Render(fmt.Sprintf("🗝️ [Ларь] Ловушка снята: +%dG и [%s]!", gold, rareItem.DisplayName())))
+		m.addLog(goldStyle.Render(T(m.Lang, "dungeon.log.trapped_chest_success", gold, rareItem.DisplayName(m.Lang))))
 		m.equipOrBag(rareItem)
 	} else {
-		m.addLog(dangerStyle.Render(fmt.Sprintf("💥 [Ловушка!] (D20=%d) Взрыв нанес урон!", d20)))
+		m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.trapped_chest_boom", d20)))
 		for _, h := range m.Party {
 			if !h.IsDead {
 				trapDmg := rand.Intn(8) + 6
@@ -720,7 +723,7 @@ func (m *Model) handleTrappedChest() {
 				m.addStress(h, 20)
 				if h.HP <= 0 {
 					h.HP = 0
-					h.CauseOfDeath = "Взорван ловушкой"
+					h.CauseOfDeath = T(m.Lang, "dungeon.death.trap")
 					m.recordFallenHero(h)
 				}
 			}
@@ -738,11 +741,11 @@ func (m *Model) handleRelicTile() {
 
 	if m.Relic == nil || newRelic.Level > m.Relic.Level {
 		m.Relic = &newRelic
-		m.addLog(relicTileStyle.Render(fmt.Sprintf("✨ [РЕЛИКВИЯ] Отряд нашел %s!", newRelic.Name)))
+		m.addLog(relicTileStyle.Render(T(m.Lang, "dungeon.log.relic_found", T(m.Lang, newRelic.NameKey))))
 	} else {
 		m.Gold += 80
 		m.Stats.TotalGoldEarned += 80
-		m.addLog(goldStyle.Render("✨ [Реликварий] Реликвия разобрана на +80G!"))
+		m.addLog(goldStyle.Render(T(m.Lang, "dungeon.log.relic_salvaged")))
 	}
 }
 
@@ -755,7 +758,7 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 			dragonLvl := floor
 			dragonHP := (260 + (floor * 20)) * scaleMult
 			dragon := &Monster{
-				ID: 1, Type: MobDragon, Name: fmt.Sprintf("Пепельный Дракон (БОСС Этажа %d)", floor), Level: dragonLvl, Affix: AffixFire,
+				ID: 1, Type: MobDragon, NameKey: "mob.boss_dragon", Level: dragonLvl, Affix: AffixFire,
 				Glyph: 'D', Color: "196", HP: dragonHP, MaxHP: dragonHP,
 				Atk: (25 + floor) * scaleMult, Defense: (9 + floor/2) * scaleMult, Speed: 12, Exp: 350 * scaleMult,
 			}
@@ -763,7 +766,7 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 
 			for i := 1; i <= 2; i++ {
 				guard := &Monster{
-					ID: i + 1, Type: MobDeathKnight, Name: fmt.Sprintf("Рыцарь Смерти #%d", i), Level: dragonLvl - 1, Affix: AffixVampiric,
+					ID: i + 1, Type: MobDeathKnight, NameKey: "mob.death_knight", Level: dragonLvl - 1, Affix: AffixVampiric,
 					Glyph: 'K', Color: "89", HP: (65 + floor*5) * scaleMult, MaxHP: (65 + floor*5) * scaleMult,
 					Atk: (18 + floor) * scaleMult, Defense: (6 + floor/3) * scaleMult, Speed: 10, Exp: 55 * scaleMult,
 				}
@@ -777,31 +780,31 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 		bType := MobOrc
 		bGlyph := 'B'
 		bColor := "202"
-		bName := "Вождь Орков"
+		bNameKey := "mob.boss_orc"
 		bAtk := (14 + (bossLvl * 2)) * scaleMult
 		bDef := (4 + bossLvl/3) * scaleMult
 
 		if floor >= 7 {
 			bType = MobGolem
-			bName = "Алмазный Колосс"
+			bNameKey = "mob.boss_golem"
 			bGlyph = 'G'
 			bColor = "141"
 			bDef = (8 + floor/4) * scaleMult
 		} else if floor >= 4 {
 			bType = MobDrowned
-			bName = "Глубинный Левиафан"
+			bNameKey = "mob.boss_leviathan"
 			bGlyph = 'L'
 			bColor = "31"
 		}
 
 		pack.Members = append(pack.Members, &Monster{
-			ID: 1, Type: bType, Name: bName, Level: bossLvl, Affix: AffixStone,
+			ID: 1, Type: bType, NameKey: bNameKey, Level: bossLvl, Affix: AffixStone,
 			Glyph: bGlyph, Color: bColor, HP: hp, MaxHP: hp,
 			Atk: bAtk, Defense: bDef, Speed: 10, Exp: (70 + bossLvl*8) * scaleMult,
 		})
 		for i := 1; i <= 2; i++ {
 			pack.Members = append(pack.Members, &Monster{
-				ID: i + 1, Type: MobSkeleton, Name: fmt.Sprintf("Прислужник #%d", i), Level: floor, Affix: AffixNone,
+				ID: i + 1, Type: MobSkeleton, NameKey: "mob.skeleton", Level: floor, Affix: AffixNone,
 				Glyph: 's', Color: "245", HP: (24 + floor*5) * scaleMult, MaxHP: (24 + floor*5) * scaleMult,
 				Atk: (9 + floor*2) * scaleMult, Defense: 3 * scaleMult, Speed: 9, Exp: (18 + floor*3) * scaleMult,
 			})
@@ -891,7 +894,7 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 		}
 
 		pack.Members = append(pack.Members, &Monster{
-			ID: i, Type: mType, Name: fmt.Sprintf("%s #%d", mType, i), Level: mobLvl, Affix: aff,
+			ID: i, Type: mType, NameKey: "mob." + string(mType), Level: mobLvl, Affix: aff,
 			Glyph: glyph, Color: color, HP: hp, MaxHP: hp, Atk: atk, Defense: def, Speed: 8 + mobLvl/2, Exp: (10 + mobLvl*4) * scaleMult,
 		})
 	}
@@ -917,7 +920,7 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 			mat = MetalMaterials[rand.Intn(matIdx+1)]
 		case ClassMage:
 			mat = ClothMaterials[rand.Intn(matIdx+1)]
-		default: // ClassRogue, ClassCleric
+		default:
 			mat = LeatherMaterials[rand.Intn(matIdx+1)]
 		}
 	}
@@ -940,7 +943,7 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 	if rand.Intn(100) > 70 {
 		s := Suffixes[rand.Intn(len(Suffixes))]
 		if pfx != nil && pfx.Element == ElemFrost && s.Effect == SuffFury {
-			s = Suffixes[2] // Медитация
+			s = Suffixes[2]
 		}
 		sfx = &s
 	}
@@ -953,7 +956,7 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 		tier++
 	}
 
-	name := "Снаряжение"
+	baseKey := fmt.Sprintf("item.%s.%s.%d", string(class), string(slot), tier+1)
 	baseStat := 2
 	bonusMP := 0
 	bonusHP := 0
@@ -968,23 +971,15 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 		cat = ArmorHeavy
 		switch slot {
 		case SlotWeapon:
-			names := []string{"Гладиус с баклером", "Палаш с щитом", "Моргенштерн с павезой", "Бастионный меч"}
-			name = names[tier]
 			baseStat = 3 + tier*2
 			blockBonus = 2 + tier*2
 		case SlotChest:
-			names := []string{"Бригантина", "Полудоспех", "Кираса бастиона", "Панцирь цитадели"}
-			name = names[tier]
 			baseStat = 4 + tier*3
 			bonusHP = 10 + tier*10
 		case SlotHead:
-			names := []string{"Топфхельм", "Салад", "Армет", "Бацинет бастиона"}
-			name = names[tier]
 			baseStat = 2 + tier*2
 			blockBonus = 1 + tier
 		case SlotLegs:
-			names := []string{"Наголенники", "Шарнирные поножи", "Латные поножи", "Протекторы цитадели"}
-			name = names[tier]
 			baseStat = 2 + tier*2
 			bonusHP = 5 + tier*5
 		}
@@ -993,23 +988,15 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 		cat = ArmorHeavy
 		switch slot {
 		case SlotWeapon:
-			names := []string{"Эспадон", "Клеймор", "Боевой топор", "Фальшион"}
-			name = names[tier]
 			baseStat = 5 + tier*3
 			critBonus = 1 + tier
 		case SlotChest:
-			names := []string{"Хауберк", "Кираса ярости", "Чешуйчатый доспех", "Нагрудник витязя"}
-			name = names[tier]
 			baseStat = 3 + tier*2
 			bonusHP = 8 + tier*8
 		case SlotHead:
-			names := []string{"Норманнский шлем", "Бацинет", "Барбют", "Шишак"}
-			name = names[tier]
 			baseStat = 2 + tier*2
 			critBonus = 1
 		case SlotLegs:
-			names := []string{"Чешуйчатые гетры", "Чулки", "Пластины", "Поножи витязя"}
-			name = names[tier]
 			baseStat = 2 + tier*2
 		}
 
@@ -1020,23 +1007,15 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 		}
 		switch slot {
 		case SlotWeapon:
-			names := []string{"Охотничьи ножи", "Парные стилеты", "Зазубренные кинжалы", "Воровские кортики"}
-			name = names[tier]
 			baseStat = 4 + tier*2
 			critBonus = 2 + tier*2
 		case SlotChest:
-			names := []string{"Колет", "Гамбезон", "Куртка теневика", "Плащ ассасина"}
-			name = names[tier]
 			baseStat = 2 + tier*2
 			critBonus = 1 + tier
 		case SlotHead:
-			names := []string{"Капюшон", "Бандана", "Маска теней", "Венец бесшумности"}
-			name = names[tier]
 			baseStat = 1 + tier*2
 			critBonus = 1
 		case SlotLegs:
-			names := []string{"Краги", "Плотные гетры", "Мягкие сапоги", "Поножи бесшумности"}
-			name = names[tier]
 			baseStat = 1 + tier*2
 		}
 
@@ -1047,23 +1026,15 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 		}
 		switch slot {
 		case SlotWeapon:
-			names := []string{"Рунная трость", "Посох искр", "Кристаллический жезл", "Архимагический скипетр"}
-			name = names[tier]
 			baseStat = 6 + tier*3
 			bonusMP = 10 + tier*10
 		case SlotChest:
-			names := []string{"Роба ученика", "Мантия чародея", "Одеяние эфира", "Астральная мантия"}
-			name = names[tier]
 			baseStat = 2 + tier*2
 			bonusMP = 15 + tier*10
 		case SlotHead:
-			names := []string{"Остроконечная шляпа", "Обруч магии", "Диадема фокуса", "Капюшон магистра"}
-			name = names[tier]
 			baseStat = 1 + tier*2
 			bonusMP = 8 + tier*6
 		case SlotLegs:
-			names := []string{"Обмотки", "Штаны чародея", "Ленты левитации", "Поножи эфира"}
-			name = names[tier]
 			baseStat = 1 + tier*2
 			bonusMP = 6 + tier*4
 		}
@@ -1072,23 +1043,15 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 		cat = ArmorMedium
 		switch slot {
 		case SlotWeapon:
-			names := []string{"Окованная дубина", "Боевой молот", "Шестопёр", "Булава света"}
-			name = names[tier]
 			baseStat = 4 + tier*2
 			bonusMP = 8 + tier*6
 		case SlotChest:
-			names := []string{"Сутана", "Хабит инквизитора", "Пресвитерский панцирь", "Священный доспех"}
-			name = names[tier]
 			baseStat = 3 + tier*2
 			stressRes = 10 + tier*5
 		case SlotHead:
-			names := []string{"Митра", "Койф", "Капеллина", "Венец правосудия"}
-			name = names[tier]
 			baseStat = 2 + tier*2
 			stressRes = 5 + tier*5
 		case SlotLegs:
-			names := []string{"Наголенники веры", "Сапоги паломника", "Инквизиторские сапоги", "Наколенники света"}
-			name = names[tier]
 			baseStat = 2 + tier*2
 			bonusHP = 6 + tier*6
 		}
@@ -1097,7 +1060,7 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 	val := (baseStat + tier*3) * mat.ValueMult * 12
 
 	return EquipItem{
-		BaseName: name, Slot: slot, Category: cat, AllowedClass: class,
+		BaseNameKey: baseKey, Slot: slot, Category: cat, AllowedClass: class,
 		Material: mat, UpgradeLevel: upg, BaseStat: baseStat,
 		BonusMP: bonusMP, BonusHP: bonusHP, CritBonus: critBonus,
 		BlockBonus: blockBonus, StressRes: stressRes, SpeedBonus: speedBonus, Value: val,
@@ -1110,3 +1073,4 @@ func generateItemForClass(class HeroClass, floor int) EquipItem {
 	chosenSlot := slots[rand.Intn(len(slots))]
 	return generateItemForClassSlot(class, chosenSlot, floor)
 }
+

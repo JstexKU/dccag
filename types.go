@@ -10,6 +10,13 @@ import (
 
 const LegacyTaxRate = 0.15
 
+type Language string
+
+const (
+	LangRU Language = "ru"
+	LangEN Language = "en"
+)
+
 var debugReportFlag = flag.Bool("report", false, "Включить сбор подробного отчета телеметрии")
 
 var globalDebugReport = DebugReportData{
@@ -39,18 +46,18 @@ type DebugReportData struct {
 type PotionType string
 
 const (
-	PotionHP     PotionType = "Зелье HP"
-	PotionMP     PotionType = "Зелье MP"
-	PotionStress PotionType = "Настойка Рассудка"
+	PotionHP     PotionType = "hp"
+	PotionMP     PotionType = "mp"
+	PotionStress PotionType = "stress"
 )
 
 type PotionSize string
 
 const (
-	SizeSmall  PotionSize = "Малое"
-	SizeMedium PotionSize = "Среднее"
-	SizeLarge  PotionSize = "Большое"
-	SizeGrand  PotionSize = "Великое"
+	SizeSmall  PotionSize = "small"
+	SizeMedium PotionSize = "medium"
+	SizeLarge  PotionSize = "large"
+	SizeGrand  PotionSize = "grand"
 )
 
 type Potion struct {
@@ -64,11 +71,11 @@ type Potion struct {
 type MutationType string
 
 const (
-	MutChimera MutationType = "Химера (Все)"
-	MutFury    MutationType = "Ярость (Atk)"
-	MutTitan   MutationType = "Титан (HP)"
-	MutAether  MutationType = "Эфир (MP)"
-	MutBastion MutationType = "Бастион (Def)"
+	MutChimera MutationType = "chimera"
+	MutFury    MutationType = "fury"
+	MutTitan   MutationType = "titan"
+	MutAether  MutationType = "aether"
+	MutBastion MutationType = "bastion"
 )
 
 type HeroMutations struct {
@@ -86,105 +93,104 @@ func (m HeroMutations) Total() int {
 type EquipSlot string
 
 const (
-	SlotWeapon EquipSlot = "Оружие"
-	SlotHead   EquipSlot = "Шлем"
-	SlotChest  EquipSlot = "Доспех"
-	SlotLegs   EquipSlot = "Поножи"
+	SlotWeapon EquipSlot = "weapon"
+	SlotHead   EquipSlot = "head"
+	SlotChest  EquipSlot = "chest"
+	SlotLegs   EquipSlot = "legs"
 )
 
 type ArmorCategory string
 
 const (
-	ArmorHeavy  ArmorCategory = "Тяжелая"
-	ArmorMedium ArmorCategory = "Средняя"
-	ArmorLight  ArmorCategory = "Легкая"
-	ArmorNone   ArmorCategory = "Нет"
+	ArmorHeavy  ArmorCategory = "heavy"
+	ArmorMedium ArmorCategory = "medium"
+	ArmorLight  ArmorCategory = "light"
+	ArmorNone   ArmorCategory = "none"
 )
 
 type MaterialTier struct {
-	Name      string
-	Adj       string
+	Key       string
 	BonusMult int
 	ValueMult int
 }
 
 var MetalMaterials = []MaterialTier{
-	{Name: "Железо", Adj: "Железн.", BonusMult: 1, ValueMult: 1},
-	{Name: "Сталь", Adj: "Стальн.", BonusMult: 2, ValueMult: 2},
-	{Name: "Мифрил", Adj: "Мифрил.", BonusMult: 3, ValueMult: 4},
-	{Name: "Адамант", Adj: "Адамант.", BonusMult: 4, ValueMult: 7},
+	{Key: "mat.iron", BonusMult: 1, ValueMult: 1},
+	{Key: "mat.steel", BonusMult: 2, ValueMult: 2},
+	{Key: "mat.mithril", BonusMult: 3, ValueMult: 4},
+	{Key: "mat.adamant", BonusMult: 4, ValueMult: 7},
 }
 
 var MageWeaponMaterials = []MaterialTier{
-	{Name: "Тис", Adj: "Тисов.", BonusMult: 1, ValueMult: 1},
-	{Name: "Ясень", Adj: "Ясенев.", BonusMult: 2, ValueMult: 2},
-	{Name: "Кристалл", Adj: "Кристальн.", BonusMult: 3, ValueMult: 4},
-	{Name: "Астральный эфир", Adj: "Эфирн.", BonusMult: 4, ValueMult: 7},
+	{Key: "mat.yew", BonusMult: 1, ValueMult: 1},
+	{Key: "mat.ash", BonusMult: 2, ValueMult: 2},
+	{Key: "mat.crystal", BonusMult: 3, ValueMult: 4},
+	{Key: "mat.aether", BonusMult: 4, ValueMult: 7},
 }
 
 var LeatherMaterials = []MaterialTier{
-	{Name: "Сыромятная кожа", Adj: "Сыромятн.", BonusMult: 1, ValueMult: 1},
-	{Name: "Варёная кожа", Adj: "Варён.", BonusMult: 2, ValueMult: 2},
-	{Name: "Кожа василиска", Adj: "Василиск.", BonusMult: 3, ValueMult: 4},
-	{Name: "Шкура дракона", Adj: "Драконь.", BonusMult: 4, ValueMult: 7},
+	{Key: "mat.raw_leather", BonusMult: 1, ValueMult: 1},
+	{Key: "mat.boiled_leather", BonusMult: 2, ValueMult: 2},
+	{Key: "mat.basilisk_skin", BonusMult: 3, ValueMult: 4},
+	{Key: "mat.dragon_scale", BonusMult: 4, ValueMult: 7},
 }
 
 var ClothMaterials = []MaterialTier{
-	{Name: "Плотный лён", Adj: "Льнян.", BonusMult: 1, ValueMult: 1},
-	{Name: "Рунический шёлк", Adj: "Шёлков.", BonusMult: 2, ValueMult: 2},
-	{Name: "Астральная парча", Adj: "Парчов.", BonusMult: 3, ValueMult: 4},
-	{Name: "Ткань Бездны", Adj: "Эфирн.", BonusMult: 4, ValueMult: 7},
+	{Key: "mat.linen", BonusMult: 1, ValueMult: 1},
+	{Key: "mat.silk", BonusMult: 2, ValueMult: 2},
+	{Key: "mat.brocade", BonusMult: 3, ValueMult: 4},
+	{Key: "mat.void_cloth", BonusMult: 4, ValueMult: 7},
 }
 
 type ElementType string
 
 const (
-	ElemNone      ElementType = "Нет"
-	ElemFire      ElementType = "Огонь"
-	ElemPoison    ElementType = "Яд"
-	ElemFrost     ElementType = "Мороз"
-	ElemLightning ElementType = "Молния"
+	ElemNone      ElementType = "none"
+	ElemFire      ElementType = "fire"
+	ElemPoison    ElementType = "poison"
+	ElemFrost     ElementType = "frost"
+	ElemLightning ElementType = "lightning"
 )
 
 type SuffixType string
 
 const (
-	SuffNone      SuffixType = "Нет"
-	SuffVampirism SuffixType = "Вампиризм"
-	SuffFury      SuffixType = "Ярость"
-	SuffMana      SuffixType = "Медитация"
-	SuffTitan     SuffixType = "Титан"
+	SuffNone      SuffixType = "none"
+	SuffVampirism SuffixType = "vampirism"
+	SuffFury      SuffixType = "fury"
+	SuffMana      SuffixType = "mana"
+	SuffTitan     SuffixType = "titan"
 )
 
 type PrefixDef struct {
-	Name    string
+	Key     string
 	Element ElementType
 	Bonus   int
 }
 
 type SuffixDef struct {
-	Name   string
+	Key    string
 	Effect SuffixType
 	Bonus  int
 }
 
 var Prefixes = []PrefixDef{
-	{Name: "Пылающий", Element: ElemFire, Bonus: 3},
-	{Name: "Ядовитый", Element: ElemPoison, Bonus: 2},
-	{Name: "Леденящий", Element: ElemFrost, Bonus: 2},
-	{Name: "Громовой", Element: ElemLightning, Bonus: 4},
-	{Name: "Закаленный", Element: ElemNone, Bonus: 2},
+	{Key: "prefix.fire", Element: ElemFire, Bonus: 3},
+	{Key: "prefix.poison", Element: ElemPoison, Bonus: 2},
+	{Key: "prefix.frost", Element: ElemFrost, Bonus: 2},
+	{Key: "prefix.lightning", Element: ElemLightning, Bonus: 4},
+	{Key: "prefix.none", Element: ElemNone, Bonus: 2},
 }
 
 var Suffixes = []SuffixDef{
-	{Name: "Кровопийцы", Effect: SuffVampirism, Bonus: 25},
-	{Name: "Ярости", Effect: SuffFury, Bonus: 4},
-	{Name: "Медитации", Effect: SuffMana, Bonus: 3},
-	{Name: "Титана", Effect: SuffTitan, Bonus: 4},
+	{Key: "suffix.vampirism", Effect: SuffVampirism, Bonus: 25},
+	{Key: "suffix.fury", Effect: SuffFury, Bonus: 4},
+	{Key: "suffix.mana", Effect: SuffMana, Bonus: 3},
+	{Key: "suffix.titan", Effect: SuffTitan, Bonus: 4},
 }
 
 type EquipItem struct {
-	BaseName     string
+	BaseNameKey  string
 	Slot         EquipSlot
 	Category     ArmorCategory
 	AllowedClass HeroClass
@@ -214,17 +220,17 @@ func (e *EquipItem) TotalStat() int {
 	return stat
 }
 
-func (e *EquipItem) DisplayName() string {
+func (e *EquipItem) DisplayName(lang Language) string {
 	var parts []string
 	if e.Prefix != nil {
-		parts = append(parts, e.Prefix.Name)
+		parts = append(parts, T(lang, e.Prefix.Key))
 	}
-	parts = append(parts, e.Material.Adj, e.BaseName)
+	parts = append(parts, T(lang, e.Material.Key), T(lang, e.BaseNameKey))
 	if e.UpgradeLevel > 0 {
 		parts = append(parts, e.UpgradeLevelStr())
 	}
 	if e.Suffix != nil {
-		parts = append(parts, e.Suffix.Name)
+		parts = append(parts, T(lang, e.Suffix.Key))
 	}
 	return joinNonEmpty(parts, " ")
 }
@@ -262,61 +268,62 @@ const (
 )
 
 type HeroNameDef struct {
-	Name   string
-	Gender Gender
+	NameKey string
+	Gender  Gender
 }
 
+// Имена героев теперь локализуются через NameKey
 var HeroNames = []HeroNameDef{
-	{Name: "Бранд", Gender: GenderMale},
-	{Name: "Торин", Gender: GenderMale},
-	{Name: "Лира", Gender: GenderFemale},
-	{Name: "Алдос", Gender: GenderMale},
-	{Name: "Селина", Gender: GenderFemale},
-	{Name: "Рагнар", Gender: GenderMale},
-	{Name: "Ингвар", Gender: GenderMale},
-	{Name: "Вульф", Gender: GenderMale},
-	{Name: "Сигурд", Gender: GenderMale},
-	{Name: "Морган", Gender: GenderMale},
-	{Name: "Элиас", Gender: GenderMale},
-	{Name: "Дункан", Gender: GenderMale},
-	{Name: "Готфрид", Gender: GenderMale},
-	{Name: "Вальтер", Gender: GenderMale},
-	{Name: "Кассиан", Gender: GenderMale},
-	{Name: "Айрис", Gender: GenderFemale},
-	{Name: "Морриган", Gender: GenderFemale},
-	{Name: "Бригитта", Gender: GenderFemale},
-	{Name: "Агнес", Gender: GenderFemale},
-	{Name: "Хильда", Gender: GenderFemale},
-	{Name: "Ярополк", Gender: GenderMale},
-	{Name: "Радомир", Gender: GenderMale},
-	{Name: "Добрыня", Gender: GenderMale},
-	{Name: "Лютобор", Gender: GenderMale},
-	{Name: "Бронислав", Gender: GenderMale},
-	{Name: "Аэрон", Gender: GenderMale},
-	{Name: "Дрейвен", Gender: GenderMale},
-	{Name: "Кэлар", Gender: GenderMale},
-	{Name: "Зордан", Gender: GenderMale},
-	{Name: "Тарион", Gender: GenderMale},
-	{Name: "Велдор", Gender: GenderMale},
-	{Name: "Фалькон", Gender: GenderMale},
-	{Name: "Йоррик", Gender: GenderMale},
-	{Name: "Эдан", Gender: GenderMale},
-	{Name: "Зарвин", Gender: GenderMale},
-	{Name: "Лирианна", Gender: GenderFemale},
-	{Name: "Велара", Gender: GenderFemale},
-	{Name: "Мираэль", Gender: GenderFemale},
-	{Name: "Селестина", Gender: GenderFemale},
-	{Name: "Каэлина", Gender: GenderFemale},
-	{Name: "Тирианна", Gender: GenderFemale},
-	{Name: "Найра", Gender: GenderFemale},
-	{Name: "Эльмира", Gender: GenderFemale},
-	{Name: "Зейра", Gender: GenderFemale},
-	{Name: "Ксандр", Gender: GenderMale},
-	{Name: "Верисса", Gender: GenderFemale},
-	{Name: "Орвин", Gender: GenderMale},
-	{Name: "Сильран", Gender: GenderMale},
-	{Name: "Келдра", Gender: GenderFemale},
-	{Name: "Вейнара", Gender: GenderFemale},
+	{NameKey: "hero.name.brand", Gender: GenderMale},
+	{NameKey: "hero.name.thorin", Gender: GenderMale},
+	{NameKey: "hero.name.lyra", Gender: GenderFemale},
+	{NameKey: "hero.name.aldos", Gender: GenderMale},
+	{NameKey: "hero.name.selina", Gender: GenderFemale},
+	{NameKey: "hero.name.ragnar", Gender: GenderMale},
+	{NameKey: "hero.name.ingvar", Gender: GenderMale},
+	{NameKey: "hero.name.wulf", Gender: GenderMale},
+	{NameKey: "hero.name.sigurd", Gender: GenderMale},
+	{NameKey: "hero.name.morgan", Gender: GenderMale},
+	{NameKey: "hero.name.elias", Gender: GenderMale},
+	{NameKey: "hero.name.duncan", Gender: GenderMale},
+	{NameKey: "hero.name.gottfried", Gender: GenderMale},
+	{NameKey: "hero.name.walter", Gender: GenderMale},
+	{NameKey: "hero.name.cassian", Gender: GenderMale},
+	{NameKey: "hero.name.iris", Gender: GenderFemale},
+	{NameKey: "hero.name.morrigan", Gender: GenderFemale},
+	{NameKey: "hero.name.brigitte", Gender: GenderFemale},
+	{NameKey: "hero.name.agnes", Gender: GenderFemale},
+	{NameKey: "hero.name.hilda", Gender: GenderFemale},
+	{NameKey: "hero.name.yaropolk", Gender: GenderMale},
+	{NameKey: "hero.name.radomir", Gender: GenderMale},
+	{NameKey: "hero.name.dobrynya", Gender: GenderMale},
+	{NameKey: "hero.name.lyutobor", Gender: GenderMale},
+	{NameKey: "hero.name.bronislav", Gender: GenderMale},
+	{NameKey: "hero.name.aeron", Gender: GenderMale},
+	{NameKey: "hero.name.draven", Gender: GenderMale},
+	{NameKey: "hero.name.kalar", Gender: GenderMale},
+	{NameKey: "hero.name.zordan", Gender: GenderMale},
+	{NameKey: "hero.name.tarion", Gender: GenderMale},
+	{NameKey: "hero.name.veldor", Gender: GenderMale},
+	{NameKey: "hero.name.falcon", Gender: GenderMale},
+	{NameKey: "hero.name.yorick", Gender: GenderMale},
+	{NameKey: "hero.name.edan", Gender: GenderMale},
+	{NameKey: "hero.name.zarvin", Gender: GenderMale},
+	{NameKey: "hero.name.lirianna", Gender: GenderFemale},
+	{NameKey: "hero.name.velara", Gender: GenderFemale},
+	{NameKey: "hero.name.mirael", Gender: GenderFemale},
+	{NameKey: "hero.name.celestina", Gender: GenderFemale},
+	{NameKey: "hero.name.kaelina", Gender: GenderFemale},
+	{NameKey: "hero.name.tirianna", Gender: GenderFemale},
+	{NameKey: "hero.name.nayra", Gender: GenderFemale},
+	{NameKey: "hero.name.elmira", Gender: GenderFemale},
+	{NameKey: "hero.name.zeyra", Gender: GenderFemale},
+	{NameKey: "hero.name.xandr", Gender: GenderMale},
+	{NameKey: "hero.name.verissa", Gender: GenderFemale},
+	{NameKey: "hero.name.orwin", Gender: GenderMale},
+	{NameKey: "hero.name.silran", Gender: GenderMale},
+	{NameKey: "hero.name.keldra", Gender: GenderFemale},
+	{NameKey: "hero.name.veynara", Gender: GenderFemale},
 }
 
 func getRandomHeroName() HeroNameDef {
@@ -326,11 +333,11 @@ func getRandomHeroName() HeroNameDef {
 type HeroClass string
 
 const (
-	ClassTank    HeroClass = "Танк"
-	ClassWarrior HeroClass = "Воин"
-	ClassRogue   HeroClass = "Разбойник"
-	ClassMage    HeroClass = "Маг"
-	ClassCleric  HeroClass = "Клирик"
+	ClassTank    HeroClass = "tank"
+	ClassWarrior HeroClass = "warrior"
+	ClassRogue   HeroClass = "rogue"
+	ClassMage    HeroClass = "mage"
+	ClassCleric  HeroClass = "cleric"
 )
 
 type CombatRole struct {
@@ -359,11 +366,11 @@ func GetClassRole(class HeroClass) CombatRole {
 type AfflictionType string
 
 const (
-	AfflictionNone     AfflictionType = "Спокоен"
-	AfflictionParanoid AfflictionType = "Параноик"
-	AfflictionSelfish  AfflictionType = "Эгоист"
-	AfflictionManiac   AfflictionType = "Безумец"
-	AfflictionVirtuous AfflictionType = "Воодушевлен"
+	AfflictionNone     AfflictionType = "none"
+	AfflictionParanoid AfflictionType = "paranoid"
+	AfflictionSelfish  AfflictionType = "selfish"
+	AfflictionManiac   AfflictionType = "maniac"
+	AfflictionVirtuous AfflictionType = "virtuous"
 )
 
 type HeroHeroics struct {
@@ -389,9 +396,9 @@ type HeroHeroics struct {
 }
 
 type Hero struct {
-	Name         string
+	NameKey      string
 	Gender       Gender
-	Title        string
+	TitleKey     string
 	Class        HeroClass
 	Role         CombatRole
 	Level        int
@@ -412,7 +419,7 @@ type Hero struct {
 	IsCharged    bool
 	IsAura       bool
 	CauseOfDeath string
-	SkillName    string
+	SkillNameKey string
 	SkillCost    int
 	Mutations    HeroMutations
 	Feats        HeroHeroics
@@ -425,6 +432,10 @@ type Hero struct {
 	Potions []*Potion
 }
 
+func (h *Hero) DisplayName(lang Language) string {
+	return T(lang, h.NameKey)
+}
+
 func (h *Hero) Verb(male, female string) string {
 	if h.Gender == GenderFemale {
 		return female
@@ -432,15 +443,8 @@ func (h *Hero) Verb(male, female string) string {
 	return male
 }
 
-func (h *Hero) ShortClass() string {
-	switch h.Class {
-	case ClassRogue:
-		return "Рога"
-	case ClassCleric:
-		return "Жрец"
-	default:
-		return string(h.Class)
-	}
+func (h *Hero) ShortClass(lang Language) string {
+	return T(lang, "class."+string(h.Class)+".short")
 }
 
 func (h *Hero) NextLevelExp() int {
@@ -491,11 +495,12 @@ func (h *Hero) GainExp(amt int) bool {
 	return leveledUp
 }
 
-func (h *Hero) FullName() string {
-	if h.Title != "" {
-		return h.Name + " «" + h.Title + "»"
+func (h *Hero) FullName(lang Language) string {
+	name := h.DisplayName(lang)
+	if h.TitleKey != "" {
+		return name + " «" + T(lang, h.TitleKey) + "»"
 	}
-	return h.Name
+	return name
 }
 
 func (h *Hero) TotalAtk() int {
@@ -596,38 +601,38 @@ func (h *Hero) RemoveDot()         { h.Feats.DoTsRemoved++ }
 type MonsterAffix string
 
 const (
-	AffixNone     MonsterAffix = "Обычный"
-	AffixFire     MonsterAffix = "Огненный"
-	AffixPoison   MonsterAffix = "Ядовитый"
-	AffixFrost    MonsterAffix = "Ледяной"
-	AffixStone    MonsterAffix = "Каменный"
-	AffixVampiric MonsterAffix = "Вампир"
+	AffixNone     MonsterAffix = "none"
+	AffixFire     MonsterAffix = "fire"
+	AffixPoison   MonsterAffix = "poison"
+	AffixFrost    MonsterAffix = "frost"
+	AffixStone    MonsterAffix = "stone"
+	AffixVampiric MonsterAffix = "vampiric"
 )
 
 type MonsterType string
 
 const (
-	MobRat         MonsterType = "Чумная крыса"
-	MobGoblin      MonsterType = "Гоблин"
-	MobSkeleton    MonsterType = "Скелет"
-	MobSlime       MonsterType = "Болотный слизень"
-	MobDrowned     MonsterType = "Утопленник"
-	MobLizard      MonsterType = "Болотный ящер"
-	MobImp         MonsterType = "Пепельный бес"
-	MobOrc         MonsterType = "Орк-берсерк"
-	MobSalamander  MonsterType = "Саламандра"
-	MobGargoyle    MonsterType = "Гаргулья"
-	MobGolem       MonsterType = "Кристальный голем"
-	MobPhantom     MonsterType = "Фантом"
-	MobVoidDemon   MonsterType = "Демон Бездны"
-	MobDeathKnight MonsterType = "Рыцарь Смерти"
-	MobDragon      MonsterType = "Пепельный Дракон"
+	MobRat         MonsterType = "rat"
+	MobGoblin      MonsterType = "goblin"
+	MobSkeleton    MonsterType = "skeleton"
+	MobSlime       MonsterType = "slime"
+	MobDrowned     MonsterType = "drowned"
+	MobLizard      MonsterType = "lizard"
+	MobImp         MonsterType = "imp"
+	MobOrc         MonsterType = "orc"
+	MobSalamander  MonsterType = "salamander"
+	MobGargoyle    MonsterType = "gargoyle"
+	MobGolem       MonsterType = "golem"
+	MobPhantom     MonsterType = "phantom"
+	MobVoidDemon   MonsterType = "void_demon"
+	MobDeathKnight MonsterType = "death_knight"
+	MobDragon      MonsterType = "dragon"
 )
 
 type Monster struct {
 	ID      int
 	Type    MonsterType
-	Name    string
+	NameKey string
 	Level   int
 	Affix   MonsterAffix
 	Glyph   rune
@@ -736,11 +741,11 @@ type Point struct {
 type BiomeType string
 
 const (
-	BiomeCatacombs BiomeType = "Гнилые Катакомбы"
-	BiomeGrotto    BiomeType = "Затопленные Гроты"
-	BiomeInferno   BiomeType = "Пепельные Недра"
-	BiomeCrystal   BiomeType = "Кристальный Лабиринт"
-	BiomeAbyss     BiomeType = "Трон Бездны"
+	BiomeCatacombs BiomeType = "catacombs"
+	BiomeGrotto    BiomeType = "grotto"
+	BiomeInferno   BiomeType = "inferno"
+	BiomeCrystal   BiomeType = "crystal"
+	BiomeAbyss     BiomeType = "abyss"
 )
 
 type QuestType int
@@ -756,8 +761,8 @@ const (
 
 type AutoQuest struct {
 	Type        QuestType
-	Title       string
-	Description string
+	TitleKey    string
+	DescKey     string
 	TargetMob   MonsterType
 	TargetCount int
 	Current     int
@@ -767,18 +772,18 @@ type AutoQuest struct {
 
 type BagUpgrade struct {
 	Level    int
-	Name     string
+	NameKey  string
 	Capacity int
 	Cost     int
 }
 
 var bagUpgrades = []BagUpgrade{
-	{Level: 1, Name: "Холщовый мешок", Capacity: 5, Cost: 0},
-	{Level: 2, Name: "Кожаный ранец", Capacity: 8, Cost: 150},
-	{Level: 3, Name: "Бездонная торба", Capacity: 12, Cost: 380},
-	{Level: 4, Name: "Походный кофр", Capacity: 16, Cost: 750},
-	{Level: 5, Name: "Обозный тюк", Capacity: 20, Cost: 1400},
-	{Level: 6, Name: "Мешок иллюзий", Capacity: 25, Cost: 2600},
+	{Level: 1, NameKey: "bag.tier_1", Capacity: 5, Cost: 0},
+	{Level: 2, NameKey: "bag.tier_2", Capacity: 8, Cost: 150},
+	{Level: 3, NameKey: "bag.tier_3", Capacity: 12, Cost: 380},
+	{Level: 4, NameKey: "bag.tier_4", Capacity: 16, Cost: 750},
+	{Level: 5, NameKey: "bag.tier_5", Capacity: 20, Cost: 1400},
+	{Level: 6, NameKey: "bag.tier_6", Capacity: 25, Cost: 2600},
 }
 
 type FallenHeroRecord struct {
@@ -830,12 +835,12 @@ type TownBudget struct {
 }
 
 type TownEstablishments struct {
-	SmithyName    string
-	TanneryName   string
-	TavernName    string
-	GuildName     string
-	AlchemistName string
-	ChurchName    string
+	SmithyKey    string
+	TanneryKey   string
+	TavernKey    string
+	GuildKey     string
+	AlchemistKey string
+	ChurchKey    string
 }
 
 type GameState int
@@ -864,9 +869,9 @@ const (
 )
 
 type PartyRelic struct {
-	Name        string
+	NameKey     string
 	Level       int
-	Description string
+	DescKey     string
 	GoldMult    float64
 	EnemyDmgMod float64
 	MartyrFury  bool
@@ -874,6 +879,7 @@ type PartyRelic struct {
 }
 
 type Model struct {
+	Lang             Language
 	State            GameState
 	MenuCountdown    int
 	TermWidth        int

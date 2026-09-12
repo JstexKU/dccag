@@ -1,0 +1,1242 @@
+package main
+
+import (
+	"fmt"
+)
+
+var dictRU = map[string]string{
+	// --- Главный интерфейс и кнопки ---
+	"ui.too_small":       "Терминал слишком мал! Увеличьте окно (минимум 60x20).",
+	"ui.press_start":     "Начать экспедицию немедленно",
+	"ui.quit":            "Выход",
+	"ui.floor":           "Этаж",
+	"ui.gold":            "G",
+	"ui.bag":             "Рюкзак",
+	"ui.contract":        "Контракт",
+	"ui.dead":            "ПАЛ",
+	"ui.alive":           "В СТРОЮ",
+	"ui.potions_short":   "Зелья",
+	"ui.potions_belt":    "Пояс зелий",
+	"ui.btn_stats":       "Статистика",
+	"ui.btn_armory":      "Арсенал",
+	"ui.btn_codex":       "Кодекс",
+	"ui.btn_restart":     "Заново",
+	"ui.btn_back":        "Назад",
+	"ui.speed":           "Скор.",
+	"ui.speed_short":     "Скор",
+	"ui.pause":           "Пауза",
+	"ui.logs":            "Логи",
+	"ui.flee":            "Побег",
+	"ui.tabs":            "Вкладки [I]",
+	"ui.glory":           "Слава",
+	"ui.scroll":          "Прокрутка",
+	"ui.total":           "Итого",
+	"ui.none":            "Нет",
+	"ui.slots":           "Слотов",
+	"ui.slots_short":     "слотов",
+	"ui.mutations":       "Мутации",
+	"ui.level_short":     "Ур",
+	"ui.atk_short":       "Атк",
+	"ui.def_short":       "Защ",
+	"ui.awaiting_revive": "Ждет воскрешения",
+	"ui.party_and_relic": "ОТРЯД И РЕЛИКВИЯ",
+	"ui.relic_short":     "Реликвия",
+	"ui.no_relic":        "Реликвия не найдена",
+	"ui.scouting":        "РАЗВЕДКА ТЕРРИТОРИИ",
+	"ui.treasury":        "Казна",
+	"ui.hazard":          "Опасность",
+	"ui.turn_in":         "СДАТЬ",
+	"ui.chronicles":      "ХРОНИКИ ЭКСПЕДИЦИИ",
+	"ui.archive":         "Архив",
+
+	// Меню и поражение
+	"defeat.title":         "ПОРАЖЕНИЕ: ВЕСЬ ОТРЯД ПАЛ ВО ТЬМЕ...",
+	"defeat.restart_timer": "⏳ Автоматический перезапуск через: %d сек...",
+
+	// Статусы
+	"status.guard":   "[БЛОК]",
+	"status.rage":    "ЯРОСТЬ",
+	"status.stealth": "[СКРЫТ]",
+	"status.aura":    "[АУРА]",
+
+	// --- Классы героев ---
+	"class.tank.name":     "Танк",
+	"class.tank.short":    "Танк",
+	"class.warrior.name":  "Воин",
+	"class.warrior.short": "Воин",
+	"class.rogue.name":    "Разбойник",
+	"class.rogue.short":   "Рога",
+	"class.mage.name":     "Маг",
+	"class.mage.short":    "Маг",
+	"class.cleric.name":   "Клирик",
+	"class.cleric.short":  "Жрец",
+
+	// --- Слоты экипировки ---
+	"slot.weapon": "Оружие",
+	"slot.head":   "Шлем",
+	"slot.chest":  "Доспех",
+	"slot.legs":   "Поножи",
+
+	// --- Психозы и воодушевление ---
+	"affliction.none":     "Спокоен",
+	"affliction.paranoid": "Параноик",
+	"affliction.selfish":  "Эгоист",
+	"affliction.maniac":   "Безумец",
+	"affliction.virtuous": "Воодушевлен",
+
+	// --- Биомы и опасности ---
+	"biome.catacombs":  "Гнилые Катакомбы",
+	"biome.grotto":     "Затопленные Гроты",
+	"biome.inferno":    "Пепельные Недра",
+	"biome.crystal":    "Кристальный Лабиринт",
+	"biome.abyss":      "Трон Бездны",
+	"hazard.catacombs": "Сырость и гниль",
+	"hazard.grotto":    "Затопленные плиты (-2 Скор)",
+	"hazard.inferno":   "Палящий зной (+Огонь)",
+	"hazard.crystal":   "Искажение эфира (+3 к MP)",
+	"hazard.abyss":     "Дыхание Бездны (+10% стресса)",
+
+	// --- Сумки ---
+	"bag.tier_1": "Холщовый мешок",
+	"bag.tier_2": "Кожаный ранец",
+	"bag.tier_3": "Бездонная торба",
+	"bag.tier_4": "Походный кофр",
+	"bag.tier_5": "Обозный тюк",
+	"bag.tier_6": "Мешок иллюзий",
+
+	// --- Зелья ---
+	"potion.small.hp":      "Малое Зелье HP",
+	"potion.medium.hp":     "Среднее Зелье HP",
+	"potion.large.hp":      "Большое Зелье HP",
+	"potion.grand.hp":      "Великое Зелье HP",
+	"potion.small.mp":      "Малое Зелье MP",
+	"potion.medium.mp":     "Среднее Зелье MP",
+	"potion.large.mp":      "Большое Зелье MP",
+	"potion.grand.mp":      "Великое Зелье MP",
+	"potion.small.stress":  "Малая Настойка Рассудка",
+	"potion.medium.stress": "Средняя Настойка Рассудка",
+	"potion.large.stress":  "Большая Настойка Рассудка",
+	"potion.grand.stress":  "Великая Настойка Рассудка",
+
+	// --- Мутации ---
+	"mut.chimera.name": "Сыворотка Химеры",
+	"mut.fury.name":    "Эссенция Ярости",
+	"mut.titan.name":   "Кровь Титана",
+	"mut.aether.name":  "Флюид Эфира",
+	"mut.bastion.name": "Эликсир Бастиона",
+
+	// --- Реликвии ---
+	"relic.greed_compass.name.1": "Потускневший Компас Алчности (Ур.1)",
+	"relic.greed_compass.name.2": "Освященный Компас Алчности (Ур.2)",
+	"relic.greed_compass.name.3": "Древний Компас Алчности (Ур.3)",
+	"relic.greed_compass.desc":   "+Золото, монстры наносят больший урон",
+
+	"relic.martyr_crown.name.1": "Потускневшая Корона Мученика (Ур.1)",
+	"relic.martyr_crown.name.2": "Освященная Корона Мученика (Ур.2)",
+	"relic.martyr_crown.name.3": "Древняя Корона Мученика (Ур.3)",
+	"relic.martyr_crown.desc":   "При гибели союзника живые получают Atk",
+
+	"relic.holy_grail.name.1": "Потускневший Священный Грааль (Ур.1)",
+	"relic.holy_grail.name.2": "Освященный Священный Грааль (Ур.2)",
+	"relic.holy_grail.name.3": "Древний Священный Грааль (Ур.3)",
+	"relic.holy_grail.desc":   "Снижает получаемый стресс отряда",
+
+	// --- Префиксы и суффиксы ---
+	"prefix.fire":      "Пылающий",
+	"prefix.poison":    "Ядовитый",
+	"prefix.frost":     "Леденящий",
+	"prefix.lightning": "Громовой",
+	"prefix.none":      "Закаленный",
+
+	"suffix.vampirism": "Кровопийцы",
+	"suffix.fury":      "Ярости",
+	"suffix.mana":      "Медитации",
+	"suffix.titan":     "Титана",
+
+	// --- Материалы ---
+	"mat.iron":           "Железн.",
+	"mat.steel":          "Стальн.",
+	"mat.mithril":        "Мифрил.",
+	"mat.adamant":        "Адамант.",
+	"mat.yew":            "Тисов.",
+	"mat.ash":            "Ясенев.",
+	"mat.crystal":        "Кристальн.",
+	"mat.aether":         "Эфирн.",
+	"mat.raw_leather":    "Сыромятн.",
+	"mat.boiled_leather": "Варён.",
+	"mat.basilisk_skin":  "Василиск.",
+	"mat.dragon_scale":   "Драконь.",
+	"mat.linen":          "Льнян.",
+	"mat.silk":           "Шёлков.",
+	"mat.brocade":        "Парчов.",
+	"mat.void_cloth":     "Эфирн.",
+
+	// --- Базовые предметы ---
+	"item.tank.weapon.1": "Гладиус с баклером",
+	"item.tank.weapon.2": "Палаш с щитом",
+	"item.tank.weapon.3": "Моргенштерн с павезой",
+	"item.tank.weapon.4": "Бастионный меч",
+	"item.tank.head.1":   "Топфхельм",
+	"item.tank.head.2":   "Салад",
+	"item.tank.head.3":   "Армет",
+	"item.tank.head.4":   "Бацинет бастиона",
+	"item.tank.chest.1":  "Бригантина",
+	"item.tank.chest.2":  "Полудоспех",
+	"item.tank.chest.3":  "Кираса бастиона",
+	"item.tank.chest.4":  "Панцирь цитадели",
+	"item.tank.legs.1":   "Наголенники",
+	"item.tank.legs.2":   "Шарнирные поножи",
+	"item.tank.legs.3":   "Латные поножи",
+	"item.tank.legs.4":   "Протекторы цитадели",
+
+	"item.warrior.weapon.1": "Эспадон",
+	"item.warrior.weapon.2": "Клеймор",
+	"item.warrior.weapon.3": "Боевой топор",
+	"item.warrior.weapon.4": "Фальшион",
+	"item.warrior.head.1":   "Норманнский шлем",
+	"item.warrior.head.2":   "Бацинет",
+	"item.warrior.head.3":   "Барбют",
+	"item.warrior.head.4":   "Шишак",
+	"item.warrior.chest.1":  "Хауберк",
+	"item.warrior.chest.2":  "Кираса ярости",
+	"item.warrior.chest.3":  "Чешуйчатый доспех",
+	"item.warrior.chest.4":  "Нагрудник витязя",
+	"item.warrior.legs.1":   "Чешуйчатые гетры",
+	"item.warrior.legs.2":   "Чулки",
+	"item.warrior.legs.3":   "Пластины",
+	"item.warrior.legs.4":   "Поножи витязя",
+
+	"item.rogue.weapon.1": "Охотничьи ножи",
+	"item.rogue.weapon.2": "Парные стилеты",
+	"item.rogue.weapon.3": "Зазубренные кинжалы",
+	"item.rogue.weapon.4": "Воровские кортики",
+	"item.rogue.head.1":   "Капюшон",
+	"item.rogue.head.2":   "Бандана",
+	"item.rogue.head.3":   "Маска теней",
+	"item.rogue.head.4":   "Венец бесшумности",
+	"item.rogue.chest.1":  "Колет",
+	"item.rogue.chest.2":  "Гамбезон",
+	"item.rogue.chest.3":  "Куртка теневика",
+	"item.rogue.chest.4":  "Плащ ассасина",
+	"item.rogue.legs.1":   "Краги",
+	"item.rogue.legs.2":   "Плотные гетры",
+	"item.rogue.legs.3":   "Мягкие сапоги",
+	"item.rogue.legs.4":   "Поножи бесшумности",
+
+	"item.mage.weapon.1": "Рунная трость",
+	"item.mage.weapon.2": "Посох искр",
+	"item.mage.weapon.3": "Кристаллический жезл",
+	"item.mage.weapon.4": "Архимагический скипетр",
+	"item.mage.head.1":   "Остроконечная шляпа",
+	"item.mage.head.2":   "Обруч магии",
+	"item.mage.head.3":   "Диадема фокуса",
+	"item.mage.head.4":   "Капюшон магистра",
+	"item.mage.chest.1":  "Роба ученика",
+	"item.mage.chest.2":  "Мантия чародея",
+	"item.mage.chest.3":  "Одеяние эфира",
+	"item.mage.chest.4":  "Астральная мантия",
+	"item.mage.legs.1":   "Обмотки",
+	"item.mage.legs.2":   "Штаны чародея",
+	"item.mage.legs.3":   "Ленты левитации",
+	"item.mage.legs.4":   "Поножи эфира",
+
+	"item.cleric.weapon.1": "Окованная дубина",
+	"item.cleric.weapon.2": "Боевой молот",
+	"item.cleric.weapon.3": "Шестопёр",
+	"item.cleric.weapon.4": "Булава света",
+	"item.cleric.head.1":   "Митра",
+	"item.cleric.head.2":   "Койф",
+	"item.cleric.head.3":   "Капеллина",
+	"item.cleric.head.4":   "Венец правосудия",
+	"item.cleric.chest.1":  "Сутана",
+	"item.cleric.chest.2":  "Хабит инквизитора",
+	"item.cleric.chest.3":  "Пресвитерский панцирь",
+	"item.cleric.chest.4":  "Священный доспех",
+	"item.cleric.legs.1":   "Наголенники веры",
+	"item.cleric.legs.2":   "Сапоги паломника",
+	"item.cleric.legs.3":   "Инквизиторские сапоги",
+	"item.cleric.legs.4":   "Наколенники света",
+
+	// --- Монстры ---
+	"mob.rat":          "Чумная крыса",
+	"mob.goblin":       "Гоблин",
+	"mob.skeleton":     "Скелет",
+	"mob.slime":        "Болотный слизень",
+	"mob.drowned":      "Утопленник",
+	"mob.lizard":       "Болотный ящер",
+	"mob.imp":          "Пепельный бес",
+	"mob.orc":          "Орк-берсерк",
+	"mob.salamander":   "Саламандра",
+	"mob.gargoyle":     "Гаргулья",
+	"mob.golem":        "Кристальный голем",
+	"mob.phantom":      "Фантом",
+	"mob.void_demon":   "Демон Бездны",
+	"mob.death_knight": "Рыцарь Смерти",
+	"mob.dragon":       "Пепельный Дракон",
+
+	"mob.boss_dragon":    "Пепельный Дракон (БОСС)",
+	"mob.boss_orc":       "Вождь Орков",
+	"mob.boss_golem":     "Алмазный Колосс",
+	"mob.boss_leviathan": "Глубинный Левиафан",
+
+	// --- Имена героев ---
+	"hero.name.brand":     "Бранд",
+	"hero.name.thorin":    "Торин",
+	"hero.name.lyra":      "Лира",
+	"hero.name.aldos":     "Алдос",
+	"hero.name.selina":    "Селина",
+	"hero.name.ragnar":    "Рагнар",
+	"hero.name.ingvar":    "Ингвар",
+	"hero.name.wulf":      "Вульф",
+	"hero.name.sigurd":    "Сигурд",
+	"hero.name.morgan":    "Морган",
+	"hero.name.elias":     "Элиас",
+	"hero.name.duncan":    "Дункан",
+	"hero.name.gottfried": "Готфрид",
+	"hero.name.walter":    "Вальтер",
+	"hero.name.cassian":   "Кассиан",
+	"hero.name.iris":      "Айрис",
+	"hero.name.morrigan":  "Морриган",
+	"hero.name.brigitte":  "Бригитта",
+	"hero.name.agnes":     "Агнес",
+	"hero.name.hilda":     "Хильда",
+	"hero.name.yaropolk":  "Ярополк",
+	"hero.name.radomir":   "Радомир",
+	"hero.name.dobrynya":  "Добрыня",
+	"hero.name.lyutobor":  "Лютобор",
+	"hero.name.bronislav": "Бронислав",
+	"hero.name.aeron":     "Аэрон",
+	"hero.name.draven":    "Дрейвен",
+	"hero.name.kalar":     "Кэлар",
+	"hero.name.zordan":    "Зордан",
+	"hero.name.tarion":    "Тарион",
+	"hero.name.veldor":    "Велдор",
+	"hero.name.falcon":    "Фалькон",
+	"hero.name.yorick":    "Йоррик",
+	"hero.name.edan":      "Эдан",
+	"hero.name.zarvin":    "Зарвин",
+	"hero.name.lirianna":  "Лирианна",
+	"hero.name.velara":    "Велара",
+	"hero.name.mirael":    "Мираэль",
+	"hero.name.celestina": "Селестина",
+	"hero.name.kaelina":   "Каэлина",
+	"hero.name.tirianna":  "Тирианна",
+	"hero.name.nayra":     "Найра",
+	"hero.name.elmira":    "Эльмира",
+	"hero.name.zeyra":     "Зейра",
+	"hero.name.xandr":     "Ксандр",
+	"hero.name.verissa":   "Верисса",
+	"hero.name.orwin":     "Орвин",
+	"hero.name.silran":    "Сильран",
+	"hero.name.keldra":    "Келдра",
+	"hero.name.veynara":   "Вейнара",
+
+	// --- Титулы ---
+	"title.militia":           "Ополченец",
+	"title.slayer_of_beasts":  "Истребитель чудовищ",
+	"title.dragonslayer":      "Драконоборец",
+	"title.luck_cursed":       "Проклятый удачей",
+	"title.immortal":          "Бессмертный",
+	"title.treasure_seeker":   "Искатель кладов",
+	"title.secret_keeper":     "Хранитель тайн",
+	"title.impenetrable":      "Непробиваемый",
+	"title.storm_shield":      "Грозовой щит",
+	"title.the_wall":          "Стена",
+	"title.blood_blade":       "Кровавый клинок",
+	"title.executioner":       "Палач",
+	"title.axe":               "Топор",
+	"title.rank_cleaver":      "Разрыватель рядов",
+	"title.phantom_strike":    "Призрачный удар",
+	"title.shadow":            "Тень",
+	"title.blade":             "Клинок",
+	"title.knife_in_the_back": "Нож за спиной",
+	"title.deft_hand":         "Ловкая рука",
+	"title.stormbringer":      "Буревестник",
+	"title.cinder":            "Пепел",
+	"title.chains_of_the_void": "Оковы пустоты",
+	"title.flash":             "Вспышка",
+	"title.grace":             "Благодать",
+	"title.holy":              "Святой",
+	"title.resurrector":       "Воскреситель",
+	"title.purifier":          "Очиститель",
+
+	// --- Квесты ---
+	"quest.hunt.title":   "Охота на монстров",
+	"quest.hunt.desc":    "Истребить врагов в подземелье",
+	"quest.chest.title":  "Сбор сокровищ",
+	"quest.chest.desc":   "Вскрыть сундуки на этажах",
+	"quest.floor.title":  "Освоение глубин",
+	"quest.floor.desc":   "Спуститься на нижние этажи",
+	"quest.relic.title":  "Поиск Реликвии",
+	"quest.relic.desc":   "Найти древний реликварий в подземелье",
+	"quest.escape.title": "Побег из засады",
+	"quest.escape.desc":  "Исследовать запечатанный зал и найти выход",
+	"quest.altar.title":  "Кровавый пакт",
+	"quest.altar.desc":   "Принести жертву у древнего Алтаря",
+
+	// --- Заведения Столицы ---
+	"town.market":       "Рыночная площадь",
+	"town.magistrate":   "Магистрат Столицы",
+	"town.hub_title":    "═══ СТОЛИЧНЫЙ КВАРТАЛ И СЛУЖБЫ ═══",
+	"town.log_title":    "ЖУРНАЛ ДЕЙСТВИЙ ОТРЯДА В ГОРОДЕ",
+	"town.camp":         "Лагерь",
+	"town.management":   "СТОЛИЧНОЕ УПРАВЛЕНИЕ",
+	"town.tax_active":   "Квотирование казны активно.",
+	"town.smithy":       "Кузница",
+	"town.tannery":      "Кожевник",
+	"town.church":       "Храм",
+	"town.tavern":       "Таверна",
+	"town.guild":        "Гильдия",
+
+	"town.smithy.1": "Драконий Вздох",
+	"town.smithy.2": "Пылающий Горн",
+	"town.smithy.3": "Молот и Наковальня",
+	"town.smithy.4": "Стальная Искра",
+	"town.smithy.5": "Удар Титана",
+
+	"town.tannery.1": "Вторая Кожа",
+	"town.tannery.2": "Прочный Стежок",
+	"town.tannery.3": "Дубленый Лев",
+	"town.tannery.4": "Лоскут и Заклепка",
+	"town.tannery.5": "Северный Олень",
+
+	"town.tavern.1": "Пьяный Дракон",
+	"town.tavern.2": "Приют Пройдохи",
+	"town.tavern.3": "Золотой Кубок",
+	"town.tavern.4": "Последний Приют",
+	"town.tavern.5": "Кабанья Голова",
+
+	"town.guild.1": "Железный Контракт",
+	"town.guild.2": "Орден Рассвета",
+	"town.guild.3": "Союз Четырех Ветров",
+	"town.guild.4": "Искатели Судеб",
+	"town.guild.5": "Гвардия Удачи",
+
+	"town.alchemist.1": "Магия Эфира",
+	"town.alchemist.2": "Зеленый Флакон",
+	"town.alchemist.3": "Корень Мандрагоры",
+	"town.alchemist.4": "Философский Камень",
+	"town.alchemist.5": "Капля Света",
+
+	"town.church.1": "Храм Вечного Рассвета",
+	"town.church.2": "Обитель Семи Светил",
+	"town.church.3": "Монастырь Безмолвия",
+	"town.church.4": "Часовня Упавшей Звезды",
+	"town.church.5": "Святыня Живой Воды",
+
+	// --- Логи города ---
+	"town.log.enter_gate":       "Отряд проходит через городские ворота на привал...",
+	"town.log.market_sold":      "⚖️ [Рынок] Трофеи проданы на +%dG.",
+	"town.log.market_history":   "Сбыт трофеев на +%dG. Дух укреплен (-40 стресса)",
+	"town.log.magistrate_tax":   "🏛️ [Магистрат] Отчислено %dG на развитие города («%s» Ур.%d)!",
+	"town.log.magistrate_hist":  "Внесено %dG («%s» улучшена до Ур.%d)",
+	"town.log.church_liturgy":   "⛪ [%s] Литургия проведена (-%dG, поднято: %d)!",
+	"town.log.church_hist":      "Литургия исцеления: поднято %d бойцов, снят стресс (-%dG)",
+	"town.log.tavern_rest":      "🍻 [%s] Полноценный отдых (-%dG). Отряд полон сил.",
+	"town.log.tavern_hist":      "Ночлег в уютных покоях (-%dG). Силы восстановлены",
+	"town.log.tavern_barn":      "🏚️ [Сеновал] Казна истощена! Ночлег на сеновале (45%% сил).",
+	"town.log.tavern_barn_hist": "Казна пуста! Ночлег на сеновале (45%% сил)",
+	"town.log.guild_quest":      "📜 [%s] Контракт закрыт: +%dG!",
+	"town.log.guild_quest_hist": "Закрыт контракт: получена награда +%dG",
+	"town.log.guild_veteran":    "⚔️ [%s] Нанят ветеран %s (%s, Ур.%d) за %dG!",
+	"town.log.guild_vet_hist":   "Принят контракт ветерана %s (%s, Ур.%d) за %dG",
+	"town.log.guild_militia":    "🤝 [%s] Ополченец %s (%s) встал в строй бесплатно.",
+	"town.log.guild_mil_hist":   "Ополченец %s (%s) встал в строй без оплаты",
+	"town.log.smithy_done":      "⚒️ [%s] Заточено оружия и лат: %d шт. (-%dG)!",
+	"town.log.smithy_hist":      "Заточено предметов арсенала: %d шт. (-%dG)",
+	"town.log.tannery_bag":      "🎒 [%s] Сшит %s (%d сл.) за %dG!",
+	"town.log.tannery_bag_hist": "Сшит %s (%d слотов) за %dG",
+	"town.log.tannery_done":     "🎒 [%s] Укреплено кожи и ткани: %d шт.!",
+	"town.log.tannery_hist":     "Выделка легких и средних доспехов: %d шт. (-%dG)",
+	"town.log.mut_chimera":      "⚗️ %s %s [%s] (+8 HP, +5 MP, +1 Atk, +1 Def) за %dG!",
+	"town.log.mut_fury":         "⚗️ %s %s [%s] (+3 Atk, +2 HP) за %dG!",
+	"town.log.mut_titan":        "⚗️ %s %s [%s] (+20 HP) за %dG!",
+	"town.log.mut_aether":       "⚗️ %s %s [%s] (+14 MP, +1 Atk) за %dG!",
+	"town.log.mut_bastion":      "⚗️ %s %s [%s] (+2 Def, +6 HP) за %dG!",
+	"town.log.alch_hist":        "Сварены сыворотки и настойки в пояса на сумму %dG",
+	"town.log.depart":           "🛡️ Отряд снаряжен и спускается на глубину!",
+
+	// --- Логи боя ---
+	"combat.barrel":            "ПОРОХ",
+	"combat.enemy_pack":        "ВРАЖЕСКАЯ СТАЯ",
+	"combat.log.start":          "⚔️ СХВАТКА! Вражеский отряд (%d тварей)!",
+	"combat.log.pack_defeated":   "💀 Вражеский отряд повержен!",
+	"combat.log.flee_success":    "💨 [ПОБЕГ] Успех! Отряд оторвался от погони под прикрытием завесы.",
+	"combat.log.evacuation":      "🕊️ [Эвакуация] Отряд вынес с поля боя %d павших героев!",
+	"combat.log.retreat_town":    "🏰 Отряд укрылся за стенами Города!",
+	"combat.log.retreat_dialog":  "Отряд отступил в Столицу.",
+	"combat.log.flee_fail":       "💥 [ПРОВАЛ ПОБЕГА] Монстры перекрыли отход! Отряд перегруппировался под градом скользящих ударов.",
+	"combat.log.death_flee":      "Зарублен при неудачном отходе",
+	"combat.log.paranoid":        "👁️ %s %s в угол (Паранойя)!",
+	"combat.log.tank_stance":     "🛡️ %s принимает [Оборонительную Стойку] (+5 Def, блок)!",
+	"combat.log.tank_bash":       "🛡️ %s проводит [Удар щитом] (-%d HP, враг ослаблен на -3 Atk)!",
+	"combat.log.warrior_rage":    "⚔️ %s входит в [Состояние Ярости] (+5 Atk, -2 Def)!",
+	"combat.log.warrior_cleave":  "⚔️ %s выполняет [Рассечение] по %d врагам (-%d HP)!",
+	"combat.log.rogue_stealth":   "🗡️ %s %s в тенях [Скрытность] (100%% крит)!",
+	"combat.log.rogue_poison":    "☣️ %s наносит [Отравленный выпад] (-%d HP)!",
+	"combat.log.cleric_heal":     "✨ %s %s %s (+%d HP)!",
+	"combat.log.cleric_aura":     "✨ %s раскрывает [Ауру Защиты] (+3 Def отряду)!",
+	"combat.log.cleric_smite":    "✨ %s %s [Священную кару] (-%d HP)!",
+	"combat.log.mage_barrel":     "💥 %s ПОДРЫВАЕТ БОЧКУ СО СМОЛОЙ (-%d HP отряду врагов)!",
+	"combat.log.mage_storm":      "🔥 %s %s врагов [Огненной Бурей]!",
+	"combat.log.mob_block":       "🛡️ [%s] отразил выпад монолитным блоком!",
+	"combat.log.fire_arrow":      "🔥 %s выпускает [Огненную стрелу] (+5 ур)!",
+	"combat.log.blessing":        "✨ %s: [Благословение] (-6 стресса %s)!",
+	"combat.log.crush_strike":    "⚔️ %s: [Сокрушающий выпад]!",
+	"combat.log.quick_cut":       "🗡️ %s: [Быстрый порез]!",
+	"combat.log.taunt":           "🛡️ %s: [Провокация] (+2 Защ)!",
+	"combat.log.fumble":          "💨 %s %s (D20=1)!",
+	"combat.log.armor_deflect":   "🛡️ Броня [%s] отразила удар %s.",
+	"combat.log.crit":            "💥 КРИТ (D20=%d)! %s сокрушает врага!",
+	"combat.log.boss_relic":      "👑 Реликвия Дракона: [%s]!",
+	"combat.log.mob_ranged":      "🎯 [%s] проводит дальнобойную атаку по позициям %s!",
+	"combat.log.mob_melee":       "🏃 [%s] сближается вплотную для ближнего боя с %s.",
+	"combat.log.dodge":           "🛡️ %s ловко %s от выпада [%s]!",
+	"combat.log.armor_absorb":    "🛡️ Доспехи %s полностью поглотили удар [%s].",
+	"combat.log.mob_crit":        "⚡ КРИТИЧЕСКИЙ УДАР от [%s] по %s!",
+	"combat.log.tank_guard":      "🛡️ %s %s %s от удара [%s], приняв %d урона!",
+	"combat.log.mob_hit":         "💥 [%s] нанес %d урона по %s!",
+	"combat.log.hero_slain":      "☠️ %s %s в бою от фатального удара [%s]!",
+	"combat.log.death_cause_mob": "Сражен монстром [%s]",
+
+	// --- Логи подземелья ---
+	"dungeon.log.start":               "Экспедиция выступает в неизведанные катакомбы...",
+	"dungeon.log.lvl_up":              "⭐ [УРОВЕНЬ] %s %s Ур.%d! Характеристики возросли!",
+	"dungeon.log.quest_done":          "📜 [КОНТРАКТ ВЫПОЛНЕН] «%s»!",
+	"dungeon.log.equip_swap":          "✨ %s %s [%s] на [%s] (Мощь: %d)!",
+	"dungeon.log.bag_stored":          "📦 %s сложен в сумку.",
+	"dungeon.log.martyr_crown":        "👑 [Корона] Ярость павшего усилила живых (+4 Atk)!",
+	"dungeon.log.rest_tick":           "🌿 [Привал] В тишине подземелья отряд немного передохнул (+1 HP/MP, -1 Стресс).",
+	"dungeon.log.collision_break":     "⚠️ [Коллизия] Экстренный прорыв к свободному залу.",
+	"dungeon.log.floor_cleared":       "Этаж %d пройден! Спуск глубже.",
+	"dungeon.log.floor_cleared_boss":  "🌟 ЭТАЖ %d ПРОЙДЕН! Бездна зовет...",
+	"dungeon.log.stairs_descend":      "Спуск на этаж %d!",
+	"dungeon.log.chest_open":          "🎁 Сундук: +%dG и [%s].",
+	"dungeon.log.virtue":              "🌟 [ВООДУШЕВЛЕНИЕ] %s %s страх и %s второе дыхание!",
+	"dungeon.log.affliction":          "👁️ [ПСИХОЗ] %s %s: %s!",
+	"dungeon.log.heart_attack":        "💔 [СЕРДЕЧНЫЙ ПРИСТУП] %s %s за сердце! HP упало до 1!",
+	"dungeon.log.heart_attack_death":  "💔 [ИНФАРКТ] Сердце %s разорвалось от безумия! Смерть!",
+	"dungeon.death.heart_attack":      "Сердечный приступ (%s)",
+	"dungeon.log.potion_hp":           "🧪 %s %s [%s] (+%d HP)!",
+	"dungeon.log.potion_mp":           "🧪 %s %s [%s] (+%d MP)!",
+	"dungeon.log.potion_stress":       "🧪 %s %s [%s] (-%d стресса)!",
+	"dungeon.log.title_awarded":       "👑 [СЛАВА] %s %s титул «%s»!",
+	"dungeon.death.altar":             "Принесен в жертву Алтарю",
+	"dungeon.log.altar_death":         "🩸 %s %s жертвой Алтаря!",
+	"dungeon.log.altar_success":       "🩸 %s %s %d HP (+2 Atk)!",
+	"dungeon.log.fountain":            "💧 [Источник] Здоровье, мана и рассудок отряда восстановлены!",
+	"dungeon.death.trap":              "Взорван ловушкой",
+	"dungeon.log.trapped_chest_success": "🗝️ [Ларь] Ловушка снята: +%dG и [%s]!",
+	"dungeon.log.trapped_chest_boom":    "💥 [Ловушка!] (D20=%d) Взрыв нанес урон!",
+	"dungeon.log.relic_found":          "✨ [РЕЛИКВИЯ] Отряд нашел %s!",
+	"dungeon.log.relic_salvaged":       "✨ [Реликварий] Реликвия разобрана на +80G!",
+
+	// --- Статистика и арсенал ---
+	"stats.manual_title":        "ЭКИПИРОВКА, НАСЛЕДИЕ И КНИГА ПАМЯТИ",
+	"stats.legacy_header":       "НАСЛЕДИЕ КОРОЛЕВСТВА",
+	"stats.legacy_treasury":     "В Казну следующего поколения передано",
+	"stats.achievements_header": "ДОСТИЖЕНИЯ И КОНТРАКТЫ",
+	"stats.floors_cleared":      "Зачищено этажей",
+	"stats.total_steps":         "Шагов",
+	"stats.gold_earned":         "Всего золота",
+	"stats.contracts_closed":    "Выполнено квестов",
+	"stats.upgrades_forged":     "Заточек",
+	"stats.chests_opened":       "Вскрыто ларей",
+	"stats.survivors_header":    "ВЫЖИВШИЕ БОЙЦЫ",
+	"stats.fallen_heroes":       "КНИГА ПАМЯТИ (ПАВШИЕ)",
+	"stats.no_fallen":           "Ни один боец не погиб в этом походе.",
+	"armory.title":              "═══ АРСЕНАЛ ОТРЯДА И АЛХИМИЧЕСКИЕ МУТАЦИИ",
+
+	// --- Кодекс знаний ---
+	"codex.header":      "═══ КОДЕКС ЗНАНИЙ И БАЗА ДАННЫХ DCCAG ═══",
+	"codex.tab.classes": "1. Бестиарий",
+	"codex.tab.combat":  "2. Арсенал",
+	"codex.tab.town":    "3. Столица",
+	"codex.tab.relics":  "4. Алхимия",
+	"codex.switch_tabs": "Переключение вкладок",
+
+	"codex.content.classes": `• ЦИКЛИЧЕСКИЕ БИОМЫ:
+  - Этажи 1, 6, 11... (Гнилые Катакомбы): Базовые монстры, сырость и гниль.
+  - Этажи 2, 7, 12... (Затопленные Гроты): Слизни, утопленники, ящеры (-2 к скорости группы).
+  - Этажи 3, 8, 13... (Пепельные Недра): Пепельные бесы, орки, саламандры (+урон огнем).
+  - Этажи 4, 9, 14... (Кристальный Лабиринт): Големы, гаргульи (+3 MP к стоимости способностей).
+  - Этажи 5, 10, 15... (Трон Бездны): Демоны, Рыцари Смерти, Дракон (+10% стресса).
+
+• АФФИКСЫ МОНСТРОВ:
+  - 🔥 Огненный: +3 к базовой атаке; опаляет героя на +4 чистого урона.
+  - ☣️ Ядовитый: Отравляет раны (-3 чистого HP и +14 стресса).
+  - ❄️ Ледяной: Замедляет инициативу группы и сковывает действия.
+  - 🪨 Каменный: +3 к защите (DEF), +12 к максимальному запасу здоровья.
+  - 🩸 Вампир: Крадет здоровье: восстанавливает 50% от нанесенного урона.`,
+
+	"codex.content.combat": `• КУЗНИЦА (ТАНК И ВОИН - Тяжелые латы и сталь):
+  - Оружие Танка: Т1 Гладиус -> Т2 Палаш -> Т3 Моргенштерн -> Т4 Бастионный меч (Atk:9, Блок:8)
+  - Доспех Танка: Т1 Бригантина -> Т2 Полудоспех -> Т3 Кираса -> Т4 Панцирь цитадели (Def:13, HP:+40)
+  - Оружие Воина: Т1 Эспадон -> Т2 Клеймор -> Т3 Боевой топор -> Т4 Фальшион (Atk:14, Крит:4)
+
+• КОЖЕВНИК (РОГА, МАГ, ЖРЕЦ - Кожа, мантии и пошив):
+  - Рога: Т1 Охотничьи ножи -> Т2 Стилеты -> Т3 Кинжалы -> Т4 Воровские кортики (Atk:10, Крит:8)
+  - Маг: Т1 Роба ученика -> Т2 Мантия чародея -> Т3 Одеяние эфира -> Т4 Астральная мантия (Def:8, MP:+45)
+  - Жрец: Т1 Окованная дубина -> Т2 Боевой молот -> Т3 Шестопёр -> Т4 Булава света (Atk:10, MP:+26)`,
+
+	"codex.content.town": `• СТОЛИЧНЫЕ СЛУЖБЫ:
+  - Кузница: Точит оружие и тяжелые латы.
+  - Кожевник: Выделывает кожу и шёлк, шьет сумки и расширяет инвентарь.
+  - Таверна: Ночлег и снятие стресса. При нехватке золота — сеновал (45% сил).
+  - Храм: Воскрешение павших соратников и очищение от безумия.
+  - Гильдия: Выплата наград за квесты и наём опытных ветеранов.
+
+• КВОТИРОВАНИЕ КАЗНЫ:
+  - Казна отчисляет 10% золота в фонд следующего поколения (Наследие).
+  - Остаток распределяется между службами города.`,
+
+	"codex.content.relics": `• АЛХИМИЧЕСКИЕ МУТАЦИИ:
+  - Сыворотка Химеры: +8 HP, +5 MP, +1 Atk, +1 Def (Универсально)
+  - Эссенция Ярости: +3 Atk, +2 HP (Приоритет: Рога, Воин, Маг)
+  - Кровь Титана: +20 MaxHP (Приоритет: Танк, Воин)
+  - Флюид Эфира: +14 MaxMP, +1 Atk (Приоритет: Маг, Жрец)
+  - Эликсир Бастиона: +2 Def, +6 HP (Приоритет: Танк, Жрец)
+
+• ЛЕГЕНДАРНЫЕ РЕЛИКВИИ:
+  - Компас Алчности: Увеличивает золото, но монстры наносят больше урона.
+  - Корона Мученика: При гибели союзников живые получают прибавку к Atk.
+  - Священный Грааль: Значительно снижает получаемый отрядом стресс.`,
+}
+
+var dictEN = map[string]string{
+	// --- Main UI & Buttons ---
+	"ui.too_small":       "Terminal window is too small! Please enlarge (min 60x20).",
+	"ui.press_start":     "Embark immediately",
+	"ui.quit":            "Quit",
+	"ui.floor":           "Floor",
+	"ui.gold":            "G",
+	"ui.bag":             "Backpack",
+	"ui.contract":        "Contract",
+	"ui.dead":            "DEAD",
+	"ui.alive":           "ALIVE",
+	"ui.potions_short":   "Potions",
+	"ui.potions_belt":    "Potion Belt",
+	"ui.btn_stats":       "Stats",
+	"ui.btn_armory":      "Armory",
+	"ui.btn_codex":       "Codex",
+	"ui.btn_restart":     "Restart",
+	"ui.btn_back":        "Back",
+	"ui.speed":           "Speed",
+	"ui.speed_short":     "Spd",
+	"ui.pause":           "Pause",
+	"ui.logs":            "Logs",
+	"ui.flee":            "Flee",
+	"ui.tabs":            "Tabs [I]",
+	"ui.glory":           "Glory",
+	"ui.scroll":          "Scroll",
+	"ui.total":           "Total",
+	"ui.none":            "None",
+	"ui.slots":           "Slots",
+	"ui.slots_short":     "slots",
+	"ui.mutations":       "Mutations",
+	"ui.level_short":     "Lvl",
+	"ui.atk_short":       "Atk",
+	"ui.def_short":       "Def",
+	"ui.awaiting_revive": "Awaiting revive",
+	"ui.party_and_relic": "PARTY & RELIC",
+	"ui.relic_short":     "Relic",
+	"ui.no_relic":        "No relic found",
+	"ui.scouting":        "AREA RECON",
+	"ui.treasury":        "Treasury",
+	"ui.hazard":          "Hazard",
+	"ui.turn_in":         "TURN IN",
+	"ui.chronicles":      "EXPEDITION CHRONICLES",
+	"ui.archive":         "Archive",
+
+	// Menu & Defeat
+	"defeat.title":         "DEFEAT: THE PARTY HAS FALLEN INTO THE ABYSS...",
+	"defeat.restart_timer": "⏳ Automatic restart in: %d sec...",
+
+	// Statuses
+	"status.guard":   "[BLOCK]",
+	"status.rage":    "RAGE",
+	"status.stealth": "[STEALTH]",
+	"status.aura":    "[AURA]",
+
+	// --- Classes ---
+	"class.tank.name":     "Tank",
+	"class.tank.short":    "Tank",
+	"class.warrior.name":  "Warrior",
+	"class.warrior.short": "Warr",
+	"class.rogue.name":    "Rogue",
+	"class.rogue.short":   "Rogue",
+	"class.mage.name":     "Mage",
+	"class.mage.short":    "Mage",
+	"class.cleric.name":   "Cleric",
+	"class.cleric.short":  "Cleric",
+
+	// --- Slots ---
+	"slot.weapon": "Weapon",
+	"slot.head":   "Head",
+	"slot.chest":  "Chest",
+	"slot.legs":   "Legs",
+
+	// --- Afflictions ---
+	"affliction.none":     "Calm",
+	"affliction.paranoid": "Paranoid",
+	"affliction.selfish":  "Selfish",
+	"affliction.maniac":   "Maniac",
+	"affliction.virtuous": "Virtuous",
+
+	// --- Biomes & Hazards ---
+	"biome.catacombs":  "Rotting Catacombs",
+	"biome.grotto":     "Flooded Grottos",
+	"biome.inferno":    "Ashen Deeps",
+	"biome.crystal":    "Crystal Labyrinth",
+	"biome.abyss":      "Throne of the Void",
+	"hazard.catacombs": "Damp & Decay",
+	"hazard.grotto":    "Flooded slabs (-2 Speed)",
+	"hazard.inferno":   "Scorching heat (+Fire)",
+	"hazard.crystal":   "Aether distortion (+3 MP cost)",
+	"hazard.abyss":     "Void Breath (+10% stress)",
+
+	// --- Bags ---
+	"bag.tier_1": "Canvas Bag",
+	"bag.tier_2": "Leather Satchel",
+	"bag.tier_3": "Bottomless Pack",
+	"bag.tier_4": "Travel Trunk",
+	"bag.tier_5": "Caravan Sack",
+	"bag.tier_6": "Bag of Illusions",
+
+	// --- Potions ---
+	"potion.small.hp":      "Small HP Potion",
+	"potion.medium.hp":     "Medium HP Potion",
+	"potion.large.hp":      "Large HP Potion",
+	"potion.grand.hp":      "Grand HP Potion",
+	"potion.small.mp":      "Small MP Potion",
+	"potion.medium.mp":     "Medium MP Potion",
+	"potion.large.mp":      "Large MP Potion",
+	"potion.grand.mp":      "Grand MP Potion",
+	"potion.small.stress":  "Small Sanity Draught",
+	"potion.medium.stress": "Medium Sanity Draught",
+	"potion.large.stress":  "Large Sanity Draught",
+	"potion.grand.stress":  "Grand Sanity Draught",
+
+	// --- Mutations ---
+	"mut.chimera.name": "Chimera Serum",
+	"mut.fury.name":    "Essence of Fury",
+	"mut.titan.name":   "Titan Blood",
+	"mut.aether.name":  "Aether Fluid",
+	"mut.bastion.name": "Bastion Elixir",
+
+	// --- Relics ---
+	"relic.greed_compass.name.1": "Tarnished Compass of Greed (Lvl.1)",
+	"relic.greed_compass.name.2": "Sanctified Compass of Greed (Lvl.2)",
+	"relic.greed_compass.name.3": "Ancient Compass of Greed (Lvl.3)",
+	"relic.greed_compass.desc":   "+Gold, monsters deal increased damage",
+
+	"relic.martyr_crown.name.1": "Tarnished Martyr's Crown (Lvl.1)",
+	"relic.martyr_crown.name.2": "Sanctified Martyr's Crown (Lvl.2)",
+	"relic.martyr_crown.name.3": "Ancient Martyr's Crown (Lvl.3)",
+	"relic.martyr_crown.desc":   "Fallen comrades grant Atk to survivors",
+
+	"relic.holy_grail.name.1": "Tarnished Holy Grail (Lvl.1)",
+	"relic.holy_grail.name.2": "Sanctified Holy Grail (Lvl.2)",
+	"relic.holy_grail.name.3": "Ancient Holy Grail (Lvl.3)",
+	"relic.holy_grail.desc":   "Reduces party stress intake",
+
+	// --- Prefixes & Suffixes ---
+	"prefix.fire":      "Blazing",
+	"prefix.poison":    "Venomous",
+	"prefix.frost":     "Freezing",
+	"prefix.lightning": "Thunderous",
+	"prefix.none":      "Tempered",
+
+	"suffix.vampirism": "of the Leech",
+	"suffix.fury":      "of Fury",
+	"suffix.mana":      "of Meditation",
+	"suffix.titan":     "of the Titan",
+
+	// --- Materials ---
+	"mat.iron":           "Iron",
+	"mat.steel":          "Steel",
+	"mat.mithril":        "Mithril",
+	"mat.adamant":        "Adamant",
+	"mat.yew":            "Yew",
+	"mat.ash":            "Ash",
+	"mat.crystal":        "Crystal",
+	"mat.aether":         "Aether",
+	"mat.raw_leather":    "Rawhide",
+	"mat.boiled_leather": "Boiled Leather",
+	"mat.basilisk_skin":  "Basilisk Hide",
+	"mat.dragon_scale":   "Dragon Scale",
+	"mat.linen":          "Linen",
+	"mat.silk":           "Silk",
+	"mat.brocade":        "Brocade",
+	"mat.void_cloth":     "Voidweave",
+
+	// --- Base Items ---
+	"item.tank.weapon.1": "Gladius with Buckler",
+	"item.tank.weapon.2": "Broadsword with Shield",
+	"item.tank.weapon.3": "Morningstar with Pavise",
+	"item.tank.weapon.4": "Bastion Blade",
+	"item.tank.head.1":   "Great Helm",
+	"item.tank.head.2":   "Sallet",
+	"item.tank.head.3":   "Armet",
+	"item.tank.head.4":   "Bastion Bascinet",
+	"item.tank.chest.1":  "Brigandine",
+	"item.tank.chest.2":  "Half-Plate",
+	"item.tank.chest.3":  "Bastion Cuirass",
+	"item.tank.chest.4":  "Citadel Carapace",
+	"item.tank.legs.1":   "Greaves",
+	"item.tank.legs.2":   "Articulated Greaves",
+	"item.tank.legs.3":   "Plate Leggings",
+	"item.tank.legs.4":   "Citadel Protectors",
+
+	"item.warrior.weapon.1": "Espadon",
+	"item.warrior.weapon.2": "Claymore",
+	"item.warrior.weapon.3": "Battleaxe",
+	"item.warrior.weapon.4": "Falchion",
+	"item.warrior.head.1":   "Norman Helm",
+	"item.warrior.head.2":   "Bascinet",
+	"item.warrior.head.3":   "Barbuta",
+	"item.warrior.head.4":   "Spangenhelm",
+	"item.warrior.chest.1":  "Hauberk",
+	"item.warrior.chest.2":  "Rage Cuirass",
+	"item.warrior.chest.3":  "Scale Armor",
+	"item.warrior.chest.4":  "Knight's Breastplate",
+	"item.warrior.legs.1":   "Scale Gaiters",
+	"item.warrior.legs.2":   "Chausses",
+	"item.warrior.legs.3":   "Plated Greaves",
+	"item.warrior.legs.4":   "Knight's Greaves",
+
+	"item.rogue.weapon.1": "Hunting Knives",
+	"item.rogue.weapon.2": "Dual Stilettos",
+	"item.rogue.weapon.3": "Serrated Daggers",
+	"item.rogue.weapon.4": "Thief Cutlasses",
+	"item.rogue.head.1":   "Hood",
+	"item.rogue.head.2":   "Bandana",
+	"item.rogue.head.3":   "Shadow Mask",
+	"item.rogue.head.4":   "Crown of Silence",
+	"item.rogue.chest.1":  "Doublet",
+	"item.rogue.chest.2":  "Gambeson",
+	"item.rogue.chest.3":  "Shadow Vest",
+	"item.rogue.chest.4":  "Assassin Cloak",
+	"item.rogue.legs.1":   "Gaiters",
+	"item.rogue.legs.2":   "Thick Hose",
+	"item.rogue.legs.3":   "Soft Boots",
+	"item.rogue.legs.4":   "Silent Treads",
+
+	"item.mage.weapon.1": "Runic Cane",
+	"item.mage.weapon.2": "Spark Staff",
+	"item.mage.weapon.3": "Crystal Rod",
+	"item.mage.weapon.4": "Archmage Scepter",
+	"item.mage.head.1":   "Pointed Hat",
+	"item.mage.head.2":   "Circlet of Magic",
+	"item.mage.head.3":   "Diadem of Focus",
+	"item.mage.head.4":   "Magister Cowl",
+	"item.mage.chest.1":  "Apprentice Robe",
+	"item.mage.chest.2":  "Sorcerer Mantle",
+	"item.mage.chest.3":  "Vestment of Aether",
+	"item.mage.chest.4":  "Astral Robe",
+	"item.mage.legs.1":   "Wrappings",
+	"item.mage.legs.2":   "Mage Breeches",
+	"item.mage.legs.3":   "Ribbons of Levitation",
+	"item.mage.legs.4":   "Aether Greaves",
+
+	"item.cleric.weapon.1": "Reinforced Club",
+	"item.cleric.weapon.2": "Warhammer",
+	"item.cleric.weapon.3": "Flanged Mace",
+	"item.cleric.weapon.4": "Mace of Radiance",
+	"item.cleric.head.1":   "Mitre",
+	"item.cleric.head.2":   "Coif",
+	"item.cleric.head.3":   "Kettle Hat",
+	"item.cleric.head.4":   "Crown of Justice",
+	"item.cleric.chest.1":  "Cassock",
+	"item.cleric.chest.2":  "Inquisitor Habit",
+	"item.cleric.chest.3":  "Presbyter Cuirass",
+	"item.cleric.chest.4":  "Sacred Vestment",
+	"item.cleric.legs.1":   "Greaves of Faith",
+	"item.cleric.legs.2":   "Pilgrim Boots",
+	"item.cleric.legs.3":   "Inquisitor Sabatons",
+	"item.cleric.legs.4":   "Sabatons of Light",
+
+	// --- Monsters ---
+	"mob.rat":          "Plague Rat",
+	"mob.goblin":       "Goblin",
+	"mob.skeleton":     "Skeleton",
+	"mob.slime":        "Swamp Slime",
+	"mob.drowned":      "Drowned",
+	"mob.lizard":       "Swamp Lizard",
+	"mob.imp":          "Ash Imp",
+	"mob.orc":          "Orc Berserker",
+	"mob.salamander":   "Salamander",
+	"mob.gargoyle":     "Gargoyle",
+	"mob.golem":        "Crystal Golem",
+	"mob.phantom":      "Phantom",
+	"mob.void_demon":   "Void Demon",
+	"mob.death_knight": "Death Knight",
+	"mob.dragon":       "Ash Dragon",
+
+	"mob.boss_dragon":    "Ash Dragon (BOSS)",
+	"mob.boss_orc":       "Orc Chieftain",
+	"mob.boss_golem":     "Diamond Colossus",
+	"mob.boss_leviathan": "Deep Leviathan",
+
+	// --- Hero Names ---
+	"hero.name.brand":     "Brand",
+	"hero.name.thorin":    "Thorin",
+	"hero.name.lyra":      "Lyra",
+	"hero.name.aldos":     "Aldos",
+	"hero.name.selina":    "Selina",
+	"hero.name.ragnar":    "Ragnar",
+	"hero.name.ingvar":    "Ingvar",
+	"hero.name.wulf":      "Wulf",
+	"hero.name.sigurd":    "Sigurd",
+	"hero.name.morgan":    "Morgan",
+	"hero.name.elias":     "Elias",
+	"hero.name.duncan":    "Duncan",
+	"hero.name.gottfried": "Gottfried",
+	"hero.name.walter":    "Walter",
+	"hero.name.cassian":   "Cassian",
+	"hero.name.iris":      "Iris",
+	"hero.name.morrigan":  "Morrigan",
+	"hero.name.brigitte":  "Brigitte",
+	"hero.name.agnes":     "Agnes",
+	"hero.name.hilda":     "Hilda",
+	"hero.name.yaropolk":  "Yaropolk",
+	"hero.name.radomir":   "Radomir",
+	"hero.name.dobrynya":  "Dobrynya",
+	"hero.name.lyutobor":  "Lyutobor",
+	"hero.name.bronislav": "Bronislav",
+	"hero.name.aeron":     "Aeron",
+	"hero.name.draven":    "Draven",
+	"hero.name.kalar":     "Kalar",
+	"hero.name.zordan":    "Zordan",
+	"hero.name.tarion":    "Tarion",
+	"hero.name.veldor":    "Veldor",
+	"hero.name.falcon":    "Falcon",
+	"hero.name.yorick":    "Yorick",
+	"hero.name.edan":      "Edan",
+	"hero.name.zarvin":    "Zarvin",
+	"hero.name.lirianna":  "Lirianna",
+	"hero.name.velara":    "Velara",
+	"hero.name.mirael":    "Mirael",
+	"hero.name.celestina": "Celestina",
+	"hero.name.kaelina":   "Kaelina",
+	"hero.name.tirianna":  "Tirianna",
+	"hero.name.nayra":     "Nayra",
+	"hero.name.elmira":    "Elmira",
+	"hero.name.zeyra":     "Zeyra",
+	"hero.name.xandr":     "Xandr",
+	"hero.name.verissa":   "Verissa",
+	"hero.name.orwin":     "Orwin",
+	"hero.name.silran":    "Silran",
+	"hero.name.keldra":    "Keldra",
+	"hero.name.veynara":   "Veynara",
+
+	// --- Titles ---
+	"title.militia":           "Militia",
+	"title.slayer_of_beasts":  "Beast Slayer",
+	"title.dragonslayer":      "Dragonslayer",
+	"title.luck_cursed":       "Fate Cursed",
+	"title.immortal":          "Immortal",
+	"title.treasure_seeker":   "Treasure Seeker",
+	"title.secret_keeper":     "Secret Keeper",
+	"title.impenetrable":      "Impenetrable",
+	"title.storm_shield":      "Storm Shield",
+	"title.the_wall":          "The Wall",
+	"title.blood_blade":       "Blood Blade",
+	"title.executioner":       "Executioner",
+	"title.axe":               "The Axe",
+	"title.rank_cleaver":      "Rank Cleaver",
+	"title.phantom_strike":    "Phantom Strike",
+	"title.shadow":            "The Shadow",
+	"title.blade":             "The Blade",
+	"title.knife_in_the_back": "Backstabber",
+	"title.deft_hand":         "Deft Hand",
+	"title.stormbringer":      "Stormbringer",
+	"title.cinder":            "The Cinder",
+	"title.chains_of_the_void": "Chains of the Void",
+	"title.flash":             "The Flash",
+	"title.grace":             "The Grace",
+	"title.holy":              "The Holy",
+	"title.resurrector":       "Resurrector",
+	"title.purifier":          "Purifier",
+
+	// --- Quests ---
+	"quest.hunt.title":   "Monster Hunt",
+	"quest.hunt.desc":    "Eliminate beasts lurking in the depths",
+	"quest.chest.title":  "Treasure Gathering",
+	"quest.chest.desc":   "Open treasure chests in the dungeon",
+	"quest.floor.title":  "Conquering the Deeps",
+	"quest.floor.desc":   "Descend deeper into lower floors",
+	"quest.relic.title":  "Relic Recovery",
+	"quest.relic.desc":   "Find an ancient reliquary in the deep",
+	"quest.escape.title": "Ambush Escape",
+	"quest.escape.desc":  "Explore sealed halls and locate the exit",
+	"quest.altar.title":  "Blood Pact",
+	"quest.altar.desc":   "Offer a blood sacrifice at the Altar",
+
+	// --- Town Establishments ---
+	"town.market":       "Market Square",
+	"town.magistrate":   "Town Magistrate",
+	"town.hub_title":    "═══ CAPITAL DISTRICT & SERVICES ═══",
+	"town.log_title":    "PARTY ACTIONS IN TOWN",
+	"town.camp":         "Camp",
+	"town.management":   "CAPITAL MANAGEMENT",
+	"town.tax_active":   "Treasury quota active.",
+	"town.smithy":       "Blacksmith",
+	"town.tannery":      "Tannery",
+	"town.church":       "Church",
+	"town.tavern":       "Tavern",
+	"town.guild":        "Guild",
+
+	"town.smithy.1": "Dragon's Breath",
+	"town.smithy.2": "Blazing Forge",
+	"town.smithy.3": "Hammer & Anvil",
+	"town.smithy.4": "Steel Spark",
+	"town.smithy.5": "Titan Strike",
+
+	"town.tannery.1": "Second Skin",
+	"town.tannery.2": "Sturdy Stitch",
+	"town.tannery.3": "Tanned Lion",
+	"town.tannery.4": "Patch & Rivet",
+	"town.tannery.5": "Northern Stag",
+
+	"town.tavern.1": "Drunken Dragon",
+	"town.tavern.2": "Scoundrel's Haven",
+	"town.tavern.3": "Golden Goblet",
+	"town.tavern.4": "Last Refuge",
+	"town.tavern.5": "Boar's Head",
+
+	"town.guild.1": "Iron Contract",
+	"town.guild.2": "Order of the Dawn",
+	"town.guild.3": "Four Winds Guild",
+	"town.guild.4": "Fate Seekers",
+	"town.guild.5": "Fortune Guard",
+
+	"town.alchemist.1": "Aether Magic",
+	"town.alchemist.2": "Green Vial",
+	"town.alchemist.3": "Mandrake Root",
+	"town.alchemist.4": "Philosopher's Stone",
+	"town.alchemist.5": "Drop of Light",
+
+	"town.church.1": "Shrine of Eternal Dawn",
+	"town.church.2": "Sanctuary of Seven Stars",
+	"town.church.3": "Monastery of Silence",
+	"town.church.4": "Chapel of the Fallen Star",
+	"town.church.5": "Spring of Living Water",
+
+	// --- Town Logs ---
+	"town.log.enter_gate":       "The party enters through the town gates for rest...",
+	"town.log.market_sold":      "⚖️ [Market] Trophies sold for +%dG.",
+	"town.log.market_history":   "Sold trophies for +%dG. Spirit fortified (-40 stress)",
+	"town.log.magistrate_tax":   "🏛️ [Magistrate] Allocated %dG to city treasury («%s» Lvl.%d)!",
+	"town.log.magistrate_hist":  "Invested %dG («%s» upgraded to Lvl.%d)",
+	"town.log.church_liturgy":   "⛪ [%s] Liturgy held (-%dG, revived: %d)!",
+	"town.log.church_hist":      "Healing prayer: revived %d heroes, cured stress (-%dG)",
+	"town.log.tavern_rest":      "🍻 [%s] Full rest (-%dG). Party fully restored.",
+	"town.log.tavern_hist":      "Night in cozy chambers (-%dG). Strength renewed",
+	"town.log.tavern_barn":      "🏚️ [Hayloft] Treasury empty! Sleeping in hayloft (45%% recovery).",
+	"town.log.tavern_barn_hist": "Treasury empty! Slept in hayloft (45%% recovery)",
+	"town.log.guild_quest":      "📜 [%s] Contract completed: +%dG!",
+	"town.log.guild_quest_hist": "Contract fulfilled: received reward +%dG",
+	"town.log.guild_veteran":    "⚔️ [%s] Hired veteran %s (%s, Lvl.%d) for %dG!",
+	"town.log.guild_vet_hist":   "Enlisted veteran %s (%s, Lvl.%d) for %dG",
+	"town.log.guild_militia":    "🤝 [%s] Militiaman %s (%s) joined ranks for free.",
+	"town.log.guild_mil_hist":   "Militiaman %s (%s) joined without fee",
+	"town.log.smithy_done":      "⚒️ [%s] Tempered weapons & armor: %d pcs. (-%dG)!",
+	"town.log.smithy_hist":      "Tempered armory gear: %d pcs. (-%dG)",
+	"town.log.tannery_bag":      "🎒 [%s] Crafted %s (%d slots) for %dG!",
+	"town.log.tannery_bag_hist": "Crafted %s (%d slots) for %dG",
+	"town.log.tannery_done":     "🎒 [%s] Reinforced leather & cloth: %d pcs.!",
+	"town.log.tannery_hist":     "Treated light & medium armor: %d pcs. (-%dG)",
+	"town.log.mut_chimera":      "⚗️ %s %s [%s] (+8 HP, +5 MP, +1 Atk, +1 Def) for %dG!",
+	"town.log.mut_fury":         "⚗️ %s %s [%s] (+3 Atk, +2 HP) for %dG!",
+	"town.log.mut_titan":        "⚗️ %s %s [%s] (+20 HP) for %dG!",
+	"town.log.mut_aether":       "⚗️ %s %s [%s] (+14 MP, +1 Atk) for %dG!",
+	"town.log.mut_bastion":      "⚗️ %s %s [%s] (+2 Def, +6 HP) for %dG!",
+	"town.log.alch_hist":        "Brewed serums and potions into belts totaling %dG",
+	"town.log.depart":           "🛡️ The party is outfitted and marches deeper!",
+
+	// --- Combat Logs ---
+	"combat.barrel":            "POWDER",
+	"combat.enemy_pack":        "ENEMY PACK",
+	"combat.log.start":          "⚔️ COMBAT! Enemy pack (%d beasts)!",
+	"combat.log.pack_defeated":   "💀 Enemy pack defeated!",
+	"combat.log.flee_success":    "💨 [ESCAPE] Success! The party broke away under cover of darkness.",
+	"combat.log.evacuation":      "🕊️ [Evacuation] The party carried %d fallen heroes from the battlefield!",
+	"combat.log.retreat_town":    "🏰 The party retreated behind the town walls!",
+	"combat.log.retreat_dialog":  "The party retreated to the Capital.",
+	"combat.log.flee_fail":       "💥 [ESCAPE FAILED] Monsters blocked the retreat! The party regrouped under glancing strikes.",
+	"combat.log.death_flee":      "Cut down during a failed retreat",
+	"combat.log.paranoid":        "👁️ %s cowered in the corner (Paranoia)!",
+	"combat.log.tank_stance":     "🛡️ %s takes [Defensive Stance] (+5 Def, block)!",
+	"combat.log.tank_bash":       "🛡️ %s uses [Shield Bash] (-%d HP, enemy weakened by -3 Atk)!",
+	"combat.log.warrior_rage":    "⚔️ %s enters [Rage State] (+5 Atk, -2 Def)!",
+	"combat.log.warrior_cleave":  "⚔️ %s performs [Cleave] hitting %d enemies (-%d HP)!",
+	"combat.log.rogue_stealth":   "🗡️ %s vanished into shadows [Stealth] (100%% crit)!",
+	"combat.log.rogue_poison":    "☣️ %s delivers [Poison Strike] (-%d HP)!",
+	"combat.log.cleric_heal":     "✨ %s healed %s (+%d HP)!",
+	"combat.log.cleric_aura":     "✨ %s manifests [Aura of Protection] (+3 Def to party)!",
+	"combat.log.cleric_smite":    "✨ %s unleashed [Holy Smite] (-%d HP)!",
+	"combat.log.mage_barrel":     "💥 %s DETONATES TAR BARREL (-%d HP to all enemies)!",
+	"combat.log.mage_storm":      "🔥 %s blanketed enemies in [Firestorm]!",
+	"combat.log.mob_block":       "🛡️ [%s] deflected strike with monolithic block!",
+	"combat.log.fire_arrow":      "🔥 %s casts [Fire Arrow] (+5 dmg)!",
+	"combat.log.blessing":        "✨ %s: [Blessing] (-6 stress to %s)!",
+	"combat.log.crush_strike":    "⚔️ %s: [Crushing Strike]!",
+	"combat.log.quick_cut":       "🗡️ %s: [Quick Cut]!",
+	"combat.log.taunt":           "🛡️ %s: [Taunt] (+2 Def)!",
+	"combat.log.fumble":          "💨 %s missed (D20=1)!",
+	"combat.log.armor_deflect":   "🛡️ Armor of [%s] deflected %s's blow.",
+	"combat.log.crit":            "💥 CRIT (D20=%d)! %s crushes the enemy!",
+	"combat.log.boss_relic":      "👑 Dragon's Relic: [%s]!",
+	"combat.log.mob_ranged":      "🎯 [%s] unleashes a ranged attack upon %s!",
+	"combat.log.mob_melee":       "🏃 [%s] closes in for melee combat with %s.",
+	"combat.log.dodge":           "🛡️ %s deftly dodged [%s]'s strike!",
+	"combat.log.armor_absorb":    "🛡️ %s's armor absorbed [%s]'s strike completely.",
+	"combat.log.mob_crit":        "⚡ CRITICAL HIT from [%s] on %s!",
+	"combat.log.tank_guard":      "🛡️ %s shielded %s from [%s]'s blow, taking %d damage!",
+	"combat.log.mob_hit":         "💥 [%s] dealt %d damage to %s!",
+	"combat.log.hero_slain":      "☠️ %s fell in battle to fatal strike of [%s]!",
+	"combat.log.death_cause_mob": "Slain by [%s]",
+
+	// --- Dungeon Logs ---
+	"dungeon.log.start":               "The expedition marches into the unknown catacombs...",
+	"dungeon.log.lvl_up":              "⭐ [LEVEL] %s reached Lvl.%d! Attributes increased!",
+	"dungeon.log.quest_done":          "📜 [CONTRACT COMPLETED] «%s»!",
+	"dungeon.log.equip_swap":          "✨ %s equipped %s: [%s] (Power: %d)!",
+	"dungeon.log.bag_stored":          "📦 %s placed into backpack.",
+	"dungeon.log.martyr_crown":        "👑 [Crown] Fallen ally's rage empowered the living (+4 Atk)!",
+	"dungeon.log.rest_tick":           "🌿 [Rest] In the quiet dungeon, the party caught their breath (+1 HP/MP, -1 Stress).",
+	"dungeon.log.collision_break":     "⚠️ [Collision] Emergency breakout into an open hall.",
+	"dungeon.log.floor_cleared":       "Floor %d cleared! Descending deeper.",
+	"dungeon.log.floor_cleared_boss":  "🌟 FLOOR %d CLEARED! The Abyss beckons...",
+	"dungeon.log.stairs_descend":      "Descending to Floor %d!",
+	"dungeon.log.chest_open":          "🎁 Chest: +%dG and [%s].",
+	"dungeon.log.virtue":              "🌟 [VIRTUE] %s conquered fear and gained second wind!",
+	"dungeon.log.affliction":          "👁️ [AFFLICTION] %s is broken: %s!",
+	"dungeon.log.heart_attack":        "💔 [HEART ATTACK] %s clutched their chest! HP dropped to 1!",
+	"dungeon.log.heart_attack_death":  "💔 [HEART ATTACK] %s's heart gave out under madness! Death!",
+	"dungeon.death.heart_attack":      "Heart attack (%s)",
+	"dungeon.log.potion_hp":           "🧪 %s drank [%s] (+%d HP)!",
+	"dungeon.log.potion_mp":           "🧪 %s drank [%s] (+%d MP)!",
+	"dungeon.log.potion_stress":       "🧪 %s took [%s] (-%d stress)!",
+	"dungeon.log.title_awarded":       "👑 [GLORY] %s earned title «%s»!",
+	"dungeon.death.altar":             "Sacrificed at the Altar",
+	"dungeon.log.altar_death":         "🩸 %s fell victim to the Altar!",
+	"dungeon.log.altar_success":       "🩸 %s sacrificed %d HP (+2 Atk)!",
+	"dungeon.log.fountain":            "💧 [Fountain] Party health, mana, and sanity restored!",
+	"dungeon.death.trap":              "Killed by trap",
+	"dungeon.log.trapped_chest_success": "🗝️ [Chest] Trap disarmed: +%dG and [%s]!",
+	"dungeon.log.trapped_chest_boom":    "💥 [Trap!] (D20=%d) Explosion dealt damage!",
+	"dungeon.log.relic_found":          "✨ [RELIC] The party found %s!",
+	"dungeon.log.relic_salvaged":       "✨ [Reliquary] Relic dismantled for +80G!",
+
+	// --- Stats & Armory ---
+	"stats.manual_title":        "EQUIPMENT, LEGACY AND MEMORIAL BOOK",
+	"stats.legacy_header":       "KINGDOM LEGACY",
+	"stats.legacy_treasury":     "Transferred to next generation's Treasury",
+	"stats.achievements_header": "ACHIEVEMENTS & CONTRACTS",
+	"stats.floors_cleared":      "Floors Cleared",
+	"stats.total_steps":         "Steps Taken",
+	"stats.gold_earned":         "Total Gold Earned",
+	"stats.contracts_closed":    "Contracts Fulfilled",
+	"stats.upgrades_forged":     "Upgrades Forged",
+	"stats.chests_opened":       "Chests Opened",
+	"stats.survivors_header":    "SURVIVING HEROES",
+	"stats.fallen_heroes":       "MEMORIAL BOOK (FALLEN)",
+	"stats.no_fallen":           "No casualties. All heroes stand tall!",
+	"armory.title":              "═══ PARTY ARMORY AND ALCHEMICAL MUTATIONS",
+
+	// --- Codex ---
+	"codex.header":      "═══ DCCAG CODEX AND KNOWLEDGE BASE ═══",
+	"codex.tab.classes": "1. Bestiary",
+	"codex.tab.combat":  "2. Armory",
+	"codex.tab.town":    "3. Capital",
+	"codex.tab.relics":  "4. Alchemy",
+	"codex.switch_tabs": "Switch Tabs",
+
+	"codex.content.classes": `• CYCLICAL BIOMES:
+  - Floors 1, 6, 11... (Rotting Catacombs): Basic monsters, damp and decay.
+  - Floors 2, 7, 12... (Flooded Grottos): Slimes, drowned, lizards (-2 party speed).
+  - Floors 3, 8, 13... (Ashen Deeps): Ash imps, orcs, salamanders (+fire damage).
+  - Floors 4, 9, 14... (Crystal Labyrinth): Golems, gargoyles (+3 MP skill cost).
+  - Floors 5, 10, 15... (Throne of the Void): Demons, Death Knights, Dragon (+10% stress).
+
+• MONSTER AFFIXES:
+  - 🔥 Fiery: +3 base attack; burns hero for +4 pure damage.
+  - ☣️ Venomous: Poisons wounds (-3 HP and +14 stress).
+  - ❄️ Freezing: Slows party initiative and binds actions.
+  - 🪨 Stony: +3 DEF, +12 Max HP.
+  - 🩸 Vampiric: Steals life: restores 50% of damage dealt.`,
+
+	"codex.content.combat": `• BLACKSMITH (TANK & WARRIOR - Heavy plate and steel):
+  - Tank Weapon: T1 Gladius -> T2 Broadsword -> T3 Morningstar -> T4 Bastion Blade (Atk:9, Block:8)
+  - Tank Armor: T1 Brigandine -> T2 Half-Plate -> T3 Cuirass -> T4 Citadel Carapace (Def:13, HP:+40)
+  - Warrior Weapon: T1 Espadon -> T2 Claymore -> T3 Battleaxe -> T4 Falchion (Atk:14, Crit:4)
+
+• TANNER (ROGUE, MAGE, CLERIC - Leather, robes, tailoring):
+  - Rogue: T1 Hunting Knives -> T2 Stilettos -> T3 Daggers -> T4 Cutlasses (Atk:10, Crit:8)
+  - Mage: T1 Apprentice Robe -> T2 Sorcerer Mantle -> T3 Aether Vestment -> T4 Astral Robe (Def:8, MP:+45)
+  - Cleric: T1 Reinforced Club -> T2 Warhammer -> T3 Flanged Mace -> T4 Mace of Radiance (Atk:10, MP:+26)`,
+
+	"codex.content.town": `• CAPITAL SERVICES:
+  - Blacksmith: Tempers weapons and heavy armor.
+  - Tannery: Treats leather and silk, crafts backpacks and expands inventory.
+  - Tavern: Rest and stress relief. Hayloft on empty treasury (45% recovery).
+  - Church: Revives fallen comrades and purges madness.
+  - Guild: Pays bounties on contracts and enlists seasoned veterans.
+
+• TREASURY QUOTAS:
+  - 10% of gold is automatically taxed into Kingdom Legacy.
+  - Remaining funds are split evenly among city services.`,
+
+	"codex.content.relics": `• ALCHEMICAL MUTATIONS:
+  - Chimera Serum: +8 HP, +5 MP, +1 Atk, +1 Def (Universal)
+  - Essence of Fury: +3 Atk, +2 HP (Priority: Rogue, Warrior, Mage)
+  - Titan Blood: +20 MaxHP (Priority: Tank, Warrior)
+  - Aether Fluid: +14 MaxMP, +1 Atk (Priority: Mage, Cleric)
+  - Bastion Elixir: +2 Def, +6 HP (Priority: Tank, Cleric)
+
+• LEGENDARY RELICS:
+  - Compass of Greed: Multiplies gold, but enemies hit harder.
+  - Martyr's Crown: Fallen comrades grant permanent attack buffs to survivors.
+  - Holy Grail: Heavily shields party sanity against stress.`,
+}
+
+func T(lang Language, key string, args ...any) string {
+	var dict map[string]string
+	if lang == LangEN {
+		dict = dictEN
+	} else {
+		dict = dictRU
+	}
+
+	val, ok := dict[key]
+	if !ok {
+		if lang == LangEN {
+			val, ok = dictRU[key]
+		}
+		if !ok {
+			return key
+		}
+	}
+
+	if len(args) > 0 {
+		return fmt.Sprintf(val, args...)
+	}
+	return val
+}
+
+func TVerb(lang Language, gender Gender, maleRU, femaleRU, eng string) string {
+	if lang == LangEN {
+		return eng
+	}
+	if gender == GenderFemale {
+		return femaleRU
+	}
+	return maleRU
+}
+
+func TranslateEnum(lang Language, prefix string, val string) string {
+	key := fmt.Sprintf("%s.%s", prefix, val)
+	return T(lang, key)
+}

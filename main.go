@@ -40,7 +40,7 @@ func saveDebugReportToFile() {
 	fileData, err := json.MarshalIndent(globalDebugReport, "", "  ")
 	if err == nil {
 		_ = os.WriteFile("dccag_report.json", fileData, 0o644)
-		fmt.Println("\n[DEBUG] Подробный отчет телеметрии сохранен в файл: dccag_report.json")
+		fmt.Println("\n[DEBUG] Telemetry report saved to: dccag_report.json")
 	}
 }
 
@@ -68,7 +68,7 @@ func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
 	maxHP := 45
 	baseDef := 2
 	speed := 10
-	skillName := "Удар"
+	skillNameKey := "skill.strike"
 	skillCost := 10
 	maxMP := 35
 
@@ -77,35 +77,35 @@ func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
 		maxHP = 65
 		baseDef = 4
 		speed = 8
-		skillName = "Стойка"
+		skillNameKey = "skill.tank_stance"
 		skillCost = 8
 		maxMP = 30
 	case ClassWarrior:
 		maxHP = 50
 		baseDef = 2
 		speed = 10
-		skillName = "Ярость"
+		skillNameKey = "skill.warrior_rage"
 		skillCost = 10
 		maxMP = 25
 	case ClassRogue:
 		maxHP = 38
 		baseDef = 1
 		speed = 15
-		skillName = "Тень"
+		skillNameKey = "skill.rogue_stealth"
 		skillCost = 12
 		maxMP = 35
 	case ClassMage:
 		maxHP = 30
 		baseDef = 0
 		speed = 11
-		skillName = "Заряд"
+		skillNameKey = "skill.mage_charge"
 		skillCost = 15
 		maxMP = 45
 	case ClassCleric:
 		maxHP = 36
 		baseDef = 2
 		speed = 9
-		skillName = "Аура"
+		skillNameKey = "skill.cleric_aura"
 		skillCost = 12
 		maxMP = 40
 	}
@@ -113,23 +113,23 @@ func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
 	nameDef := getRandomHeroName()
 
 	h := &Hero{
-		Name:      nameDef.Name,
-		Gender:    nameDef.Gender,
-		Class:     class,
-		Role:      GetClassRole(class),
-		Level:     1,
-		Exp:       0,
-		MaxHP:     maxHP,
-		HP:        maxHP,
-		MaxMP:     maxMP,
-		MP:        maxMP,
-		BaseAtk:   6 + smithyLvl,
-		BaseDef:   baseDef,
-		Speed:     speed,
-		SkillName: skillName,
-		SkillCost: skillCost,
-		IsDead:    false,
-		Potions:   []*Potion{},
+		NameKey:      nameDef.NameKey,
+		Gender:       nameDef.Gender,
+		Class:        class,
+		Role:         GetClassRole(class),
+		Level:        1,
+		Exp:          0,
+		MaxHP:        maxHP,
+		HP:           maxHP,
+		MaxMP:        maxMP,
+		MP:           maxMP,
+		BaseAtk:      6 + smithyLvl,
+		BaseDef:      baseDef,
+		Speed:        speed,
+		SkillNameKey: skillNameKey,
+		SkillCost:    skillCost,
+		IsDead:       false,
+		Potions:      []*Potion{},
 	}
 
 	for h.Level < targetLevel {
@@ -163,6 +163,7 @@ func initialModelWithLegacy(legacy TownLegacy) Model {
 	activeRelic := generateRelic(1)
 
 	m := Model{
+		Lang:             LangRU,
 		State:            StateMenu,
 		MenuCountdown:    20,
 		Party:            heroes,
@@ -172,11 +173,11 @@ func initialModelWithLegacy(legacy TownLegacy) Model {
 		Floor:            1,
 		InTown:           false,
 		TownPhase:        TownPhaseSellLoot,
-		TownDialog:       "Отряд вошел через ворота Столицы на привал.",
+		TownDialog:       "",
 		TownHistory:      []string{},
 		TownEst:          generateTownEstablishments(),
 		Combat:           nil,
-		Logs:             []string{"[Хроники] Отряд ступил во мрак подземелья dccag."},
+		Logs:             []string{},
 		AutoMode:         true,
 		SpeedMs:          260,
 		TownDelayMs:      2200,
@@ -192,6 +193,8 @@ func initialModelWithLegacy(legacy TownLegacy) Model {
 		TermWidth:        120,
 		TermHeight:       36,
 	}
+	m.TownDialog = T(m.Lang, "town.log.enter_gate")
+	m.Logs = append(m.Logs, T(m.Lang, "dungeon.log.start"))
 	m.Stats.TotalGoldEarned = 50 + legacy.TreasuryGold
 	m.initDungeonForFloor(1)
 	return m
@@ -231,8 +234,8 @@ func (m *Model) distributePartyExp(expAmt int) {
 
 	for _, h := range living {
 		if h.GainExp(expPerHero) {
-			m.addLog(healStyle.Render(fmt.Sprintf("⭐ [УРОВЕНЬ] %s %s Ур.%d! Характеристики возросли!",
-				h.Name, h.Verb("достиг", "достигла"), h.Level)))
+			verb := TVerb(m.Lang, h.Gender, "достиг", "достигла", "reached")
+			m.addLog(healStyle.Render(T(m.Lang, "dungeon.log.lvl_up", h.DisplayName(m.Lang), verb, h.Level)))
 		}
 	}
 }
@@ -249,7 +252,7 @@ func (m *Model) checkQuestProgress(action QuestType, targetMob MonsterType, val 
 			if val >= m.CurrentQuest.TargetCount {
 				m.CurrentQuest.Current = m.CurrentQuest.TargetCount
 				m.CurrentQuest.Completed = true
-				m.addLog(questStyle.Render(fmt.Sprintf("📜 [КОНТРАКТ] %s выполнен!", m.CurrentQuest.Title)))
+				m.addLog(questStyle.Render(T(m.Lang, "dungeon.log.quest_done", T(m.Lang, m.CurrentQuest.TitleKey))))
 			}
 			return
 		}
@@ -257,7 +260,7 @@ func (m *Model) checkQuestProgress(action QuestType, targetMob MonsterType, val 
 		if m.CurrentQuest.Current >= m.CurrentQuest.TargetCount {
 			m.CurrentQuest.Current = m.CurrentQuest.TargetCount
 			m.CurrentQuest.Completed = true
-			m.addLog(questStyle.Render(fmt.Sprintf("📜 [КОНТРАКТ] %s выполнен!", m.CurrentQuest.Title)))
+			m.addLog(questStyle.Render(T(m.Lang, "dungeon.log.quest_done", T(m.Lang, m.CurrentQuest.TitleKey))))
 		}
 	}
 }
@@ -294,17 +297,19 @@ func (m *Model) equipOrBag(item EquipItem) {
 		}
 		newItem := item
 		bestHero.SetItemInSlot(newItem.Slot, &newItem)
-		m.addLog(healStyle.Render(fmt.Sprintf("✨ %s %s [%s] на [%s] (Мощь: %d)!",
-			bestHero.Name, bestHero.Verb("сменил", "сменила"), item.Slot, newItem.DisplayName(), newItem.TotalStat())))
+		verb := TVerb(m.Lang, bestHero.Gender, "сменил", "сменила", "equipped")
+		slotName := T(m.Lang, "slot."+string(item.Slot))
+		m.addLog(healStyle.Render(T(m.Lang, "dungeon.log.equip_swap",
+			bestHero.DisplayName(m.Lang), verb, slotName, newItem.DisplayName(m.Lang), newItem.TotalStat())))
 	} else {
 		m.Bag = append(m.Bag, item)
-		m.addLog(subtleStyle.Render(fmt.Sprintf("📦 %s сложен в сумку.", item.DisplayName())))
+		m.addLog(subtleStyle.Render(T(m.Lang, "dungeon.log.bag_stored", item.DisplayName(m.Lang))))
 	}
 }
 
 func (m *Model) recordFallenHero(h *Hero) {
 	m.Stats.FallenHeroes = append(m.Stats.FallenHeroes, FallenHeroRecord{
-		FullName: h.FullName(),
+		FullName: h.FullName(m.Lang),
 		Class:    h.Class,
 		Cause:    h.CauseOfDeath,
 		Floor:    m.Floor,
@@ -323,7 +328,7 @@ func (m *Model) recordFallenHero(h *Hero) {
 	h.Potions = []*Potion{}
 
 	if m.Relic != nil && m.Relic.MartyrFury {
-		m.addLog(fireStyle.Render("👑 [Корона] Ярость павшего усилила живых (+4 Atk)!"))
+		m.addLog(fireStyle.Render(T(m.Lang, "dungeon.log.martyr_crown")))
 		for _, ally := range m.Party {
 			if !ally.IsDead {
 				ally.BaseAtk += 4
@@ -368,7 +373,7 @@ func (m *Model) step() {
 			}
 		}
 		if healedCount > 0 {
-			m.addLog(healStyle.Render("🌿 [Привал] В тишине подземелья отряд немного передохнул (+1 HP/MP, -1 Стресс)."))
+			m.addLog(healStyle.Render(T(m.Lang, "dungeon.log.rest_tick")))
 		}
 	}
 
@@ -389,7 +394,7 @@ func (m *Model) step() {
 	if m.checkRetreat() && m.Grid[m.PartyPos.Y][m.PartyPos.X] == TileExit && m.Stats.TotalSteps > 0 {
 		m.InTown = true
 		m.TownPhase = TownPhaseSellLoot
-		m.TownDialog = "Отряд вернулся в город."
+		m.TownDialog = T(m.Lang, "town.log.enter_gate")
 		return
 	}
 
@@ -408,7 +413,7 @@ func (m *Model) step() {
 	}
 
 	if m.LoopDetectCount > 4 {
-		m.addLog(dangerStyle.Render("⚠️ [Коллизия] Экстренный прорыв к свободному залу."))
+		m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.collision_break")))
 		foundSafeSpot := false
 		for y := 0; y < m.MapHeight && !foundSafeSpot; y++ {
 			for x := 0; x < m.MapWidth && !foundSafeSpot; x++ {
@@ -445,9 +450,9 @@ func (m *Model) step() {
 		m.checkQuestProgress(QuestEscapeTrap, "", 1)
 
 		if m.Floor%10 == 0 {
-			m.addLog(accentStyle.Render(fmt.Sprintf("🌟 ЭТАЖ %d ПРОЙДЕН! Бездна зовет...", m.Floor)))
+			m.addLog(accentStyle.Render(T(m.Lang, "dungeon.log.floor_cleared_boss", m.Floor)))
 		} else {
-			m.addLog(accentStyle.Render(fmt.Sprintf("Этаж %d пройден! Спуск глубже.", m.Floor)))
+			m.addLog(accentStyle.Render(T(m.Lang, "dungeon.log.floor_cleared", m.Floor)))
 		}
 
 		m.initDungeonForFloor(m.Floor)
@@ -469,7 +474,7 @@ func (m *Model) step() {
 			m.checkAndAwardTitle(lh)
 		}
 		item := generateItemForClass(targetClass, m.Floor)
-		m.addLog(goldStyle.Render(fmt.Sprintf("🎁 Сундук: +%dG и [%s].", gold, item.DisplayName())))
+		m.addLog(goldStyle.Render(T(m.Lang, "dungeon.log.chest_open", gold, item.DisplayName(m.Lang))))
 		m.equipOrBag(item)
 		m.Grid[next.Y][next.X] = TileFloor
 
@@ -499,9 +504,9 @@ func (m *Model) step() {
 		m.checkQuestProgress(QuestEscapeTrap, "", 1)
 
 		if m.Floor%10 == 0 {
-			m.addLog(accentStyle.Render(fmt.Sprintf("🌟 ЭТАЖ %d ПРОЙДЕН! Бездна зовет...", m.Floor)))
+			m.addLog(accentStyle.Render(T(m.Lang, "dungeon.log.floor_cleared_boss", m.Floor)))
 		} else {
-			m.addLog(accentStyle.Render(fmt.Sprintf("Спуск на этаж %d!", m.Floor)))
+			m.addLog(accentStyle.Render(T(m.Lang, "dungeon.log.stairs_descend", m.Floor)))
 		}
 
 		m.initDungeonForFloor(m.Floor)
@@ -521,6 +526,7 @@ func resetGameStatic(m Model) (Model, tea.Cmd) {
 	newLegacy.TreasuryGold = savedGold
 
 	fresh := initialModelWithLegacy(newLegacy)
+	fresh.Lang = m.Lang
 	fresh.TermWidth = m.TermWidth
 	fresh.TermHeight = m.TermHeight
 
@@ -554,6 +560,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
+		case "l":
+			if m.Lang == LangRU {
+				m.Lang = LangEN
+			} else {
+				m.Lang = LangRU
+			}
 		case "1", "2", "3", "4":
 			if m.State == StateInfoBook {
 				tabIdx, _ := strconv.Atoi(msg.String())
@@ -701,7 +713,7 @@ func main() {
 	p := tea.NewProgram(&m, tea.WithAltScreen())
 	finalModel, err := p.Run()
 	if err != nil {
-		fmt.Printf("Ошибка запуска: %v\n", err)
+		fmt.Printf("Startup error: %v\n", err)
 		os.Exit(1)
 	}
 

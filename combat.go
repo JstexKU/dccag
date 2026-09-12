@@ -109,7 +109,7 @@ func (m *Model) startCombat(pos Point, pack *MonsterPack) {
 	})
 
 	m.Combat = combat
-	m.addLog(accentStyle.Render(fmt.Sprintf("⚔️ СХВАТКА! Вражеский отряд (%d тварей)!", pack.LivingCount())))
+	m.addLog(accentStyle.Render(T(m.Lang, "combat.log.start", pack.LivingCount())))
 }
 
 func (m *Model) shouldAttemptFlee() bool {
@@ -155,7 +155,7 @@ func (m *Model) attemptFlee() {
 	roll := rand.Intn(100)
 	if roll < chance {
 		globalDebugReport.FleeSuccesses++
-		m.addLog(healStyle.Render("💨 [ПОБЕГ] Успех! Отряд оторвался от погони под прикрытием завесы."))
+		m.addLog(healStyle.Render(T(m.Lang, "combat.log.flee_success")))
 
 		evacuatedCount := 0
 		for _, h := range m.Party {
@@ -167,16 +167,16 @@ func (m *Model) attemptFlee() {
 			}
 		}
 		if evacuatedCount > 0 {
-			m.addLog(altarStyle.Render(fmt.Sprintf("🕊️ [Эвакуация] Отряд вынес с поля боя %d павших героев!", evacuatedCount)))
+			m.addLog(altarStyle.Render(T(m.Lang, "combat.log.evacuation", evacuatedCount)))
 		}
 
 		m.Combat = nil
 		m.InTown = true
 		m.TownPhase = TownPhaseSellLoot
-		m.TownDialog = "Отряд отступил в Столицу."
-		m.addLog(dangerStyle.Render("🏰 Отряд укрылся за стенами Города!"))
+		m.TownDialog = T(m.Lang, "combat.log.retreat_dialog")
+		m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.retreat_town")))
 	} else {
-		m.addLog(dangerStyle.Render("💥 [ПРОВАЛ ПОБЕГА] Монстры перекрыли отход! Отряд перегруппировался под градом скользящих ударов."))
+		m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.flee_fail")))
 
 		for _, h := range m.Party {
 			if !h.IsDead {
@@ -190,7 +190,7 @@ func (m *Model) attemptFlee() {
 
 				if h.HP <= 0 {
 					h.HP = 0
-					h.CauseOfDeath = "Зарублен при неудачном отходе"
+					h.CauseOfDeath = T(m.Lang, "combat.log.death_flee")
 					m.recordFallenHero(h)
 				}
 			}
@@ -216,7 +216,7 @@ func (m *Model) executeCombatTurn() {
 	}
 
 	if m.Combat.Pack.LivingCount() == 0 {
-		m.addLog(healStyle.Render("💀 Вражеский отряд повержен!"))
+		m.addLog(healStyle.Render(T(m.Lang, "combat.log.pack_defeated")))
 		delete(m.Packs, m.Combat.Pos)
 		m.PartyPos = m.Combat.Pos
 		m.Combat = nil
@@ -253,9 +253,11 @@ func (m *Model) executeCombatTurn() {
 		}
 
 		m.checkAndDrinkPotions(h)
+		hName := h.DisplayName(m.Lang)
 
 		if h.Affliction == AfflictionParanoid && rand.Intn(100) < 30 {
-			m.addLog(stressStyle.Render(fmt.Sprintf("👁️ %s %s в угол (Паранойя)!", h.Name, h.Verb("забился", "забилась"))))
+			verb := TVerb(m.Lang, h.Gender, "забился", "забилась", "cowered")
+			m.addLog(stressStyle.Render(T(m.Lang, "combat.log.paranoid", hName, verb)))
 			return
 		}
 
@@ -274,14 +276,14 @@ func (m *Model) executeCombatTurn() {
 				h.AddBlock()
 				h.PullAggro()
 				m.checkAndAwardTitle(h)
-				m.addLog(healStyle.Render(fmt.Sprintf("🛡️ %s принимает [Оборонительную Стойку] (+5 Def, блок)!", h.Name)))
+				m.addLog(healStyle.Render(T(m.Lang, "combat.log.tank_stance", hName)))
 			} else if h.MP >= 6 && targetMob != nil && targetMob.Atk >= 12 && rand.Intn(100) < 45 {
 				h.MP -= 6
 				bashDmg := h.TotalDef() + 4
 				targetMob.HP -= bashDmg
 				targetMob.Atk = max(2, targetMob.Atk-3)
 				h.AddBlock()
-				m.addLog(healStyle.Render(fmt.Sprintf("🛡️ %s проводит [Удар щитом] (-%d HP, враг ослаблен на -3 Atk)!", h.Name, bashDmg)))
+				m.addLog(healStyle.Render(T(m.Lang, "combat.log.tank_bash", hName, bashDmg)))
 				if targetMob.HP <= 0 {
 					targetMob.HP = 0
 					targetMob.IsDead = true
@@ -297,7 +299,7 @@ func (m *Model) executeCombatTurn() {
 			if h.MP >= skillCost && !h.IsBerserk {
 				h.MP -= skillCost
 				h.IsBerserk = true
-				m.addLog(fireStyle.Render(fmt.Sprintf("⚔️ %s входит в [Состояние Ярости] (+5 Atk, -2 Def)!", h.Name)))
+				m.addLog(fireStyle.Render(T(m.Lang, "combat.log.warrior_rage", hName)))
 			} else if h.MP >= 7 && m.Combat.Pack.LivingCount() >= 2 && rand.Intn(100) < 55 {
 				h.MP -= 7
 				cleaveDmg := h.TotalAtk() + 2
@@ -315,7 +317,7 @@ func (m *Model) executeCombatTurn() {
 						hitCount++
 					}
 				}
-				m.addLog(dangerStyle.Render(fmt.Sprintf("⚔️ %s выполняет [Рассечение] по %d врагам (-%d HP)!", h.Name, hitCount, cleaveDmg)))
+				m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.warrior_cleave", hName, hitCount, cleaveDmg)))
 				return
 			}
 		}
@@ -326,13 +328,14 @@ func (m *Model) executeCombatTurn() {
 				h.MP -= skillCost
 				h.IsStealthed = true
 				h.AddBackstab()
-				m.addLog(accentStyle.Render(fmt.Sprintf("🗡️ %s %s в тенях [Скрытность] (100%% крит)!", h.Name, h.Verb("растворился", "растворилась"))))
+				verb := TVerb(m.Lang, h.Gender, "растворился", "растворилась", "vanished")
+				m.addLog(accentStyle.Render(T(m.Lang, "combat.log.rogue_stealth", hName, verb)))
 			} else if h.MP >= 6 && targetMob != nil && targetMob.HP > 20 && rand.Intn(100) < 50 {
 				h.MP -= 6
 				poisonDmg := h.TotalAtk() + 6
 				targetMob.HP -= poisonDmg
 				h.Feats.DamageDealt += poisonDmg
-				m.addLog(stressStyle.Render(fmt.Sprintf("☣️ %s наносит [Отравленный выпад] (-%d HP)!", h.Name, poisonDmg)))
+				m.addLog(stressStyle.Render(T(m.Lang, "combat.log.rogue_poison", hName, poisonDmg)))
 				if targetMob.HP <= 0 {
 					targetMob.HP = 0
 					targetMob.IsDead = true
@@ -362,13 +365,14 @@ func (m *Model) executeCombatTurn() {
 				criticalAlly.HP = min(criticalAlly.MaxHP, criticalAlly.HP+hAmt)
 				criticalAlly.Stress = max(0, criticalAlly.Stress-12)
 				h.Feats.HealsGiven += hAmt
-				m.addLog(healStyle.Render(fmt.Sprintf("✨ %s %s %s (+%d HP)!", h.Name, h.Verb("исцелил", "исцелила"), criticalAlly.Name, hAmt)))
+				verb := TVerb(m.Lang, h.Gender, "исцелил", "исцелила", "healed")
+				m.addLog(healStyle.Render(T(m.Lang, "combat.log.cleric_heal", hName, verb, criticalAlly.DisplayName(m.Lang), hAmt)))
 				m.checkAndAwardTitle(h)
 				return
 			} else if !h.IsAura && h.MP >= (skillCost+6) {
 				h.MP -= skillCost
 				h.IsAura = true
-				m.addLog(fountStyle.Render(fmt.Sprintf("✨ %s раскрывает [Ауру Защиты] (+3 Def отряду)!", h.Name)))
+				m.addLog(fountStyle.Render(T(m.Lang, "combat.log.cleric_aura", hName)))
 			} else if h.MP >= 7 && targetMob != nil && rand.Intn(100) < 40 {
 				h.MP -= 7
 				smiteDmg := h.TotalAtk() + 4
@@ -376,7 +380,8 @@ func (m *Model) executeCombatTurn() {
 				if lowest := m.getRandomLivingHero(); lowest != nil && lowest.HP < lowest.MaxHP {
 					lowest.HP = min(lowest.MaxHP, lowest.HP+6)
 				}
-				m.addLog(fountStyle.Render(fmt.Sprintf("✨ %s %s [Священную кару] (-%d HP)!", h.Name, h.Verb("обрушил", "обрушила"), smiteDmg)))
+				verb := TVerb(m.Lang, h.Gender, "обрушил", "обрушила", "unleashed")
+				m.addLog(fountStyle.Render(T(m.Lang, "combat.log.cleric_smite", hName, verb, smiteDmg)))
 				if targetMob.HP <= 0 {
 					targetMob.HP = 0
 					targetMob.IsDead = true
@@ -395,7 +400,7 @@ func (m *Model) executeCombatTurn() {
 				m.Stats.BarrelsBlown++
 				h.AddManaBurst()
 				barrelDmg := 22 + (m.Floor * 3)
-				m.addLog(barrelStyle.Render(fmt.Sprintf("💥 %s ПОДРЫВАЕТ БОЧКУ СО СМОЛОЙ (-%d HP отряду врагов)!", h.Name, barrelDmg)))
+				m.addLog(barrelStyle.Render(T(m.Lang, "combat.log.mage_barrel", hName, barrelDmg)))
 				for _, mob := range m.Combat.Pack.Members {
 					if !mob.IsDead {
 						mob.HP -= barrelDmg
@@ -420,7 +425,8 @@ func (m *Model) executeCombatTurn() {
 				aoeDmg := h.TotalAtk() + 6
 				h.AddManaBurst()
 				h.AddCCDuration()
-				m.addLog(fireStyle.Render(fmt.Sprintf("🔥 %s %s врагов [Огненной Бурей]!", h.Name, h.Verb("накрыл", "накрыла"))))
+				verb := TVerb(m.Lang, h.Gender, "накрыл", "накрыла", "blanketed")
+				m.addLog(fireStyle.Render(T(m.Lang, "combat.log.mage_storm", hName, verb)))
 				for _, mob := range m.Combat.Pack.Members {
 					if !mob.IsDead {
 						mob.HP -= aoeDmg
@@ -451,8 +457,10 @@ func (m *Model) executeCombatTurn() {
 			return
 		}
 
+		mobDisplayName := T(m.Lang, targetMob.NameKey)
+
 		if (targetMob.Type == MobSkeleton || targetMob.Type == MobGolem || targetMob.Type == MobGargoyle) && rand.Intn(100) < 20 {
-			m.addLog(subtleStyle.Render(fmt.Sprintf("🛡️ [%s] отразил выпад монолитным блоком!", targetMob.Name)))
+			m.addLog(subtleStyle.Render(T(m.Lang, "combat.log.mob_block", mobDisplayName)))
 			return
 		}
 
@@ -479,7 +487,7 @@ func (m *Model) executeCombatTurn() {
 			if h.MP >= 5 {
 				h.MP -= 5
 				bonusDmg += 5
-				m.addLog(fireStyle.Render(fmt.Sprintf("🔥 %s выпускает [Огненную стрелу] (+5 ур)!", h.Name)))
+				m.addLog(fireStyle.Render(T(m.Lang, "combat.log.fire_arrow", hName)))
 			}
 		case ClassCleric:
 			if h.MP >= 4 {
@@ -488,7 +496,7 @@ func (m *Model) executeCombatTurn() {
 					if !ally.IsDead && ally.Stress > 0 {
 						ally.Stress = max(0, ally.Stress-6)
 						h.RemoveDot()
-						m.addLog(fountStyle.Render(fmt.Sprintf("✨ %s: [Благословение] (-6 стресса %s)!", h.Name, ally.Name)))
+						m.addLog(fountStyle.Render(T(m.Lang, "combat.log.blessing", hName, ally.DisplayName(m.Lang))))
 						break
 					}
 				}
@@ -498,21 +506,21 @@ func (m *Model) executeCombatTurn() {
 				h.MP -= 4
 				bonusDmg += 3
 				armorPierce = 3
-				m.addLog(dangerStyle.Render(fmt.Sprintf("⚔️ %s: [Сокрушающий выпад]!", h.Name)))
+				m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.crush_strike", hName)))
 			}
 		case ClassRogue:
 			if h.MP >= 3 && h.MP < skillCost {
 				h.MP -= 3
 				critThreshold = 17
 				h.StealLoot()
-				m.addLog(accentStyle.Render(fmt.Sprintf("🗡️ %s: [Быстрый порез]!", h.Name)))
+				m.addLog(accentStyle.Render(T(m.Lang, "combat.log.quick_cut", hName)))
 			}
 		case ClassTank:
 			if h.MP >= 4 {
 				h.MP -= 4
 				h.BaseDef += 2
 				h.PullAggro()
-				m.addLog(healStyle.Render(fmt.Sprintf("🛡️ %s: [Провокация] (+2 Защ)!", h.Name)))
+				m.addLog(healStyle.Render(T(m.Lang, "combat.log.taunt", hName)))
 			}
 		}
 
@@ -520,11 +528,12 @@ func (m *Model) executeCombatTurn() {
 		isFumble := d20 == 1 && !h.IsStealthed
 
 		if isFumble {
-			m.addLog(subtleStyle.Render(fmt.Sprintf("💨 %s %s (D20=1)!", h.Name, h.Verb("промахнулся", "промахнулась"))))
+			verb := TVerb(m.Lang, h.Gender, "промахнулся", "промахнулась", "missed")
+			m.addLog(subtleStyle.Render(T(m.Lang, "combat.log.fumble", hName, verb)))
 			return
 		}
 		if hitRoll < targetAC && !isCrit {
-			m.addLog(subtleStyle.Render(fmt.Sprintf("🛡️ Броня [%s] отразила удар %s.", targetMob.Name, h.Name)))
+			m.addLog(subtleStyle.Render(T(m.Lang, "combat.log.armor_deflect", mobDisplayName, hName)))
 			return
 		}
 
@@ -538,14 +547,15 @@ func (m *Model) executeCombatTurn() {
 			h.Feats.CritsLanded++
 			h.AddCriticalStrike()
 			m.checkAndAwardTitle(h)
-			m.addLog(dangerStyle.Render(fmt.Sprintf("💥 КРИТ (D20=%d)! %s сокрушает врага!", d20, h.Name)))
+			m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.crit", d20, hName)))
 			h.IsStealthed = false
 		}
 
 		targetMob.HP -= dmg
 		h.Feats.DamageDealt += dmg
 		m.checkAndAwardTitle(h)
-		m.addLog(fmt.Sprintf("⚔️ %s %s %d урона [%s] (%d HP).", h.Name, h.Verb("нанес", "нанесла"), dmg, targetMob.Name, targetMob.HP))
+		hitVerb := TVerb(m.Lang, h.Gender, "нанес", "нанесла", "dealt")
+		m.addLog(fmt.Sprintf("⚔️ %s %s %d урона [%s] (%d HP).", hName, hitVerb, dmg, mobDisplayName, targetMob.HP))
 
 		if targetMob.HP <= 0 {
 			targetMob.HP = 0
@@ -562,7 +572,7 @@ func (m *Model) executeCombatTurn() {
 				h.Feats.BossKills++
 				bossItem := generateItemForClass(h.Class, m.Floor+2)
 				bossItem.UpgradeLevel = 4
-				m.addLog(accentStyle.Render(fmt.Sprintf("👑 Реликвия Дракона: [%s]!", bossItem.DisplayName())))
+				m.addLog(accentStyle.Render(T(m.Lang, "combat.log.boss_relic", bossItem.DisplayName(m.Lang))))
 				m.equipOrBag(bossItem)
 			}
 			m.checkAndAwardTitle(h)
@@ -583,11 +593,13 @@ func (m *Model) executeCombatTurn() {
 
 		m.checkAndDrinkPotions(victim)
 
+		mobDisplayName := T(m.Lang, mob.NameKey)
+		victimName := victim.DisplayName(m.Lang)
 		isRanged := (mob.Type == MobImp || mob.Type == MobPhantom || mob.Type == MobVoidDemon || mob.Type == MobDragon)
 		if isRanged {
-			m.addLog(fireStyle.Render(fmt.Sprintf("🎯 [%s] проводит дальнобойную атаку по позициям %s!", mob.Name, victim.Name)))
+			m.addLog(fireStyle.Render(T(m.Lang, "combat.log.mob_ranged", mobDisplayName, victimName)))
 		} else {
-			m.addLog(subtleStyle.Render(fmt.Sprintf("🏃 [%s] сближается вплотную для ближнего боя с %s.", mob.Name, victim.Name)))
+			m.addLog(subtleStyle.Render(T(m.Lang, "combat.log.mob_melee", mobDisplayName, victimName)))
 		}
 
 		mobRoll := rand.Intn(20) + 1
@@ -595,11 +607,12 @@ func (m *Model) executeCombatTurn() {
 		heroAC := 10 + victim.TotalDef()
 
 		if mobRoll == 1 {
-			m.addLog(healStyle.Render(fmt.Sprintf("🛡️ %s ловко %s от выпада [%s]!", victim.Name, victim.Verb("увернулся", "увернулась"), mob.Name)))
+			verb := TVerb(m.Lang, victim.Gender, "увернулся", "увернулась", "dodged")
+			m.addLog(healStyle.Render(T(m.Lang, "combat.log.dodge", victimName, verb, mobDisplayName)))
 			return
 		}
 		if mobHit < heroAC && mobRoll < 19 {
-			m.addLog(subtleStyle.Render(fmt.Sprintf("🛡️ Доспехи %s полностью поглотили удар [%s].", victim.Name, mob.Name)))
+			m.addLog(subtleStyle.Render(T(m.Lang, "combat.log.armor_absorb", victimName, mobDisplayName)))
 			return
 		}
 
@@ -618,7 +631,7 @@ func (m *Model) executeCombatTurn() {
 		if mobRoll >= 19 {
 			rawDmg = int(float64(rawDmg) * 1.5)
 			m.addStress(victim, 25)
-			m.addLog(dangerStyle.Render(fmt.Sprintf("⚡ КРИТИЧЕСКИЙ УДАР от [%s] по %s!", mob.Name, victim.Name)))
+			m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.mob_crit", mobDisplayName, victimName)))
 		}
 
 		inDmg := max(3, int(float64(rawDmg)*m.Relic.EnemyDmgMod*enrageMult))
@@ -634,11 +647,13 @@ func (m *Model) executeCombatTurn() {
 			dealtDmg = inDmg
 		}
 
+		actualHeroName := actualHero.DisplayName(m.Lang)
+
 		if guarded {
-			m.addLog(healStyle.Render(fmt.Sprintf("🛡️ %s %s %s от удара [%s], приняв %d урона!",
-				actualHero.Name, actualHero.Verb("прикрыл собой", "прикрыла собой"), victim.Name, mob.Name, dealtDmg)))
+			verb := TVerb(m.Lang, actualHero.Gender, "прикрыл собой", "прикрыла собой", "shielded")
+			m.addLog(healStyle.Render(T(m.Lang, "combat.log.tank_guard", actualHeroName, verb, victimName, mobDisplayName, dealtDmg)))
 		} else {
-			m.addLog(dangerStyle.Render(fmt.Sprintf("💥 [%s] нанес %d урона по %s!", mob.Name, dealtDmg, actualHero.Name)))
+			m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.mob_hit", mobDisplayName, dealtDmg, actualHeroName)))
 		}
 
 		actualHero.Feats.DamageTaken += dealtDmg
@@ -646,10 +661,10 @@ func (m *Model) executeCombatTurn() {
 
 		if actualHero.HP <= 0 {
 			actualHero.HP = 0
-			actualHero.CauseOfDeath = fmt.Sprintf("Сражен монстром [%s]", mob.Name)
+			actualHero.CauseOfDeath = T(m.Lang, "combat.log.death_cause_mob", mobDisplayName)
 			m.recordFallenHero(actualHero)
-			m.addLog(dangerStyle.Render(fmt.Sprintf("☠️ %s %s в бою от фатального удара [%s]!",
-				actualHero.Name, actualHero.Verb("пал", "пала"), mob.Name)))
+			verb := TVerb(m.Lang, actualHero.Gender, "пал", "пала", "fell")
+			m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.hero_slain", actualHeroName, verb, mobDisplayName)))
 			for _, ally := range m.Party {
 				if !ally.IsDead {
 					m.addStress(ally, 20)

@@ -9,20 +9,13 @@ import (
 // --- Столичные заведения и вспомогательные функции ---
 
 func generateTownEstablishments() TownEstablishments {
-	smithies := []string{"Драконий Вздох", "Пылающий Горн", "Молот и Наковальня", "Стальная Искра", "Удар Титана"}
-	tanneries := []string{"Вторая Кожа", "Прочный Стежок", "Дубленый Лев", "Лоскут и Заклепка", "Северный Олень"}
-	taverns := []string{"Пьяный Дракон", "Приют Пройдохи", "Золотой Кубок", "Последний Приют", "Кабанья Голова"}
-	guilds := []string{"Железный Контракт", "Орден Рассвета", "Союз Четырех Ветров", "Искатели Судеб", "Гвардия Удачи"}
-	alchemists := []string{"Магия Эфира", "Зеленый Флакон", "Корень Мандрагоры", "Философский Камень", "Капля Света"}
-	churches := []string{"Храм Вечного Рассвета", "Обитель Семи Светил", "Монастырь Безмолвия", "Часовня Упавшей Звезды", "Святыня Живой Воды"}
-
 	return TownEstablishments{
-		SmithyName:    smithies[rand.Intn(len(smithies))],
-		TanneryName:   tanneries[rand.Intn(len(tanneries))],
-		TavernName:    taverns[rand.Intn(len(taverns))],
-		GuildName:     guilds[rand.Intn(len(guilds))],
-		AlchemistName: alchemists[rand.Intn(len(alchemists))],
-		ChurchName:    churches[rand.Intn(len(churches))],
+		SmithyKey:    fmt.Sprintf("town.smithy.%d", rand.Intn(5)+1),
+		TanneryKey:   fmt.Sprintf("town.tannery.%d", rand.Intn(5)+1),
+		TavernKey:    fmt.Sprintf("town.tavern.%d", rand.Intn(5)+1),
+		GuildKey:     fmt.Sprintf("town.guild.%d", rand.Intn(5)+1),
+		AlchemistKey: fmt.Sprintf("town.alchemist.%d", rand.Intn(5)+1),
+		ChurchKey:    fmt.Sprintf("town.church.%d", rand.Intn(5)+1),
 	}
 }
 
@@ -79,8 +72,8 @@ func createPotion(pType PotionType, size PotionSize, floor int) Potion {
 	return Potion{Type: pType, Size: size, Power: power, Cost: cost, Symbol: symbol}
 }
 
-func getPotionName(p Potion) string {
-	return fmt.Sprintf("%s %s", p.Size, p.Type)
+func getPotionName(p Potion, lang Language) string {
+	return T(lang, fmt.Sprintf("potion.%s.%s", p.Size, p.Type))
 }
 
 func GetClassMutationPreference(class HeroClass, m HeroMutations) MutationType {
@@ -163,8 +156,8 @@ func (m *Model) stepTown() {
 		if soldGold > 0 {
 			m.Gold += soldGold
 			m.Stats.TotalGoldEarned += soldGold
-			m.addLog(goldStyle.Render(fmt.Sprintf("⚖️ [Рынок] Трофеи проданы на +%dG.", soldGold)))
-			m.logTownAction("⚖️", "Рыночная площадь", fmt.Sprintf("Сбыт трофеев на +%dG. Дух укреплен (-40 стресса)", soldGold))
+			m.addLog(goldStyle.Render(T(m.Lang, "town.log.market_sold", soldGold)))
+			m.logTownAction("⚖️", T(m.Lang, "town.market"), T(m.Lang, "town.log.market_history", soldGold))
 		}
 		m.Bag = []EquipItem{}
 
@@ -186,31 +179,31 @@ func (m *Model) stepTown() {
 			globalDebugReport.GoldSpentBreakdown["Инвестиции в Магистрат"] += investAmt
 
 			type Building struct {
-				Name  string
+				Key   string
 				Level int
 			}
 			buildings := []Building{
-				{Name: m.TownEst.SmithyName, Level: m.Legacy.SmithyLevel},
-				{Name: m.TownEst.TanneryName, Level: m.Legacy.TanneryLevel},
-				{Name: m.TownEst.ChurchName, Level: m.Legacy.ChurchLevel},
-				{Name: m.TownEst.TavernName, Level: m.Legacy.TavernLevel},
+				{Key: m.TownEst.SmithyKey, Level: m.Legacy.SmithyLevel},
+				{Key: m.TownEst.TanneryKey, Level: m.Legacy.TanneryLevel},
+				{Key: m.TownEst.ChurchKey, Level: m.Legacy.ChurchLevel},
+				{Key: m.TownEst.TavernKey, Level: m.Legacy.TavernLevel},
 			}
 			sort.Slice(buildings, func(i, j int) bool { return buildings[i].Level < buildings[j].Level })
 
 			targetBld := &buildings[0]
-			switch targetBld.Name {
-			case m.TownEst.SmithyName:
+			switch targetBld.Key {
+			case m.TownEst.SmithyKey:
 				m.Legacy.SmithyLevel++
-			case m.TownEst.TanneryName:
+			case m.TownEst.TanneryKey:
 				m.Legacy.TanneryLevel++
-			case m.TownEst.ChurchName:
+			case m.TownEst.ChurchKey:
 				m.Legacy.ChurchLevel++
-			case m.TownEst.TavernName:
+			case m.TownEst.TavernKey:
 				m.Legacy.TavernLevel++
 			}
-			m.addLog(titleStyle.Render(fmt.Sprintf("🏛️ [Магистрат] Отчислено %dG на развитие города («%s» Ур.%d)!",
-				investAmt, targetBld.Name, targetBld.Level+1)))
-			m.logTownAction("🏛️", "Магистрат Столицы", fmt.Sprintf("Внесено %dG («%s» улучшена до Ур.%d)", investAmt, targetBld.Name, targetBld.Level+1))
+			bldName := T(m.Lang, targetBld.Key)
+			m.addLog(titleStyle.Render(T(m.Lang, "town.log.magistrate_tax", investAmt, bldName, targetBld.Level+1)))
+			m.logTownAction("🏛️", T(m.Lang, "town.magistrate"), T(m.Lang, "town.log.magistrate_hist", investAmt, bldName, targetBld.Level+1))
 		}
 		m.TownPhase = TownPhaseChurch
 
@@ -228,6 +221,7 @@ func (m *Model) stepTown() {
 
 		if hasDead || hasStress {
 			blessCost := max(80, (100*m.Floor)-(m.Legacy.ChurchLevel*30))
+			churchName := T(m.Lang, m.TownEst.ChurchKey)
 			if m.Gold >= blessCost {
 				m.Gold -= blessCost
 				globalDebugReport.GoldSpentBreakdown["Церковь (исцеление/воскрешение)"] += blessCost
@@ -241,14 +235,15 @@ func (m *Model) stepTown() {
 					h.Stress = 0
 					h.Affliction = AfflictionNone
 				}
-				m.addLog(fountStyle.Render(fmt.Sprintf("⛪ [%s] Литургия проведена (-%dG, поднято: %d)!", m.TownEst.ChurchName, blessCost, revived)))
-				m.logTownAction("⛪", m.TownEst.ChurchName, fmt.Sprintf("Литургия исцеления: поднято %d бойцов, снят стресс (-%dG)", revived, blessCost))
+				m.addLog(fountStyle.Render(T(m.Lang, "town.log.church_liturgy", churchName, blessCost, revived)))
+				m.logTownAction("⛪", churchName, T(m.Lang, "town.log.church_hist", revived, blessCost))
 			}
 		}
 		m.TownPhase = TownPhaseTavern
 
 	case TownPhaseTavern:
 		tavernCost := max(35, (20*m.Floor)-(m.Legacy.TavernLevel*8))
+		tavernName := T(m.Lang, m.TownEst.TavernKey)
 		if m.Gold >= tavernCost {
 			m.Gold -= tavernCost
 			globalDebugReport.GoldSpentBreakdown["Таверна (ночлег)"] += tavernCost
@@ -258,8 +253,8 @@ func (m *Model) stepTown() {
 					h.MP = h.MaxMP
 				}
 			}
-			m.addLog(healStyle.Render(fmt.Sprintf("🍻 [%s] Полноценный отдых (-%dG). Отряд полон сил.", m.TownEst.TavernName, tavernCost)))
-			m.logTownAction("🍻", m.TownEst.TavernName, fmt.Sprintf("Ночлег в уютных покоях (-%dG). Силы восстановлены", tavernCost))
+			m.addLog(healStyle.Render(T(m.Lang, "town.log.tavern_rest", tavernName, tavernCost)))
+			m.logTownAction("🍻", tavernName, T(m.Lang, "town.log.tavern_hist", tavernCost))
 		} else {
 			barnCost := max(5, tavernCost/4)
 			if m.Gold >= barnCost {
@@ -272,19 +267,20 @@ func (m *Model) stepTown() {
 					h.MP = int(float64(h.MaxMP) * 0.45)
 				}
 			}
-			m.addLog(dangerStyle.Render("🏚️ [Сеновал] Казна истощена! Ночлег на сеновале (45% сил)."))
-			m.logTownAction("🏚️", m.TownEst.TavernName, "Казна пуста! Ночлег на сеновале (45% сил)")
+			m.addLog(dangerStyle.Render(T(m.Lang, "town.log.tavern_barn")))
+			m.logTownAction("🏚️", tavernName, T(m.Lang, "town.log.tavern_barn_hist"))
 		}
 		m.TownPhase = TownPhaseGuild
 
 	case TownPhaseGuild:
+		guildName := T(m.Lang, m.TownEst.GuildKey)
 		if m.CurrentQuest.Completed {
 			reward := m.CurrentQuest.RewardGold * 2
 			m.Gold += reward
 			m.Stats.TotalGoldEarned += reward
 			m.Stats.QuestsCompleted++
-			m.addLog(questStyle.Render(fmt.Sprintf("📜 [%s] Контракт закрыт: +%dG!", m.TownEst.GuildName, reward)))
-			m.logTownAction("📜", m.TownEst.GuildName, fmt.Sprintf("Закрыт контракт: получена награда +%dG", reward))
+			m.addLog(questStyle.Render(T(m.Lang, "town.log.guild_quest", guildName, reward)))
+			m.logTownAction("📜", guildName, T(m.Lang, "town.log.guild_quest_hist", reward))
 			m.CurrentQuest = generateAutoQuest(m.Floor)
 		}
 
@@ -298,17 +294,17 @@ func (m *Model) stepTown() {
 					m.Gold -= recruitCost
 					globalDebugReport.GoldSpentBreakdown["Найм ветеранов"] += recruitCost
 					m.Party[i] = createHero(newClass, m.Floor, m.Legacy.SmithyLevel)
-					m.addLog(healStyle.Render(fmt.Sprintf("⚔️ [%s] Нанят ветеран %s (%s, Ур.%d) за %dG!",
-						m.TownEst.GuildName, m.Party[i].Name, m.Party[i].ShortClass(), m.Party[i].Level, recruitCost)))
-					m.logTownAction("⚔️", m.TownEst.GuildName, fmt.Sprintf("Принят контракт ветерана %s (%s, Ур.%d) за %dG",
-						m.Party[i].Name, m.Party[i].ShortClass(), m.Party[i].Level, recruitCost))
+					m.addLog(healStyle.Render(T(m.Lang, "town.log.guild_veteran",
+						guildName, m.Party[i].DisplayName(m.Lang), m.Party[i].ShortClass(m.Lang), m.Party[i].Level, recruitCost)))
+					m.logTownAction("⚔️", guildName, T(m.Lang, "town.log.guild_vet_hist",
+						m.Party[i].DisplayName(m.Lang), m.Party[i].ShortClass(m.Lang), m.Party[i].Level, recruitCost))
 				} else {
 					m.Party[i] = createHero(newClass, 1, 0)
-					m.Party[i].Title = "Ополченец"
-					m.addLog(subtleStyle.Render(fmt.Sprintf("🤝 [%s] Ополченец %s (%s) встал в строй бесплатно.",
-						m.TownEst.GuildName, m.Party[i].Name, m.Party[i].ShortClass())))
-					m.logTownAction("🤝", m.TownEst.GuildName, fmt.Sprintf("Ополченец %s (%s) встал в строй без оплаты",
-						m.Party[i].Name, m.Party[i].ShortClass()))
+					m.Party[i].TitleKey = "title.militia"
+					m.addLog(subtleStyle.Render(T(m.Lang, "town.log.guild_militia",
+						guildName, m.Party[i].DisplayName(m.Lang), m.Party[i].ShortClass(m.Lang))))
+					m.logTownAction("🤝", guildName, T(m.Lang, "town.log.guild_mil_hist",
+						m.Party[i].DisplayName(m.Lang), m.Party[i].ShortClass(m.Lang)))
 				}
 			}
 		}
@@ -319,6 +315,7 @@ func (m *Model) stepTown() {
 		smithyBudget := budget.Forge
 		upgradesCount := 0
 		totalSpent := 0
+		smithyName := T(m.Lang, m.TownEst.SmithyKey)
 
 		getUpgradeCost := func(it *EquipItem) int {
 			if it == nil {
@@ -342,7 +339,6 @@ func (m *Model) stepTown() {
 				}
 				for _, slot := range []EquipSlot{SlotWeapon, SlotHead, SlotChest, SlotLegs} {
 					it := h.GetItemInSlot(slot)
-					// Кузница точит ВСЁ оружие отряда (металл и дерево магов) + тяжелые латы
 					canForge := it != nil && it.UpgradeLevel < 6 && (it.Slot == SlotWeapon || it.Category == ArmorHeavy)
 					if canForge {
 						cost := getUpgradeCost(it)
@@ -371,8 +367,8 @@ func (m *Model) stepTown() {
 
 		if totalSpent > 0 {
 			globalDebugReport.GoldSpentBreakdown["Кузница (заточки)"] += totalSpent
-			m.addLog(goldStyle.Render(fmt.Sprintf("⚒️ [%s] Заточено оружия и лат: %d шт. (-%dG)!", m.TownEst.SmithyName, upgradesCount, totalSpent)))
-			m.logTownAction("⚒️", m.TownEst.SmithyName, fmt.Sprintf("Заточено предметов арсенала: %d шт. (-%dG)", upgradesCount, totalSpent))
+			m.addLog(goldStyle.Render(T(m.Lang, "town.log.smithy_done", smithyName, upgradesCount, totalSpent)))
+			m.logTownAction("⚒️", smithyName, T(m.Lang, "town.log.smithy_hist", upgradesCount, totalSpent))
 		}
 		m.TownPhase = TownPhaseTannery
 
@@ -380,6 +376,7 @@ func (m *Model) stepTown() {
 		budget := AllocateBudget(m.Gold)
 		tanneryBudget := budget.Tannery + budget.Bags
 		totalSpent := 0
+		tanneryName := T(m.Lang, m.TownEst.TanneryKey)
 
 		// 1. Пошив новой сумки
 		if m.BagLevel < len(bagUpgrades)-1 {
@@ -391,8 +388,9 @@ func (m *Model) stepTown() {
 				totalSpent += nextBag.Cost
 				globalDebugReport.GoldSpentBreakdown["Улучшение сумок"] += nextBag.Cost
 				m.BagLevel++
-				m.addLog(goldStyle.Render(fmt.Sprintf("🎒 [%s] Сшит %s (%d сл.) за %dG!", m.TownEst.TanneryName, nextBag.Name, nextBag.Capacity, nextBag.Cost)))
-				m.logTownAction("🎒", m.TownEst.TanneryName, fmt.Sprintf("Сшит %s (%d слотов) за %dG", nextBag.Name, nextBag.Capacity, nextBag.Cost))
+				bagName := T(m.Lang, nextBag.NameKey)
+				m.addLog(goldStyle.Render(T(m.Lang, "town.log.tannery_bag", tanneryName, bagName, nextBag.Capacity, nextBag.Cost)))
+				m.logTownAction("🎒", tanneryName, T(m.Lang, "town.log.tannery_bag_hist", bagName, nextBag.Capacity, nextBag.Cost))
 			}
 		}
 
@@ -418,7 +416,6 @@ func (m *Model) stepTown() {
 				if h.IsDead {
 					continue
 				}
-				// Кожевник обслуживает только доспехи (не оружие!)
 				for _, slot := range []EquipSlot{SlotHead, SlotChest, SlotLegs} {
 					it := h.GetItemInSlot(slot)
 					canTan := it != nil && (it.Category == ArmorMedium || it.Category == ArmorLight) && it.UpgradeLevel < 6
@@ -450,8 +447,8 @@ func (m *Model) stepTown() {
 		if totalSpent > 0 {
 			globalDebugReport.GoldSpentBreakdown["Кожевник (выделка и сумки)"] += totalSpent
 			if craftedItems > 0 {
-				m.addLog(goldStyle.Render(fmt.Sprintf("🎒 [%s] Укреплено кожи и ткани: %d шт.!", m.TownEst.TanneryName, craftedItems)))
-				m.logTownAction("🎒", m.TownEst.TanneryName, fmt.Sprintf("Выделка легких и средних доспехов: %d шт. (-%dG)", craftedItems, totalSpent))
+				m.addLog(goldStyle.Render(T(m.Lang, "town.log.tannery_done", tanneryName, craftedItems)))
+				m.logTownAction("🎒", tanneryName, T(m.Lang, "town.log.tannery_hist", craftedItems, totalSpent))
 			}
 		}
 		m.TownPhase = TownPhaseAlchemist
@@ -498,7 +495,8 @@ func (m *Model) stepTown() {
 				alchBudget -= cost
 				spentAlch += cost
 
-				verbApplied := target.Verb("принял", "приняла")
+				verbApplied := TVerb(m.Lang, target.Gender, "принял", "приняла", "took")
+				hName := target.DisplayName(m.Lang)
 
 				switch pref {
 				case MutChimera:
@@ -509,30 +507,30 @@ func (m *Model) stepTown() {
 					target.MP += 5
 					target.BaseAtk += 1
 					target.BaseDef += 1
-					m.addLog(accentStyle.Render(fmt.Sprintf("⚗️ %s %s [Сыворотку Химеры] (+8 HP, +5 MP, +1 Atk, +1 Def) за %dG!", target.Name, verbApplied, cost)))
+					m.addLog(accentStyle.Render(T(m.Lang, "town.log.mut_chimera", hName, verbApplied, T(m.Lang, "mut.chimera.name"), cost)))
 				case MutFury:
 					target.Mutations.FuryCount++
 					target.BaseAtk += 3
 					target.MaxHP += 2
 					target.HP += 2
-					m.addLog(fireStyle.Render(fmt.Sprintf("⚗️ %s %s [Эссенцию Ярости] (+3 Atk, +2 HP) за %dG!", target.Name, verbApplied, cost)))
+					m.addLog(fireStyle.Render(T(m.Lang, "town.log.mut_fury", hName, verbApplied, T(m.Lang, "mut.fury.name"), cost)))
 				case MutTitan:
 					target.Mutations.TitanCount++
 					target.MaxHP += 20
 					target.HP += 20
-					m.addLog(healStyle.Render(fmt.Sprintf("⚗️ %s %s [Кровь Титана] (+20 HP) за %dG!", target.Name, verbApplied, cost)))
+					m.addLog(healStyle.Render(T(m.Lang, "town.log.mut_titan", hName, verbApplied, T(m.Lang, "mut.titan.name"), cost)))
 				case MutAether:
 					target.Mutations.AetherCount++
 					target.MaxMP += 14
 					target.MP += 14
 					target.BaseAtk += 1
-					m.addLog(fountStyle.Render(fmt.Sprintf("⚗️ %s %s [Флюид Эфира] (+14 MP, +1 Atk) за %dG!", target.Name, verbApplied, cost)))
+					m.addLog(fountStyle.Render(T(m.Lang, "town.log.mut_aether", hName, verbApplied, T(m.Lang, "mut.aether.name"), cost)))
 				case MutBastion:
 					target.Mutations.BastionCount++
 					target.BaseDef += 2
 					target.MaxHP += 6
 					target.HP += 6
-					m.addLog(healStyle.Render(fmt.Sprintf("⚗️ %s %s [Эликсир Бастиона] (+2 Def, +6 HP) за %dG!", target.Name, verbApplied, cost)))
+					m.addLog(healStyle.Render(T(m.Lang, "town.log.mut_bastion", hName, verbApplied, T(m.Lang, "mut.bastion.name"), cost)))
 				}
 			} else {
 				break
@@ -567,7 +565,7 @@ func (m *Model) stepTown() {
 
 		if spentAlch > 0 {
 			globalDebugReport.GoldSpentBreakdown["Алхимия и зелья"] += spentAlch
-			m.logTownAction("🧪", m.TownEst.AlchemistName, fmt.Sprintf("Сварены сыворотки и настойки в пояса на сумму %dG", spentAlch))
+			m.logTownAction("🧪", T(m.Lang, m.TownEst.AlchemistKey), T(m.Lang, "town.log.alch_hist", spentAlch))
 		}
 		m.TownPhase = TownPhaseDepart
 
@@ -577,6 +575,6 @@ func (m *Model) stepTown() {
 		m.PathHistory = []Point{}
 		m.LoopDetectCount = 0
 		m.initDungeonForFloor(m.Floor)
-		m.addLog(accentStyle.Render("🛡️ Отряд снаряжен и спускается на глубину!"))
+		m.addLog(accentStyle.Render(T(m.Lang, "town.log.depart")))
 	}
 }
