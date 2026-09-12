@@ -547,60 +547,86 @@ var dictRU = map[string]string{
 	"stats.no_fallen":           "Ни один боец не погиб в этом походе.",
 	"armory.title":              "═══ АРСЕНАЛ ОТРЯДА И АЛХИМИЧЕСКИЕ МУТАЦИИ",
 
-	// --- Кодекс знаний ---
-	"codex.header":      "═══ КОДЕКС ЗНАНИЙ И БАЗА ДАННЫХ DCCAG ═══",
-	"codex.tab.classes": "1. Бестиарий",
-	"codex.tab.combat":  "2. Арсенал",
-	"codex.tab.town":    "3. Столица",
-	"codex.tab.relics":  "4. Алхимия",
-	"codex.switch_tabs": "Переключение вкладок",
+	// --- Полный расширенный Кодекс DCCAG ---
+	"codex.header":        "═══ КОДЕКС ЗНАНИЙ И БАЗА ДАННЫХ DCCAG [I] ═══",
+	"codex.growth_label":  "Рост",
+	"codex.block_stat":    "Блок",
+	"codex.crit_stat":     "Крит",
+	"codex.mob_block":     "(Блок 20%)",
+	"codex.mob_stress_10": "(+10 Стр)",
+	"codex.mob_stress_18": "(+18 Стр)",
+	"codex.mob_crits":     "(Криты)",
+	"codex.mob_scorch":    "(Опаление)",
+	"codex.mob_rage":      "(Ярость)",
+	"codex.mob_vamp":      "(Вампиризм)",
+	"codex.mob_dragon_breath": "Дыхание по всей группе",
 
-	"codex.content.classes": `• ЦИКЛИЧЕСКИЕ БИОМЫ:
-  - Этажи 1, 6, 11... (Гнилые Катакомбы): Базовые монстры, сырость и гниль.
-  - Этажи 2, 7, 12... (Затопленные Гроты): Слизни, утопленники, ящеры (-2 к скорости группы).
-  - Этажи 3, 8, 13... (Пепельные Недра): Пепельные бесы, орки, саламандры (+урон огнем).
-  - Этажи 4, 9, 14... (Кристальный Лабиринт): Големы, гаргульи (+3 MP к стоимости способностей).
-  - Этажи 5, 10, 15... (Трон Бездны): Демоны, Рыцари Смерти, Дракон (+10% стресса).
+	"codex.sec.1":          "1. ЦИКЛИЧЕСКИЕ БИОМЫ ПОДЗЕМЕЛЬЯ:",
+	"codex.biome.1.title":  "Этажи 1, 6, 11... (Гнилые Катакомбы)",
+	"codex.biome.1.desc":   "Базовые монстры, сырость и гниль.",
+	"codex.biome.2.title":  "Этажи 2, 7, 12... (Затопленные Гроты)",
+	"codex.biome.2.desc":   "Слизни, утопленники, ящеры (-2 к скорости отряда).",
+	"codex.biome.3.title":  "Этажи 3, 8, 13... (Пепельные Недра)",
+	"codex.biome.3.desc":   "Пепельные бесы, орки, саламандры (+урон огнем).",
+	"codex.biome.4.title":  "Этажи 4, 9, 14... (Кристальный Лабиринт)",
+	"codex.biome.4.desc":   "Големы, гаргульи (+3 MP к стоимости навыков).",
+	"codex.biome.5.title":  "Этажи 5, 10, 15... (Трон Бездны)",
+	"codex.biome.5.desc":   "Демоны, Рыцари Смерти, Дракон (+10% стресса).",
 
-• АФФИКСЫ МОНСТРОВ:
-  - 🔥 Огненный: +3 к базовой атаке; опаляет героя на +4 чистого урона.
-  - ☣️ Ядовитый: Отравляет раны (-3 чистого HP и +14 стресса).
-  - ❄️ Ледяной: Замедляет инициативу группы и сковывает действия.
-  - 🪨 Каменный: +3 к защите (DEF), +12 к максимальному запасу здоровья.
-  - 🩸 Вампир: Крадет здоровье: восстанавливает 50% от нанесенного урона.`,
+	"codex.sec.2":             "2. МОНСТРЫ И ПРОГРЕССИЯ ХАРАКТЕРИСТИК:",
+	"codex.catacombs_header":  " [Гнилые Катакомбы]",
+	"codex.grotto_header":     " [Затопленные Гроты]",
+	"codex.inferno_header":    " [Пепельные Недра]",
+	"codex.crystal_header":    " [Кристальный Лабиринт]",
+	"codex.abyss_header":      " [Трон Бездны & Владыки]",
 
-	"codex.content.combat": `• КУЗНИЦА (ТАНК И ВОИН - Тяжелые латы и сталь):
-  - Оружие Танка: Т1 Гладиус -> Т2 Палаш -> Т3 Моргенштерн -> Т4 Бастионный меч (Atk:9, Блок:8)
-  - Доспех Танка: Т1 Бригантина -> Т2 Полудоспех -> Т3 Кираса -> Т4 Панцирь цитадели (Def:13, HP:+40)
-  - Оружие Воина: Т1 Эспадон -> Т2 Клеймор -> Т3 Боевой топор -> Т4 Фальшион (Atk:14, Крит:4)
+	"codex.sec.3":          "3. АФФИКСЫ И МОДИФИКАТОРЫ ВРАГОВ:",
+	"codex.affix.1.title":  "🔥 Огненный",
+	"codex.affix.1.desc":   "+3 к базовой атаке; опаляет бойца на +4 урона",
+	"codex.affix.2.title":  "☣️ Ядовитый",
+	"codex.affix.2.desc":   "Отравляет раны: -3 чистого здоровья и +14 стресса",
+	"codex.affix.3.title":  "❄️ Ледяной",
+	"codex.affix.3.desc":   "Замедляет инициативу группы и сковывает действия",
+	"codex.affix.4.title":  "🪨 Каменный",
+	"codex.affix.4.desc":   "+3 к защите (DEF), +12 к максимальному здоровью",
+	"codex.affix.5.title":  "🩸 Вампир",
+	"codex.affix.5.desc":   "Крадет здоровье: исцеляет себе 50% нанесенного урона",
 
-• КОЖЕВНИК (РОГА, МАГ, ЖРЕЦ - Кожа, мантии и пошив):
-  - Рога: Т1 Охотничьи ножи -> Т2 Стилеты -> Т3 Кинжалы -> Т4 Воровские кортики (Atk:10, Крит:8)
-  - Маг: Т1 Роба ученика -> Т2 Мантия чародея -> Т3 Одеяние эфира -> Т4 Астральная мантия (Def:8, MP:+45)
-  - Жрец: Т1 Окованная дубина -> Т2 Боевой молот -> Т3 Шестопёр -> Т4 Булава света (Atk:10, MP:+26)`,
+	"codex.sec.4":          "4. ТАБЛИЦА СНАРЯЖЕНИЯ И МАСТЕРСКИЕ:",
+	"codex.forge_note":     "[Кузница - Металлы: Железн. x1 | Стальн. x2 | Мифрил. x3 | Адамант. x4]",
+	"codex.tanner_note":    "[Кожевник - Органика: Сыромятн. x1 | Варён. x2 | Василиск. x3 | Драконь. x4]",
+	"codex.forge_header":   " [КУЗНИЦА: ТАНК И ВОИН - Тяжелые латы и сталь]",
+	"codex.tanner_header":  " [КОЖЕВНИК: РОГА, МАГ, ЖРЕЦ - Кожа, ткань и ремни]",
+	"codex.item.tank_w":    "Танк оружие",
+	"codex.item.tank_a":    "Танк доспех",
+	"codex.item.warr_w":    "Воин оружие",
+	"codex.item.warr_a":    "Воин доспех",
+	"codex.item.mage_robe": "Маг мантия",
 
-	"codex.content.town": `• СТОЛИЧНЫЕ СЛУЖБЫ:
-  - Кузница: Точит оружие и тяжелые латы.
-  - Кожевник: Выделывает кожу и шёлк, шьет сумки и расширяет инвентарь.
-  - Таверна: Ночлег и снятие стресса. При нехватке золота — сеновал (45% сил).
-  - Храм: Воскрешение павших соратников и очищение от безумия.
-  - Гильдия: Выплата наград за квесты и наём опытных ветеранов.
+	"codex.sec.5":  "5. ПРОГРЕССИЯ УРОВНЕЙ И КЛАССОВЫЙ ОПЫТ (XP):",
+	"codex.xp.1":   " • Опыт от убитых врагов делится поровну между всеми живыми героями.",
+	"codex.xp.2":   " • Прирост Танка: +12 HP, +2 MP, +1 Atk, +1 Def каждые 2 ур.",
+	"codex.xp.3":   " • Прирост Воина: +8 HP, +3 MP, +2 Atk, +1 Def каждые 3 ур.",
+	"codex.xp.4":   " • Прирост Роги: +5 HP, +4 MP, +2 Atk, +1 Скор.",
+	"codex.xp.5":   " • Прирост Мага: +4 HP, +8 MP, +3 Atk.",
+	"codex.xp.6":   " • Прирост Жреца: +6 HP, +6 MP, +1 Atk.",
 
-• КВОТИРОВАНИЕ КАЗНЫ:
-  - Казна отчисляет 10% золота в фонд следующего поколения (Наследие).
-  - Остаток распределяется между службами города.`,
+	"codex.sec.6":            "6. АЛХИМИЧЕСКИЕ МУТАЦИИ И ПРИОРИТЕТЫ:",
+	"codex.base_260g":        "(База 260G)",
+	"codex.base_220g":        "(База 220G)",
+	"codex.base_210g":        "(База 210G)",
+	"codex.base_200g":        "(База 200G)",
+	"codex.base_240g":        "(База 240G)",
+	"codex.mut_chimera_desc": "+8 HP, +5 MP, +1 Atk, +1 Def (Универсально)",
+	"codex.mut_fury_desc":    "+3 Atk, +2 HP (Приоритет: Рога, Воин, Маг)",
+	"codex.mut_titan_desc":   "+20 MaxHP (Приоритет: Танк, Воин)",
+	"codex.mut_aether_desc":  "+14 MaxMP, +1 Atk (Приоритет: Маг, Жрец)",
+	"codex.mut_bastion_desc": "+2 Def, +6 HP (Приоритет: Танк, Жрец)",
 
-	"codex.content.relics": `• АЛХИМИЧЕСКИЕ МУТАЦИИ:
-  - Сыворотка Химеры: +8 HP, +5 MP, +1 Atk, +1 Def (Универсально)
-  - Эссенция Ярости: +3 Atk, +2 HP (Приоритет: Рога, Воин, Маг)
-  - Кровь Титана: +20 MaxHP (Приоритет: Танк, Воин)
-  - Флюид Эфира: +14 MaxMP, +1 Atk (Приоритет: Маг, Жрец)
-  - Эликсир Бастиона: +2 Def, +6 HP (Приоритет: Танк, Жрец)
-
-• ЛЕГЕНДАРНЫЕ РЕЛИКВИИ:
-  - Компас Алчности: Увеличивает золото, но монстры наносят больше урона.
-  - Корона Мученика: При гибели союзников живые получают прибавку к Atk.
-  - Священный Грааль: Значительно снижает получаемый отрядом стресс.`,
+	"codex.sec.7":              "7. РЕЛИКВИИ И АРТЕФАКТЫ ПОДЗЕМЕЛЬЯ:",
+	"codex.relic_greed_desc":   "Увеличивает добычу золота до +45%, но враги бьют больнее.",
+	"codex.relic_martyr_desc":  "При гибели героя все выжившие получают +3 Atk за каждый уровень реликвии.",
+	"codex.relic_grail_desc":   "Пассивно снижает весь получаемый отрядом стресс вплоть до 60%.",
 }
 
 var dictEN = map[string]string{
@@ -1146,60 +1172,86 @@ var dictEN = map[string]string{
 	"stats.no_fallen":           "No casualties. All heroes stand tall!",
 	"armory.title":              "═══ PARTY ARMORY AND ALCHEMICAL MUTATIONS",
 
-	// --- Codex ---
-	"codex.header":      "═══ DCCAG CODEX AND KNOWLEDGE BASE ═══",
-	"codex.tab.classes": "1. Bestiary",
-	"codex.tab.combat":  "2. Armory",
-	"codex.tab.town":    "3. Capital",
-	"codex.tab.relics":  "4. Alchemy",
-	"codex.switch_tabs": "Switch Tabs",
+	// --- Full Expanded DCCAG Codex ---
+	"codex.header":        "═══ DCCAG KNOWLEDGE BASE & CODEX [I] ═══",
+	"codex.growth_label":  "Growth",
+	"codex.block_stat":    "Block",
+	"codex.crit_stat":     "Crit",
+	"codex.mob_block":     "(Block 20%)",
+	"codex.mob_stress_10": "(+10 Str)",
+	"codex.mob_stress_18": "(+18 Str)",
+	"codex.mob_crits":     "(Crits)",
+	"codex.mob_scorch":    "(Scorch)",
+	"codex.mob_rage":      "(Rage)",
+	"codex.mob_vamp":      "(Vampiric)",
+	"codex.mob_dragon_breath": "AOE Fire Breath",
 
-	"codex.content.classes": `• CYCLICAL BIOMES:
-  - Floors 1, 6, 11... (Rotting Catacombs): Basic monsters, damp and decay.
-  - Floors 2, 7, 12... (Flooded Grottos): Slimes, drowned, lizards (-2 party speed).
-  - Floors 3, 8, 13... (Ashen Deeps): Ash imps, orcs, salamanders (+fire damage).
-  - Floors 4, 9, 14... (Crystal Labyrinth): Golems, gargoyles (+3 MP skill cost).
-  - Floors 5, 10, 15... (Throne of the Void): Demons, Death Knights, Dragon (+10% stress).
+	"codex.sec.1":          "1. CYCLICAL DUNGEON BIOMES:",
+	"codex.biome.1.title":  "Floors 1, 6, 11... (Rotting Catacombs)",
+	"codex.biome.1.desc":   "Basic monsters, damp and decay.",
+	"codex.biome.2.title":  "Floors 2, 7, 12... (Flooded Grottos)",
+	"codex.biome.2.desc":   "Slimes, drowned, lizards (-2 party speed).",
+	"codex.biome.3.title":  "Floors 3, 8, 13... (Ashen Deeps)",
+	"codex.biome.3.desc":   "Ash imps, orcs, salamanders (+fire damage).",
+	"codex.biome.4.title":  "Floors 4, 9, 14... (Crystal Labyrinth)",
+	"codex.biome.4.desc":   "Golems, gargoyles (+3 MP skill cost).",
+	"codex.biome.5.title":  "Floors 5, 10, 15... (Throne of the Void)",
+	"codex.biome.5.desc":   "Demons, Death Knights, Dragon (+10% stress).",
 
-• MONSTER AFFIXES:
-  - 🔥 Fiery: +3 base attack; burns hero for +4 pure damage.
-  - ☣️ Venomous: Poisons wounds (-3 HP and +14 stress).
-  - ❄️ Freezing: Slows party initiative and binds actions.
-  - 🪨 Stony: +3 DEF, +12 Max HP.
-  - 🩸 Vampiric: Steals life: restores 50% of damage dealt.`,
+	"codex.sec.2":             "2. MONSTERS & STAT PROGRESSION:",
+	"codex.catacombs_header":  " [Rotting Catacombs]",
+	"codex.grotto_header":     " [Flooded Grottos]",
+	"codex.inferno_header":    " [Ashen Deeps]",
+	"codex.crystal_header":    " [Crystal Labyrinth]",
+	"codex.abyss_header":      " [Throne of the Void & Bosses]",
 
-	"codex.content.combat": `• BLACKSMITH (TANK & WARRIOR - Heavy plate and steel):
-  - Tank Weapon: T1 Gladius -> T2 Broadsword -> T3 Morningstar -> T4 Bastion Blade (Atk:9, Block:8)
-  - Tank Armor: T1 Brigandine -> T2 Half-Plate -> T3 Cuirass -> T4 Citadel Carapace (Def:13, HP:+40)
-  - Warrior Weapon: T1 Espadon -> T2 Claymore -> T3 Battleaxe -> T4 Falchion (Atk:14, Crit:4)
+	"codex.sec.3":          "3. MONSTER AFFIXES:",
+	"codex.affix.1.title":  "🔥 Fiery",
+	"codex.affix.1.desc":   "+3 base attack; burns hero for +4 pure damage",
+	"codex.affix.2.title":  "☣️ Venomous",
+	"codex.affix.2.desc":   "Poisons wounds: -3 HP and +14 stress",
+	"codex.affix.3.title":  "❄️ Freezing",
+	"codex.affix.3.desc":   "Slows party initiative and binds actions",
+	"codex.affix.4.title":  "🪨 Stony",
+	"codex.affix.4.desc":   "+3 DEF, +12 Max HP",
+	"codex.affix.5.title":  "🩸 Vampiric",
+	"codex.affix.5.desc":   "Steals life: restores 50% of damage dealt",
 
-• TANNER (ROGUE, MAGE, CLERIC - Leather, robes, tailoring):
-  - Rogue: T1 Hunting Knives -> T2 Stilettos -> T3 Daggers -> T4 Cutlasses (Atk:10, Crit:8)
-  - Mage: T1 Apprentice Robe -> T2 Sorcerer Mantle -> T3 Aether Vestment -> T4 Astral Robe (Def:8, MP:+45)
-  - Cleric: T1 Reinforced Club -> T2 Warhammer -> T3 Flanged Mace -> T4 Mace of Radiance (Atk:10, MP:+26)`,
+	"codex.sec.4":          "4. EQUIPMENT TIERS & WORKSHOPS:",
+	"codex.forge_note":     "[Blacksmith - Metals: Iron x1 | Steel x2 | Mithril x3 | Adamant x4]",
+	"codex.tanner_note":    "[Tannery - Organics: Raw x1 | Boiled x2 | Basilisk x3 | Dragon x4]",
+	"codex.forge_header":   " [BLACKSMITH: TANK & WARRIOR - Heavy Plate & Steel]",
+	"codex.tanner_header":  " [TANNER: ROGUE, MAGE, CLERIC - Leather, Cloth & Mail]",
+	"codex.item.tank_w":    "Tank Weapon",
+	"codex.item.tank_a":    "Tank Armor",
+	"codex.item.warr_w":    "Warr Weapon",
+	"codex.item.warr_a":    "Warr Armor",
+	"codex.item.mage_robe": "Mage Robe",
 
-	"codex.content.town": `• CAPITAL SERVICES:
-  - Blacksmith: Tempers weapons and heavy armor.
-  - Tannery: Treats leather and silk, crafts backpacks and expands inventory.
-  - Tavern: Rest and stress relief. Hayloft on empty treasury (45% recovery).
-  - Church: Revives fallen comrades and purges madness.
-  - Guild: Pays bounties on contracts and enlists seasoned veterans.
+	"codex.sec.5":  "5. LEVEL PROGRESSION & CLASS EXP (XP):",
+	"codex.xp.1":   " • XP from defeated enemies is shared equally among all living heroes.",
+	"codex.xp.2":   " • Tank Growth: +12 HP, +2 MP, +1 Atk, +1 Def every 2 levels.",
+	"codex.xp.3":   " • Warrior Growth: +8 HP, +3 MP, +2 Atk, +1 Def every 3 levels.",
+	"codex.xp.4":   " • Rogue Growth: +5 HP, +4 MP, +2 Atk, +1 Spd.",
+	"codex.xp.5":   " • Mage Growth: +4 HP, +8 MP, +3 Atk.",
+	"codex.xp.6":   " • Cleric Growth: +6 HP, +6 MP, +1 Atk.",
 
-• TREASURY QUOTAS:
-  - 10% of gold is automatically taxed into Kingdom Legacy.
-  - Remaining funds are split evenly among city services.`,
+	"codex.sec.6":            "6. ALCHEMICAL MUTATIONS & PRIORS:",
+	"codex.base_260g":        "(Base 260G)",
+	"codex.base_220g":        "(Base 220G)",
+	"codex.base_210g":        "(Base 210G)",
+	"codex.base_200g":        "(Base 200G)",
+	"codex.base_240g":        "(Base 240G)",
+	"codex.mut_chimera_desc": "+8 HP, +5 MP, +1 Atk, +1 Def (Universal)",
+	"codex.mut_fury_desc":    "+3 Atk, +2 HP (Priority: Rogue, Warrior, Mage)",
+	"codex.mut_titan_desc":   "+20 MaxHP (Priority: Tank, Warrior)",
+	"codex.mut_aether_desc":  "+14 MaxMP, +1 Atk (Priority: Mage, Cleric)",
+	"codex.mut_bastion_desc": "+2 Def, +6 HP (Priority: Tank, Cleric)",
 
-	"codex.content.relics": `• ALCHEMICAL MUTATIONS:
-  - Chimera Serum: +8 HP, +5 MP, +1 Atk, +1 Def (Universal)
-  - Essence of Fury: +3 Atk, +2 HP (Priority: Rogue, Warrior, Mage)
-  - Titan Blood: +20 MaxHP (Priority: Tank, Warrior)
-  - Aether Fluid: +14 MaxMP, +1 Atk (Priority: Mage, Cleric)
-  - Bastion Elixir: +2 Def, +6 HP (Priority: Tank, Cleric)
-
-• LEGENDARY RELICS:
-  - Compass of Greed: Multiplies gold, but enemies hit harder.
-  - Martyr's Crown: Fallen comrades grant permanent attack buffs to survivors.
-  - Holy Grail: Heavily shields party sanity against stress.`,
+	"codex.sec.7":              "7. LEGENDARY RELICS & ARTIFACTS:",
+	"codex.relic_greed_desc":   "Increases gold yield up to +45%, but enemies hit harder.",
+	"codex.relic_martyr_desc":  "Grants permanent Attack to survivors when a hero falls in battle.",
+	"codex.relic_grail_desc":   "Passively shields the party against stress accumulation (up to 60%).",
 }
 
 func T(lang Language, key string, args ...any) string {

@@ -15,7 +15,7 @@ func generateRelic(level int) PartyRelic {
 	switch chosen {
 	case "greed_compass":
 		gMult := 1.15 + (float64(level) * 0.10)
-		dmgMod := 1.15 - (float64(level) * 0.03)
+		dmgMod := 1.20 - (float64(level) * 0.02)
 		return PartyRelic{
 			NameKey: nameKey, Level: level, GoldMult: gMult, EnemyDmgMod: dmgMod, MartyrFury: false,
 			DescKey: descKey,
@@ -26,7 +26,7 @@ func generateRelic(level int) PartyRelic {
 			DescKey: descKey,
 		}
 	default:
-		res := 15 + (level * 15)
+		res := 10 + (level * 10)
 		return PartyRelic{
 			NameKey: nameKey, Level: level, GoldMult: 1.0, EnemyDmgMod: 1.0, MartyrFury: false, StressRes: res,
 			DescKey: descKey,
@@ -385,7 +385,7 @@ func (m *Model) findNextStep() Point {
 
 func (m *Model) needsHealing() bool {
 	for _, h := range m.Party {
-		if !h.IsDead && (float64(h.HP)/float64(h.MaxHP) <= 0.50 || h.Stress >= 70) {
+		if !h.IsDead && (float64(h.HP)/float64(h.MaxHP) <= 0.40 || h.Stress >= 80) {
 			return true
 		}
 	}
@@ -398,15 +398,16 @@ func (m *Model) checkRetreat() bool {
 	}
 
 	living := 0
+	criticallyWounded := 0
 	for _, h := range m.Party {
 		if !h.IsDead {
 			living++
-			if float64(h.HP)/float64(h.MaxHP) <= 0.35 || h.Stress >= 130 {
-				return true
+			if float64(h.HP)/float64(h.MaxHP) <= 0.30 || h.Stress >= 140 {
+				criticallyWounded++
 			}
 		}
 	}
-	if living <= 2 {
+	if living <= 2 || criticallyWounded >= 2 {
 		return true
 	}
 	return false
@@ -448,15 +449,15 @@ func (m *Model) addStress(h *Hero, amt int) {
 			itemRes += it.StressRes
 		}
 	}
-	if itemRes > 60 {
-		itemRes = 60
+	if itemRes > 50 {
+		itemRes = 50
 	}
 	amt = amt * (100 - itemRes) / 100
 
 	h.Stress += amt
 
 	if amt >= 15 {
-		splash := amt / 3
+		splash := amt / 2
 		for _, ally := range m.Party {
 			if !ally.IsDead && ally != h {
 				ally.Stress += splash
@@ -465,7 +466,8 @@ func (m *Model) addStress(h *Hero, amt int) {
 	}
 
 	if h.Stress >= 100 && h.Affliction == AfflictionNone {
-		if rand.Intn(100) < 30 {
+		// Снижаем шанс воодушевления до 20%
+		if rand.Intn(100) < 20 {
 			h.Affliction = AfflictionVirtuous
 			h.Stress = 0
 			h.HP = h.MaxHP
@@ -474,7 +476,7 @@ func (m *Model) addStress(h *Hero, amt int) {
 			m.addLog(healStyle.Render(T(m.Lang, "dungeon.log.virtue", h.FullName(m.Lang), verb1, verb2)))
 			for _, ally := range m.Party {
 				if !ally.IsDead {
-					ally.Stress = max(0, ally.Stress-30)
+					ally.Stress = max(0, ally.Stress-20)
 				}
 			}
 		} else {
@@ -495,7 +497,7 @@ func (m *Model) addStress(h *Hero, amt int) {
 			m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.heart_attack_death", h.DisplayName(m.Lang))))
 			for _, ally := range m.Party {
 				if !ally.IsDead {
-					ally.Stress += 25
+					ally.Stress += 35
 				}
 			}
 			return
@@ -507,7 +509,7 @@ func (m *Model) addStress(h *Hero, amt int) {
 		m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.heart_attack", h.FullName(m.Lang), verb)))
 		for _, ally := range m.Party {
 			if !ally.IsDead && ally != h {
-				ally.Stress += 15
+				ally.Stress += 20
 			}
 		}
 	}
@@ -528,17 +530,17 @@ func (m *Model) checkAndDrinkPotions(h *Hero) {
 		switch p.Type {
 		case PotionHP:
 			missingHP := h.MaxHP - h.HP
-			if float64(h.HP)/float64(h.MaxHP) <= 0.45 || missingHP >= p.Power {
+			if float64(h.HP)/float64(h.MaxHP) <= 0.40 || missingHP >= p.Power {
 				shouldDrink = true
 			}
 		case PotionMP:
 			missingMP := h.MaxMP - h.MP
 			skillNeeded := h.SkillCost
-			if h.MP < skillNeeded || (h.MaxMP > 0 && float64(h.MP)/float64(h.MaxHP) <= 0.35) || missingMP >= p.Power {
+			if h.MP < skillNeeded || (h.MaxMP > 0 && float64(h.MP)/float64(h.MaxHP) <= 0.30) || missingMP >= p.Power {
 				shouldDrink = true
 			}
 		case PotionStress:
-			if h.Stress >= 60 || h.Affliction != AfflictionNone {
+			if h.Stress >= 70 || h.Affliction != AfflictionNone {
 				shouldDrink = true
 			}
 		}
@@ -638,18 +640,14 @@ func (m *Model) checkAndAwardTitle(h *Hero) {
 func (m *Model) handleAltar() {
 	m.Stats.AltarsUsed++
 	m.checkQuestProgress(QuestUseAltar, "", 1)
-	d20 := rand.Intn(20) + 1
-	isEven := d20%2 == 0
 	target := m.getRandomLivingHero()
 
 	if target != nil {
-		bloodCost := 10
-		if !isEven {
-			bloodCost = 16
-		}
+		// Алтарь берет 35% от текущего HP, не меньше 15 урона
+		bloodCost := max(15, target.HP*35/100)
 		target.HP -= bloodCost
-		target.BaseAtk += 2
-		m.addStress(target, 15)
+		target.BaseAtk += 3
+		m.addStress(target, 25)
 
 		hName := target.DisplayName(m.Lang)
 		if target.HP <= 0 {
@@ -671,8 +669,10 @@ func (m *Model) handleFountain() {
 		if !h.IsDead {
 			h.HP = h.MaxHP
 			h.MP = h.MaxMP
-			h.Stress = 0
-			h.Affliction = AfflictionNone
+			h.Stress = max(0, h.Stress-60)
+			if h.Stress == 0 {
+				h.Affliction = AfflictionNone
+			}
 			h.IsGuarding = false
 			h.IsBerserk = false
 			h.IsStealthed = false
@@ -718,9 +718,9 @@ func (m *Model) handleTrappedChest() {
 		m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.trapped_chest_boom", d20)))
 		for _, h := range m.Party {
 			if !h.IsDead {
-				trapDmg := rand.Intn(8) + 6
+				trapDmg := rand.Intn(12) + 10
 				h.HP -= trapDmg
-				m.addStress(h, 20)
+				m.addStress(h, 25)
 				if h.HP <= 0 {
 					h.HP = 0
 					h.CauseOfDeath = T(m.Lang, "dungeon.death.trap")
@@ -751,24 +751,24 @@ func (m *Model) handleRelicTile() {
 
 func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 	pack := &MonsterPack{IsBoss: isBoss}
-	scaleMult := 1 + (floor / 10)
+	scaleMult := 1 + (floor / 8)
 
 	if isBoss {
 		if floor%10 == 0 {
 			dragonLvl := floor
-			dragonHP := (260 + (floor * 20)) * scaleMult
+			dragonHP := (320 + (floor * 25)) * scaleMult
 			dragon := &Monster{
 				ID: 1, Type: MobDragon, NameKey: "mob.boss_dragon", Level: dragonLvl, Affix: AffixFire,
 				Glyph: 'D', Color: "196", HP: dragonHP, MaxHP: dragonHP,
-				Atk: (25 + floor) * scaleMult, Defense: (9 + floor/2) * scaleMult, Speed: 12, Exp: 350 * scaleMult,
+				Atk: (30 + floor*2) * scaleMult, Defense: (10 + floor/2) * scaleMult, Speed: 12, Exp: 450 * scaleMult,
 			}
 			pack.Members = append(pack.Members, dragon)
 
 			for i := 1; i <= 2; i++ {
 				guard := &Monster{
 					ID: i + 1, Type: MobDeathKnight, NameKey: "mob.death_knight", Level: dragonLvl - 1, Affix: AffixVampiric,
-					Glyph: 'K', Color: "89", HP: (65 + floor*5) * scaleMult, MaxHP: (65 + floor*5) * scaleMult,
-					Atk: (18 + floor) * scaleMult, Defense: (6 + floor/3) * scaleMult, Speed: 10, Exp: 55 * scaleMult,
+					Glyph: 'K', Color: "89", HP: (85 + floor*6) * scaleMult, MaxHP: (85 + floor*6) * scaleMult,
+					Atk: (22 + floor*2) * scaleMult, Defense: (7 + floor/3) * scaleMult, Speed: 10, Exp: 75 * scaleMult,
 				}
 				pack.Members = append(pack.Members, guard)
 			}
@@ -776,20 +776,20 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 		}
 
 		bossLvl := floor
-		hp := (70 + (bossLvl * 15)) * scaleMult
+		hp := (90 + (bossLvl * 18)) * scaleMult
 		bType := MobOrc
 		bGlyph := 'B'
 		bColor := "202"
 		bNameKey := "mob.boss_orc"
-		bAtk := (14 + (bossLvl * 2)) * scaleMult
-		bDef := (4 + bossLvl/3) * scaleMult
+		bAtk := (16 + (bossLvl * 2)) * scaleMult
+		bDef := (5 + bossLvl/3) * scaleMult
 
 		if floor >= 7 {
 			bType = MobGolem
 			bNameKey = "mob.boss_golem"
 			bGlyph = 'G'
 			bColor = "141"
-			bDef = (8 + floor/4) * scaleMult
+			bDef = (9 + floor/4) * scaleMult
 		} else if floor >= 4 {
 			bType = MobDrowned
 			bNameKey = "mob.boss_leviathan"
@@ -800,33 +800,33 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 		pack.Members = append(pack.Members, &Monster{
 			ID: 1, Type: bType, NameKey: bNameKey, Level: bossLvl, Affix: AffixStone,
 			Glyph: bGlyph, Color: bColor, HP: hp, MaxHP: hp,
-			Atk: bAtk, Defense: bDef, Speed: 10, Exp: (70 + bossLvl*8) * scaleMult,
+			Atk: bAtk, Defense: bDef, Speed: 10, Exp: (90 + bossLvl*10) * scaleMult,
 		})
 		for i := 1; i <= 2; i++ {
 			pack.Members = append(pack.Members, &Monster{
 				ID: i + 1, Type: MobSkeleton, NameKey: "mob.skeleton", Level: floor, Affix: AffixNone,
-				Glyph: 's', Color: "245", HP: (24 + floor*5) * scaleMult, MaxHP: (24 + floor*5) * scaleMult,
-				Atk: (9 + floor*2) * scaleMult, Defense: 3 * scaleMult, Speed: 9, Exp: (18 + floor*3) * scaleMult,
+				Glyph: 's', Color: "245", HP: (28 + floor*6) * scaleMult, MaxHP: (28 + floor*6) * scaleMult,
+				Atk: (11 + floor*2) * scaleMult, Defense: 4 * scaleMult, Speed: 9, Exp: (22 + floor*3) * scaleMult,
 			})
 		}
 		return pack
 	}
 
-	maxExtra := floor / 8
-	if maxExtra > 3 {
-		maxExtra = 3
+	maxExtra := floor / 6
+	if maxExtra > 4 {
+		maxExtra = 4
 	}
 	packSize := rand.Intn(3) + 3 + maxExtra
 	affixes := []MonsterAffix{AffixNone, AffixFire, AffixPoison, AffixFrost, AffixStone, AffixVampiric}
 
 	for i := 1; i <= packSize; i++ {
 		mobLvl := floor
-		if rand.Intn(100) < 30 {
+		if rand.Intn(100) < 35 {
 			mobLvl++
 		}
 
 		aff := AffixNone
-		if floor >= 3 && rand.Intn(100) < (20+(floor*5)) {
+		if floor >= 2 && rand.Intn(100) < (25+(floor*5)) {
 			aff = affixes[rand.Intn(len(affixes))]
 		}
 
@@ -840,69 +840,69 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 		if biomeCycle == 0 {
 			roll := rand.Intn(3)
 			if roll == 0 {
-				mType, glyph, color, baseAtk, baseDef, baseHP = MobRat, 'r', "137", 5, 0, 14
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobRat, 'r', "137", 6, 0, 15
 			} else if roll == 1 {
-				mType, glyph, color, baseAtk, baseDef, baseHP = MobGoblin, 'g', "118", 7, 1, 17
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobGoblin, 'g', "118", 8, 1, 19
 			} else {
-				mType, glyph, color, baseAtk, baseDef, baseHP = MobSkeleton, 's', "252", 8, 3, 22
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobSkeleton, 's', "252", 10, 3, 25
 			}
 		} else if biomeCycle == 1 {
 			roll := rand.Intn(3)
 			if roll == 0 {
-				mType, glyph, color, baseAtk, baseDef, baseHP = MobSlime, 'c', "43", 9, 1, 26
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobSlime, 'c', "43", 11, 1, 30
 			} else if roll == 1 {
-				mType, glyph, color, baseAtk, baseDef, baseHP = MobDrowned, 'u', "31", 11, 2, 34
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobDrowned, 'u', "31", 13, 2, 38
 			} else {
-				mType, glyph, color, baseAtk, baseDef, baseHP = MobLizard, 'l', "29", 12, 3, 30
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobLizard, 'l', "29", 14, 3, 34
 			}
 		} else if biomeCycle == 2 {
 			roll := rand.Intn(3)
 			if roll == 0 {
-				mType, glyph, color, baseAtk, baseDef, baseHP = MobImp, 'i', "208", 13, 2, 36
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobImp, 'i', "208", 15, 2, 40
 			} else if roll == 1 {
-				mType, glyph, color, baseAtk, baseDef, baseHP = MobOrc, 'o', "130", 15, 4, 46
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobOrc, 'o', "130", 17, 4, 52
 			} else {
-				mType, glyph, color, baseAtk, baseDef, baseHP = MobSalamander, 'm', "196", 16, 3, 40
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobSalamander, 'm', "196", 18, 3, 46
 			}
 		} else if biomeCycle == 3 {
 			roll := rand.Intn(3)
 			if roll == 0 {
-				mType, glyph, color, baseAtk, baseDef, baseHP = MobGargoyle, 'G', "102", 17, 6, 52
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobGargoyle, 'G', "102", 19, 6, 58
 			} else if roll == 1 {
-				mType, glyph, color, baseAtk, baseDef, baseHP = MobGolem, 'C', "141", 18, 7, 60
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobGolem, 'C', "141", 20, 7, 68
 			} else {
-				mType, glyph, color, baseAtk, baseDef, baseHP = MobPhantom, 'p', "159", 19, 2, 44
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobPhantom, 'p', "159", 22, 2, 50
 			}
 		} else {
 			roll := rand.Intn(2)
 			if roll == 0 {
-				mType, glyph, color, baseAtk, baseDef, baseHP = MobVoidDemon, 'V', "161", 21, 5, 66
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobVoidDemon, 'V', "161", 24, 5, 75
 			} else {
-				mType, glyph, color, baseAtk, baseDef, baseHP = MobDeathKnight, 'K', "89", 22, 7, 76
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobDeathKnight, 'K', "89", 26, 7, 85
 			}
 		}
 
-		hp := (baseHP + (mobLvl * 5)) * scaleMult
-		atk := (baseAtk + (mobLvl * 2)) * scaleMult
-		def := (baseDef + (mobLvl / 3)) * scaleMult
+		hp := (baseHP + (mobLvl * 6)) * scaleMult
+		atk := (baseAtk + (mobLvl * 3)) * scaleMult
+		def := (baseDef + (mobLvl / 2)) * scaleMult
 
 		if aff == AffixFire {
-			atk += 3 * scaleMult
+			atk += 4 * scaleMult
 		} else if aff == AffixStone {
-			def += 3 * scaleMult
-			hp += 12 * scaleMult
+			def += 4 * scaleMult
+			hp += 15 * scaleMult
 		}
 
 		pack.Members = append(pack.Members, &Monster{
 			ID: i, Type: mType, NameKey: "mob." + string(mType), Level: mobLvl, Affix: aff,
-			Glyph: glyph, Color: color, HP: hp, MaxHP: hp, Atk: atk, Defense: def, Speed: 8 + mobLvl/2, Exp: (10 + mobLvl*4) * scaleMult,
+			Glyph: glyph, Color: color, HP: hp, MaxHP: hp, Atk: atk, Defense: def, Speed: 8 + mobLvl/2, Exp: (12 + mobLvl*4) * scaleMult,
 		})
 	}
 	return pack
 }
 
 func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipItem {
-	matIdx := floor / 3
+	matIdx := floor / 4
 	if matIdx > 3 {
 		matIdx = 3
 	}
