@@ -464,7 +464,7 @@ func (m *Model) step() {
 	case TileChest:
 		m.Stats.ChestsOpened++
 		m.checkQuestProgress(QuestOpenChests, "", 1)
-		gold := int(float64(rand.Intn(16)+10+(m.Floor*2)) * m.Relic.GoldMult * 2)
+		gold := int(float64(rand.Intn(16)+10+(m.Floor*2)) * m.Relic.GoldMult)
 		m.Gold += gold
 		m.Stats.TotalGoldEarned += gold
 
@@ -727,3 +727,4 @@ func main() {
 		saveDebugReportToFile()
 	}
 }
+

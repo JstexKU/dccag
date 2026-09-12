@@ -700,7 +700,7 @@ func (m *Model) handleTrappedChest() {
 
 	if rollSuccess {
 		m.Stats.TrapsDisarmed++
-		gold := int(float64(rand.Intn(25)+15) * m.Relic.GoldMult * 2)
+		gold := int(float64(rand.Intn(25)+15) * m.Relic.GoldMult)
 		m.Gold += gold
 		m.Stats.TotalGoldEarned += gold
 
@@ -1073,4 +1073,3 @@ func generateItemForClass(class HeroClass, floor int) EquipItem {
 	chosenSlot := slots[rand.Intn(len(slots))]
 	return generateItemForClassSlot(class, chosenSlot, floor)
 }
-

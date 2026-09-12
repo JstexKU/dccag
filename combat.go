@@ -397,7 +397,7 @@ func (m *Model) executeCombatTurn() {
 							mob.IsDead = true
 							h.Feats.Kills++
 							m.distributePartyExp(mob.Exp)
-							g := int(float64(mob.Exp) * m.Relic.GoldMult * 2)
+							g := int(float64(mob.Exp) * m.Relic.GoldMult)
 							m.Gold += g
 							m.Stats.TotalGoldEarned += g
 							m.Stats.MonsterKills[mob.Type]++
@@ -423,7 +423,7 @@ func (m *Model) executeCombatTurn() {
 							mob.IsDead = true
 							h.Feats.Kills++
 							m.distributePartyExp(mob.Exp)
-							g := int(float64(mob.Exp) * m.Relic.GoldMult * 2)
+							g := int(float64(mob.Exp) * m.Relic.GoldMult)
 							m.Gold += g
 							m.Stats.TotalGoldEarned += g
 							m.Stats.MonsterKills[mob.Type]++
@@ -549,7 +549,7 @@ func (m *Model) executeCombatTurn() {
 			targetMob.IsDead = true
 			h.Feats.Kills++
 			m.distributePartyExp(targetMob.Exp)
-			g := int(float64(targetMob.Exp) * m.Relic.GoldMult * 2)
+			g := int(float64(targetMob.Exp) * m.Relic.GoldMult)
 			m.Gold += g
 			m.Stats.TotalGoldEarned += g
 			m.Stats.MonsterKills[targetMob.Type]++
@@ -667,3 +667,4 @@ func (m *Model) executeCombatTurn() {
 		}
 	}
 }
+

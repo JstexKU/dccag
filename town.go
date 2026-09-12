@@ -305,7 +305,7 @@ func (m *Model) stepTown() {
 	case TownPhaseGuild:
 		guildName := T(m.Lang, m.TownEst.GuildKey)
 		if m.CurrentQuest.Completed {
-			reward := m.CurrentQuest.RewardGold * 2
+			reward := m.CurrentQuest.RewardGold
 			m.Gold += reward
 			m.Stats.TotalGoldEarned += reward
 			m.Stats.QuestsCompleted++
@@ -609,3 +609,4 @@ func (m *Model) stepTown() {
 		m.addLog(accentStyle.Render(T(m.Lang, "town.log.depart")))
 	}
 }
+
