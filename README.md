@@ -69,15 +69,13 @@ If you don't have Go installed, you can download ready-to-run binaries for your 
    ```bash
    git clone [https://github.com/JstexKU/dccag.git](https://github.com/JstexKU/dccag.git)
    cd dccag
-     ```
 2. Run the game:
      ```bash
-go run .
-     ```
+    go run .
   * (Optional) To generate a detailed telemetry JSON report upon exiting, run with the report flag:
       ```bash
- go run . -report
-     ```
+    go run . -report
+ 
 ### 📂 Project Structure
 * main.go — Core Bubble Tea application loop, state machine, and timer ticks.
 * types.go — Data structures for Heroes, Items, Monsters, Stats, and Lipgloss styles.
