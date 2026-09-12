@@ -6,6 +6,8 @@ import (
 	"sort"
 )
 
+// --- Столичные заведения и вспомогательные функции ---
+
 func generateTownEstablishments() TownEstablishments {
 	return TownEstablishments{
 		SmithyKey:    fmt.Sprintf("town.smithy.%d", rand.Intn(5)+1),
@@ -74,39 +76,64 @@ func getPotionName(p Potion, lang Language) string {
 	return T(lang, fmt.Sprintf("potion.%s.%s", p.Size, p.Type))
 }
 
-func GetClassMutationPreference(class HeroClass, m HeroMutations) MutationType {
-	switch class {
-	case ClassTank:
-		if m.TitanCount <= m.BastionCount {
-			return MutTitan
+// GetClassMutationPreference динамически оценивает уязвимость героя и историю потерь
+func GetClassMutationPreference(h *Hero, floor int, fallenHistory []FallenHeroRecord) MutationType {
+	muts := h.Mutations
+
+	// 1. Проверяем, погибал ли этот класс в последних записях Книги Памяти
+	recentlyDied := false
+	for i := len(fallenHistory) - 1; i >= 0 && i >= len(fallenHistory)-6; i-- {
+		if fallenHistory[i].Class == h.Class {
+			recentlyDied = true
+			break
 		}
-		if m.BastionCount < 3 {
-			return MutBastion
-		}
-		return MutChimera
-	case ClassWarrior:
-		if m.FuryCount <= m.TitanCount {
-			return MutFury
-		}
+	}
+
+	// 2. Индикаторы дефицита живучести:
+	// - Недавняя смерть и воскрешение
+	// - Критическое проседание по HP к моменту привала (HP <= 45% от MaxHP)
+	// - MaxHP ниже расчетного порога выживания под урон текущего этажа
+	hpThreshold := 30 + (floor * 6)
+	isCriticallyWounded := float64(h.HP)/float64(h.MaxHP) <= 0.45
+	isFragile := h.MaxHP < hpThreshold
+
+	if recentlyDied || isCriticallyWounded || isFragile {
+		// Безоговорочный приоритет на спасение жизни — Кровь Титана (+20 MaxHP)
 		return MutTitan
+	}
+
+	// 3. Базовая ролевая прогрессия, если здоровье персонажа вне опасности
+	switch h.Class {
+	case ClassTank:
+		if muts.BastionCount < muts.TitanCount {
+			return MutBastion // +2 Def, +6 HP
+		}
+		return MutChimera // +8 HP, +5 MP, +1 Atk, +1 Def
+
+	case ClassWarrior:
+		if muts.FuryCount <= muts.TitanCount {
+			return MutFury // +3 Atk, +2 HP
+		}
+		return MutChimera
+
 	case ClassRogue:
-		if m.FuryCount <= m.ChimeraCount*2 {
+		if muts.FuryCount <= muts.ChimeraCount*2 {
 			return MutFury
 		}
 		return MutChimera
+
 	case ClassMage:
-		if m.AetherCount <= m.FuryCount {
-			return MutAether
+		if muts.AetherCount <= muts.FuryCount {
+			return MutAether // +14 MP, +1 Atk
 		}
 		return MutFury
+
 	case ClassCleric:
-		if m.AetherCount <= m.BastionCount {
+		if muts.AetherCount <= muts.BastionCount {
 			return MutAether
 		}
-		if m.BastionCount <= m.ChimeraCount {
-			return MutBastion
-		}
-		return MutChimera
+		return MutBastion
+
 	default:
 		return MutChimera
 	}
@@ -141,6 +168,8 @@ func (m *Model) logTownAction(icon, building, desc string) {
 		m.TownHistory = m.TownHistory[len(m.TownHistory)-6:]
 	}
 }
+
+// --- Пайплайн пребывания в городе ---
 
 func (m *Model) stepTown() {
 	switch m.TownPhase {
@@ -285,7 +314,6 @@ func (m *Model) stepTown() {
 			m.CurrentQuest = generateAutoQuest(m.Floor)
 		}
 
-		// Если герой всё ещё мертв (не хватило денег на Храм), нанимаем нового
 		recruitCost := max(45, 60+(m.Floor*25)-(m.Legacy.ChurchLevel*8))
 		for i, h := range m.Party {
 			if h.IsDead {
@@ -396,7 +424,7 @@ func (m *Model) stepTown() {
 			}
 		}
 
-		// 2. Выделка брони
+		// 2. Выделка легкой и средней брони
 		getUpgradeCost := func(it *EquipItem) int {
 			if it == nil {
 				return 999999
@@ -476,7 +504,8 @@ func (m *Model) stepTown() {
 			})
 			target := candidates[0]
 
-			pref := GetClassMutationPreference(target.Class, target.Mutations)
+			// Адаптивный расчет мутации с учетом выживаемости и дефицита HP
+			pref := GetClassMutationPreference(target, m.Floor, m.Stats.FallenHeroes)
 			baseCost := 240
 			switch pref {
 			case MutChimera:
