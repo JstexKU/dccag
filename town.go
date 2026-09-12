@@ -6,8 +6,6 @@ import (
 	"sort"
 )
 
-// --- Столичные заведения и вспомогательные функции ---
-
 func generateTownEstablishments() TownEstablishments {
 	return TownEstablishments{
 		SmithyKey:    fmt.Sprintf("town.smithy.%d", rand.Intn(5)+1),
@@ -115,8 +113,8 @@ func GetClassMutationPreference(class HeroClass, m HeroMutations) MutationType {
 }
 
 func CalculateMutationCost(basePrice, floor, heroMutationsCount int) int {
-	floorMult := 1.0 + (float64(floor) * 0.07)
-	heroMult := 1.0 + (float64(heroMutationsCount) * 0.12)
+	floorMult := 1.0 + (float64(floor) * 0.08)
+	heroMult := 1.0 + (float64(heroMutationsCount) * 0.15)
 	cost := int(float64(basePrice) * floorMult * heroMult)
 
 	hardCap := basePrice * 6
@@ -144,8 +142,6 @@ func (m *Model) logTownAction(icon, building, desc string) {
 	}
 }
 
-// --- Пайплайн пребывания в городе ---
-
 func (m *Model) stepTown() {
 	switch m.TownPhase {
 	case TownPhaseSellLoot:
@@ -163,8 +159,8 @@ func (m *Model) stepTown() {
 
 		for _, h := range m.Party {
 			if !h.IsDead {
-				h.Stress = max(0, h.Stress-40)
-				if h.Stress < 60 {
+				h.Stress = max(0, h.Stress-30)
+				if h.Stress < 50 {
 					h.Affliction = AfflictionNone
 				}
 			}
@@ -208,41 +204,46 @@ func (m *Model) stepTown() {
 		m.TownPhase = TownPhaseChurch
 
 	case TownPhaseChurch:
-		hasDead := false
-		hasStress := false
+		churchName := T(m.Lang, m.TownEst.ChurchKey)
+		reviveBaseCost := 120 + (m.Floor * 30) - (m.Legacy.ChurchLevel * 15)
+		if reviveBaseCost < 60 {
+			reviveBaseCost = 60
+		}
+
+		revivedCount := 0
+		totalChurchSpent := 0
+
 		for _, h := range m.Party {
-			if h.HP == 1 || h.IsDead {
-				hasDead = true
-			}
-			if h.Stress > 0 {
-				hasStress = true
+			if h.IsDead && m.Gold >= reviveBaseCost {
+				m.Gold -= reviveBaseCost
+				totalChurchSpent += reviveBaseCost
+				h.IsDead = false
+				h.HP = h.MaxHP / 2
+				h.MP = h.MaxMP / 2
+				h.Stress = 90
+				h.CauseOfDeath = ""
+				revivedCount++
+				m.Stats.Resurrections++
+			} else if !h.IsDead && (h.Stress > 20 || h.Affliction != AfflictionNone) {
+				cleanseCost := reviveBaseCost / 3
+				if m.Gold >= cleanseCost {
+					m.Gold -= cleanseCost
+					totalChurchSpent += cleanseCost
+					h.Stress = max(0, h.Stress-60)
+					h.Affliction = AfflictionNone
+				}
 			}
 		}
 
-		if hasDead || hasStress {
-			blessCost := max(80, (100*m.Floor)-(m.Legacy.ChurchLevel*30))
-			churchName := T(m.Lang, m.TownEst.ChurchKey)
-			if m.Gold >= blessCost {
-				m.Gold -= blessCost
-				globalDebugReport.GoldSpentBreakdown["Церковь (исцеление/воскрешение)"] += blessCost
-				revived := 0
-				for _, h := range m.Party {
-					if h.HP == 1 || h.IsDead {
-						h.IsDead = false
-						h.HP = h.MaxHP / 2
-						revived++
-					}
-					h.Stress = 0
-					h.Affliction = AfflictionNone
-				}
-				m.addLog(fountStyle.Render(T(m.Lang, "town.log.church_liturgy", churchName, blessCost, revived)))
-				m.logTownAction("⛪", churchName, T(m.Lang, "town.log.church_hist", revived, blessCost))
-			}
+		if totalChurchSpent > 0 {
+			globalDebugReport.GoldSpentBreakdown["Церковь (исцеление/воскрешение)"] += totalChurchSpent
+			m.addLog(fountStyle.Render(T(m.Lang, "town.log.church_liturgy", churchName, totalChurchSpent, revivedCount)))
+			m.logTownAction("⛪", churchName, T(m.Lang, "town.log.church_hist", revivedCount, totalChurchSpent))
 		}
 		m.TownPhase = TownPhaseTavern
 
 	case TownPhaseTavern:
-		tavernCost := max(35, (20*m.Floor)-(m.Legacy.TavernLevel*8))
+		tavernCost := max(40, (25*m.Floor)-(m.Legacy.TavernLevel*10))
 		tavernName := T(m.Lang, m.TownEst.TavernKey)
 		if m.Gold >= tavernCost {
 			m.Gold -= tavernCost
@@ -263,8 +264,8 @@ func (m *Model) stepTown() {
 			}
 			for _, h := range m.Party {
 				if !h.IsDead {
-					h.HP = max(1, int(float64(h.MaxHP)*0.45))
-					h.MP = int(float64(h.MaxMP) * 0.45)
+					h.HP = max(1, int(float64(h.MaxHP)*0.40))
+					h.MP = int(float64(h.MaxMP) * 0.40)
 				}
 			}
 			m.addLog(dangerStyle.Render(T(m.Lang, "town.log.tavern_barn")))
@@ -284,7 +285,8 @@ func (m *Model) stepTown() {
 			m.CurrentQuest = generateAutoQuest(m.Floor)
 		}
 
-		recruitCost := max(35, 50+(m.Floor*22)-(m.Legacy.ChurchLevel*6))
+		// Если герой всё ещё мертв (не хватило денег на Храм), нанимаем нового
+		recruitCost := max(45, 60+(m.Floor*25)-(m.Legacy.ChurchLevel*8))
 		for i, h := range m.Party {
 			if h.IsDead {
 				classes := []HeroClass{ClassTank, ClassWarrior, ClassRogue, ClassMage, ClassCleric}
@@ -323,8 +325,8 @@ func (m *Model) stepTown() {
 			}
 			matMult := max(1, it.Material.ValueMult)
 			nextLvl := it.UpgradeLevel + 1
-			cost := (nextLvl * nextLvl * 35 * matMult) - (m.Legacy.SmithyLevel * 15)
-			return max(30*matMult, cost)
+			cost := (nextLvl * nextLvl * 45 * matMult) - (m.Legacy.SmithyLevel * 18)
+			return max(35*matMult, cost)
 		}
 
 		for smithyBudget > 0 {
@@ -378,7 +380,7 @@ func (m *Model) stepTown() {
 		totalSpent := 0
 		tanneryName := T(m.Lang, m.TownEst.TanneryKey)
 
-		// 1. Пошив новой сумки
+		// 1. Пошив сумки
 		if m.BagLevel < len(bagUpgrades)-1 {
 			nextBag := bagUpgrades[m.BagLevel+1]
 			maxAllowedTier := m.Legacy.TanneryLevel + 1
@@ -394,15 +396,15 @@ func (m *Model) stepTown() {
 			}
 		}
 
-		// 2. Выделка доспехов Роги, Жреца и мантий Мага
+		// 2. Выделка брони
 		getUpgradeCost := func(it *EquipItem) int {
 			if it == nil {
 				return 999999
 			}
 			matMult := max(1, it.Material.ValueMult)
 			nextLvl := it.UpgradeLevel + 1
-			cost := (nextLvl * nextLvl * 30 * matMult) - (m.Legacy.TanneryLevel * 12)
-			return max(25*matMult, cost)
+			cost := (nextLvl * nextLvl * 38 * matMult) - (m.Legacy.TanneryLevel * 14)
+			return max(30*matMult, cost)
 		}
 
 		craftedItems := 0
@@ -475,18 +477,18 @@ func (m *Model) stepTown() {
 			target := candidates[0]
 
 			pref := GetClassMutationPreference(target.Class, target.Mutations)
-			baseCost := 220
+			baseCost := 240
 			switch pref {
 			case MutChimera:
-				baseCost = 260
+				baseCost = 280
 			case MutBastion:
-				baseCost = 240
+				baseCost = 260
 			case MutFury:
-				baseCost = 220
+				baseCost = 240
 			case MutTitan:
-				baseCost = 210
+				baseCost = 230
 			case MutAether:
-				baseCost = 200
+				baseCost = 220
 			}
 
 			cost := CalculateMutationCost(baseCost, m.Floor, target.Mutations.Total())
@@ -544,7 +546,7 @@ func (m *Model) stepTown() {
 			}
 			for h.HasFreePotionSlot(maxPots) {
 				pType := PotionHP
-				if h.Stress > 25 || h.Affliction != AfflictionNone {
+				if h.Stress > 30 || h.Affliction != AfflictionNone {
 					pType = PotionStress
 				} else if h.Class == ClassMage || h.Class == ClassCleric {
 					pType = PotionMP

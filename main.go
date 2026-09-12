@@ -65,7 +65,7 @@ func menuTickCmd() tea.Cmd {
 func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
 	targetLevel := max(1, floor/2)
 
-	maxHP := 45
+	maxHP := 42
 	baseDef := 2
 	speed := 10
 	skillNameKey := "skill.strike"
@@ -74,35 +74,35 @@ func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
 
 	switch class {
 	case ClassTank:
-		maxHP = 65
+		maxHP = 60
 		baseDef = 4
 		speed = 8
 		skillNameKey = "skill.tank_stance"
 		skillCost = 8
 		maxMP = 30
 	case ClassWarrior:
-		maxHP = 50
+		maxHP = 48
 		baseDef = 2
 		speed = 10
 		skillNameKey = "skill.warrior_rage"
 		skillCost = 10
 		maxMP = 25
 	case ClassRogue:
-		maxHP = 38
+		maxHP = 35
 		baseDef = 1
 		speed = 15
 		skillNameKey = "skill.rogue_stealth"
 		skillCost = 12
 		maxMP = 35
 	case ClassMage:
-		maxHP = 30
+		maxHP = 28
 		baseDef = 0
 		speed = 11
 		skillNameKey = "skill.mage_charge"
 		skillCost = 15
 		maxMP = 45
 	case ClassCleric:
-		maxHP = 36
+		maxHP = 34
 		baseDef = 2
 		speed = 9
 		skillNameKey = "skill.cleric_aura"
@@ -349,7 +349,8 @@ func (m *Model) step() {
 
 	m.Stats.TotalSteps++
 
-	if m.Stats.TotalSteps > 0 && m.Stats.TotalSteps%25 == 0 {
+	// Отдых на привале работает ТОЛЬКО до 5 этажа! Дальше — чистый хардкор
+	if m.Floor <= 5 && m.Stats.TotalSteps > 0 && m.Stats.TotalSteps%30 == 0 {
 		healedCount := 0
 		for _, h := range m.Party {
 			if h.IsDead {

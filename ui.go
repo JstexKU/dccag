@@ -114,7 +114,7 @@ func (m Model) renderMenuScreen() string {
 `)
 
 	sb.WriteString(banner + "\n")
-	sb.WriteString(lipgloss.NewStyle().Align(lipgloss.Center).Render(titleStyle.Render("       Dungeon Crawler Console Auto Game (dccag) v2.3.0")) + "\n\n")
+	sb.WriteString(lipgloss.NewStyle().Align(lipgloss.Center).Render(titleStyle.Render("       Dungeon Crawler Console Auto Game (dccag) v2.4.0")) + "\n\n")
 
 	var textBlock string
 	if m.Lang == LangEN {
@@ -143,7 +143,6 @@ func (m Model) renderMenuScreen() string {
 			subtleStyle.Render("[Q] — Выход из игры")
 	}
 
-	// Выравниваем текстовый блок по левому краю внутри центрированного бокса
 	alignedText := lipgloss.NewStyle().Align(lipgloss.Left).Render(textBlock)
 	sb.WriteString(alignedText)
 
@@ -242,42 +241,148 @@ func (m Model) renderInfoBookScreen() string {
 	}
 	innerW := boxW - 6
 
-	tabNames := []string{
-		T(m.Lang, "codex.tab.classes"),
-		T(m.Lang, "codex.tab.combat"),
-		T(m.Lang, "codex.tab.town"),
-		T(m.Lang, "codex.tab.relics"),
-	}
+	cSec := lipgloss.NewStyle().Foreground(lipgloss.Color("51")).Bold(true)
+	cSub := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
+	cMob := lipgloss.NewStyle().Foreground(lipgloss.Color("203")).Bold(true)
+	cBoss := lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true)
+	cHp := lipgloss.NewStyle().Foreground(lipgloss.Color("82"))
+	cAtk := lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
+	cDef := lipgloss.NewStyle().Foreground(lipgloss.Color("39"))
+	cSpd := lipgloss.NewStyle().Foreground(lipgloss.Color("226"))
+	cTier := lipgloss.NewStyle().Foreground(lipgloss.Color("141")).Bold(true)
+	cItem := lipgloss.NewStyle().Foreground(lipgloss.Color("222"))
+	cNote := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
+	cVal := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
+	cArrow := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render("➔ ")
 
-	var tabHeaders []string
-	for i, name := range tabNames {
-		if m.CodexTab == i {
-			tabHeaders = append(tabHeaders, lipgloss.NewStyle().Foreground(lipgloss.Color("226")).Bold(true).Render("►["+name+"]◄"))
-		} else {
-			tabHeaders = append(tabHeaders, subtleStyle.Render(" ["+name+"] "))
+	fmtMob := func(name string, nameWidth int, hp, atk, def, spd int, growth, extra string) string {
+		nameStr := cMob.Render(padRight(name, nameWidth))
+		statsStr := fmt.Sprintf(
+			"%s %s | %s %s | %s %s | %s %s",
+			cHp.Render("HP"), cVal.Render(fmt.Sprintf("%-2d", hp)),
+			cAtk.Render("ATK"), cVal.Render(fmt.Sprintf("%-2d", atk)),
+			cDef.Render("DEF"), cVal.Render(fmt.Sprintf("%-1d", def)),
+			cSpd.Render(T(m.Lang, "ui.speed_short")), cVal.Render(fmt.Sprintf("%-2d", spd)),
+		)
+		tail := cNote.Render(fmt.Sprintf("| %s: %s", T(m.Lang, "codex.growth_label"), growth))
+		if extra != "" {
+			tail += " " + extra
 		}
+		return fmt.Sprintf("   • %s: %s %s\n", nameStr, statsStr, tail)
 	}
-	tabsRow := strings.Join(tabHeaders, " ")
 
 	var sb strings.Builder
 	sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("220")).Bold(true).Render(T(m.Lang, "codex.header") + "\n\n"))
-	sb.WriteString(tabsRow + "\n")
-	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n\n")
 
-	switch m.CodexTab {
-	case 0:
-		sb.WriteString(T(m.Lang, "codex.content.classes") + "\n\n")
-	case 1:
-		sb.WriteString(T(m.Lang, "codex.content.combat") + "\n\n")
-	case 2:
-		sb.WriteString(T(m.Lang, "codex.content.town") + "\n\n")
-	case 3:
-		sb.WriteString(T(m.Lang, "codex.content.relics") + "\n\n")
-	}
+	sb.WriteString(cSec.Render(T(m.Lang, "codex.sec.1")) + "\n")
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", cSub.Render(T(m.Lang, "codex.biome.1.title")), T(m.Lang, "codex.biome.1.desc")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", cSub.Render(T(m.Lang, "codex.biome.2.title")), T(m.Lang, "codex.biome.2.desc")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", cSub.Render(T(m.Lang, "codex.biome.3.title")), T(m.Lang, "codex.biome.3.desc")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", cSub.Render(T(m.Lang, "codex.biome.4.title")), T(m.Lang, "codex.biome.4.desc")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n\n", cSub.Render(T(m.Lang, "codex.biome.5.title")), T(m.Lang, "codex.biome.5.desc")))
 
-	sb.WriteString(subtleStyle.Render(fmt.Sprintf("[%s / %s] %s | [↑/↓/PgUp/PgDn] %s | [L] Lang | [I/Esc] %s",
-		accentStyle.Render("Tab"), accentStyle.Render("1-4"), T(m.Lang, "codex.switch_tabs"),
-		T(m.Lang, "ui.scroll"), T(m.Lang, "ui.btn_back"))))
+	sb.WriteString(cSec.Render(T(m.Lang, "codex.sec.2")) + "\n")
+	sb.WriteString(cSub.Render(T(m.Lang, "codex.catacombs_header")) + "\n")
+	sb.WriteString(fmtMob(T(m.Lang, "mob.rat"), 16, 14, 5, 0, 8, "+15% HP, +10% ATK", ""))
+	sb.WriteString(fmtMob(T(m.Lang, "mob.goblin"), 16, 17, 7, 1, 8, "+15% HP, +12% ATK", ""))
+	sb.WriteString(fmtMob(T(m.Lang, "mob.skeleton"), 16, 22, 8, 3, 8, "+18% HP, +15% ATK", subtleStyle.Render(T(m.Lang, "codex.mob_block"))))
+	sb.WriteString("\n")
+
+	sb.WriteString(cSub.Render(T(m.Lang, "codex.grotto_header")) + "\n")
+	sb.WriteString(fmtMob(T(m.Lang, "mob.slime"), 18, 26, 9, 1, 9, "+20% HP, +12% ATK", stressStyle.Render(T(m.Lang, "codex.mob_stress_10"))))
+	sb.WriteString(fmtMob(T(m.Lang, "mob.drowned"), 18, 34, 11, 2, 9, "+20% HP, +16% ATK", stressStyle.Render(T(m.Lang, "codex.mob_stress_10"))))
+	sb.WriteString(fmtMob(T(m.Lang, "mob.lizard"), 18, 30, 12, 3, 9, "+18% HP, +18% ATK", accentStyle.Render(T(m.Lang, "codex.mob_crits"))))
+	sb.WriteString("\n")
+
+	sb.WriteString(cSub.Render(T(m.Lang, "codex.inferno_header")) + "\n")
+	sb.WriteString(fmtMob(T(m.Lang, "mob.imp"), 16, 36, 13, 2, 10, "+22% HP, +20% ATK", fireStyle.Render(T(m.Lang, "codex.mob_scorch"))))
+	sb.WriteString(fmtMob(T(m.Lang, "mob.orc"), 16, 46, 15, 4, 10, "+25% HP, +22% ATK", fireStyle.Render(T(m.Lang, "codex.mob_rage"))))
+	sb.WriteString(fmtMob(T(m.Lang, "mob.salamander"), 16, 40, 16, 3, 10, "+22% HP, +25% ATK", fireStyle.Render(T(m.Lang, "codex.mob_rage"))))
+	sb.WriteString("\n")
+
+	sb.WriteString(cSub.Render(T(m.Lang, "codex.crystal_header")) + "\n")
+	sb.WriteString(fmtMob(T(m.Lang, "mob.gargoyle"), 19, 52, 17, 6, 11, "+25% HP, +22% ATK", subtleStyle.Render(T(m.Lang, "codex.mob_block"))))
+	sb.WriteString(fmtMob(T(m.Lang, "mob.golem"), 19, 60, 18, 7, 11, "+30% HP, +20% ATK", subtleStyle.Render(T(m.Lang, "codex.mob_block"))))
+	sb.WriteString(fmtMob(T(m.Lang, "mob.phantom"), 19, 44, 19, 2, 11, "+20% HP, +28% ATK", stressStyle.Render(T(m.Lang, "codex.mob_stress_18"))))
+	sb.WriteString("\n")
+
+	sb.WriteString(cSub.Render(T(m.Lang, "codex.abyss_header")) + "\n")
+	sb.WriteString(fmtMob(T(m.Lang, "mob.void_demon"), 18, 66, 21, 5, 12, "+30% HP, +25% ATK", stressStyle.Render(T(m.Lang, "codex.mob_stress_18"))))
+	sb.WriteString(fmtMob(T(m.Lang, "mob.death_knight"), 18, 76, 22, 7, 12, "+32% HP, +28% ATK", dangerStyle.Render(T(m.Lang, "codex.mob_vamp"))))
+	sb.WriteString(fmt.Sprintf("   • %s: %s 260+(Lvl*20) | %s 25+Lvl | %s\n\n",
+		cBoss.Render(T(m.Lang, "mob.boss_dragon")), cHp.Render("HP"), cAtk.Render("ATK"), fireStyle.Render(T(m.Lang, "codex.mob_dragon_breath"))))
+
+	sb.WriteString(cSec.Render(T(m.Lang, "codex.sec.3")) + "\n")
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", fireStyle.Render(T(m.Lang, "codex.affix.1.title")), cNote.Render(T(m.Lang, "codex.affix.1.desc"))))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", stressStyle.Render(T(m.Lang, "codex.affix.2.title")), cNote.Render(T(m.Lang, "codex.affix.2.desc"))))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", fountStyle.Render(T(m.Lang, "codex.affix.3.title")), cNote.Render(T(m.Lang, "codex.affix.3.desc"))))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", subtleStyle.Render(T(m.Lang, "codex.affix.4.title")), cNote.Render(T(m.Lang, "codex.affix.4.desc"))))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n\n", dangerStyle.Render(T(m.Lang, "codex.affix.5.title")), cNote.Render(T(m.Lang, "codex.affix.5.desc"))))
+
+	sb.WriteString(cSec.Render(T(m.Lang, "codex.sec.4")) + "\n")
+	sb.WriteString(cNote.Render("   "+T(m.Lang, "codex.forge_note")) + "\n")
+	sb.WriteString(cNote.Render("   "+T(m.Lang, "codex.tanner_note")) + "\n\n")
+
+	sb.WriteString(cSub.Render(T(m.Lang, "codex.forge_header")) + "\n")
+	sb.WriteString(fmt.Sprintf("   • %s: %s %s (%s:3) %s%s %s %s%s %s %s%s %s (%s:9, %s:8)\n",
+		T(m.Lang, "codex.item.tank_w"), cTier.Render("Т1"), T(m.Lang, "item.tank.weapon.1"), cAtk.Render("Atk"), cArrow,
+		cTier.Render("Т2"), T(m.Lang, "item.tank.weapon.2"), cArrow,
+		cTier.Render("Т3"), T(m.Lang, "item.tank.weapon.3"), cArrow,
+		cTier.Render("Т4"), T(m.Lang, "item.tank.weapon.4"), cAtk.Render("Atk"), T(m.Lang, "codex.block_stat")))
+	sb.WriteString(fmt.Sprintf("   • %s: %s %s (%s:4) %s%s %s %s%s %s %s%s %s (%s:13, %s:+40)\n",
+		T(m.Lang, "codex.item.tank_a"), cTier.Render("Т1"), T(m.Lang, "item.tank.chest.1"), cDef.Render("Def"), cArrow,
+		cTier.Render("Т2"), T(m.Lang, "item.tank.chest.2"), cArrow,
+		cTier.Render("Т3"), T(m.Lang, "item.tank.chest.3"), cArrow,
+		cTier.Render("Т4"), T(m.Lang, "item.tank.chest.4"), cDef.Render("Def"), cHp.Render("HP")))
+	sb.WriteString(fmt.Sprintf("   • %s: %s %s (%s:5) %s%s %s %s%s %s %s%s %s (%s:14, %s:4)\n",
+		T(m.Lang, "codex.item.warr_w"), cTier.Render("Т1"), T(m.Lang, "item.warrior.weapon.1"), cAtk.Render("Atk"), cArrow,
+		cTier.Render("Т2"), T(m.Lang, "item.warrior.weapon.2"), cArrow,
+		cTier.Render("Т3"), T(m.Lang, "item.warrior.weapon.3"), cArrow,
+		cTier.Render("Т4"), T(m.Lang, "item.warrior.weapon.4"), cAtk.Render("Atk"), T(m.Lang, "codex.crit_stat")))
+	sb.WriteString(fmt.Sprintf("   • %s: %s %s (%s:3) %s%s %s %s%s %s %s%s %s (%s:9, %s:+32)\n\n",
+		T(m.Lang, "codex.item.warr_a"), cTier.Render("Т1"), T(m.Lang, "item.warrior.chest.1"), cDef.Render("Def"), cArrow,
+		cTier.Render("Т2"), T(m.Lang, "item.warrior.chest.2"), cArrow,
+		cTier.Render("Т3"), T(m.Lang, "item.warrior.chest.3"), cArrow,
+		cTier.Render("Т4"), T(m.Lang, "item.warrior.chest.4"), cDef.Render("Def"), cHp.Render("HP")))
+
+	sb.WriteString(cSub.Render(T(m.Lang, "codex.tanner_header")) + "\n")
+	sb.WriteString(fmt.Sprintf("   • %s:        %s %s %s%s %s %s%s %s %s%s %s (%s:10, %s:8)\n",
+		T(m.Lang, "class.rogue.name"), cTier.Render("Т1"), T(m.Lang, "item.rogue.weapon.1"), cArrow,
+		cTier.Render("Т2"), T(m.Lang, "item.rogue.weapon.2"), cArrow,
+		cTier.Render("Т3"), T(m.Lang, "item.rogue.weapon.3"), cArrow,
+		cTier.Render("Т4"), T(m.Lang, "item.rogue.weapon.4"), cAtk.Render("Atk"), T(m.Lang, "codex.crit_stat")))
+	sb.WriteString(fmt.Sprintf("   • %s:  %s %s %s%s %s %s%s %s %s%s %s (%s:8, MP:+45)\n",
+		T(m.Lang, "codex.item.mage_robe"), cTier.Render("Т1"), T(m.Lang, "item.mage.chest.1"), cArrow,
+		cTier.Render("Т2"), T(m.Lang, "item.mage.chest.2"), cArrow,
+		cTier.Render("Т3"), T(m.Lang, "item.mage.chest.3"), cArrow,
+		cTier.Render("Т4"), T(m.Lang, "item.mage.chest.4"), cDef.Render("Def")))
+	sb.WriteString(fmt.Sprintf("   • %s:        %s %s %s%s %s %s%s %s %s%s %s (%s:10, MP:+26)\n\n",
+		T(m.Lang, "class.cleric.name"), cTier.Render("Т1"), T(m.Lang, "item.cleric.weapon.1"), cArrow,
+		cTier.Render("Т2"), T(m.Lang, "item.cleric.weapon.2"), cArrow,
+		cTier.Render("Т3"), T(m.Lang, "item.cleric.weapon.3"), cArrow,
+		cTier.Render("Т4"), T(m.Lang, "item.cleric.weapon.4"), cAtk.Render("Atk")))
+
+	sb.WriteString(cSec.Render(T(m.Lang, "codex.sec.5")) + "\n")
+	sb.WriteString(T(m.Lang, "codex.xp.1") + "\n")
+	sb.WriteString(T(m.Lang, "codex.xp.2") + "\n")
+	sb.WriteString(T(m.Lang, "codex.xp.3") + "\n")
+	sb.WriteString(T(m.Lang, "codex.xp.4") + "\n")
+	sb.WriteString(T(m.Lang, "codex.xp.5") + "\n")
+	sb.WriteString(T(m.Lang, "codex.xp.6") + "\n\n")
+
+	sb.WriteString(cSec.Render(T(m.Lang, "codex.sec.6")) + "\n")
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", accentStyle.Render(T(m.Lang, "mut.chimera.name")+" "+T(m.Lang, "codex.base_260g")), T(m.Lang, "codex.mut_chimera_desc")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", fireStyle.Render(T(m.Lang, "mut.fury.name")+" "+T(m.Lang, "codex.base_220g")), T(m.Lang, "codex.mut_fury_desc")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", healStyle.Render(T(m.Lang, "mut.titan.name")+" "+T(m.Lang, "codex.base_210g")), T(m.Lang, "codex.mut_titan_desc")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", fountStyle.Render(T(m.Lang, "mut.aether.name")+" "+T(m.Lang, "codex.base_200g")), T(m.Lang, "codex.mut_aether_desc")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n\n", healStyle.Render(T(m.Lang, "mut.bastion.name")+" "+T(m.Lang, "codex.base_240g")), T(m.Lang, "codex.mut_bastion_desc")))
+
+	sb.WriteString(cSec.Render(T(m.Lang, "codex.sec.7")) + "\n")
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", cItem.Render(T(m.Lang, "relic.greed_compass.name.1")), T(m.Lang, "codex.relic_greed_desc")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", cItem.Render(T(m.Lang, "relic.martyr_crown.name.1")), T(m.Lang, "codex.relic_martyr_desc")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n\n", cItem.Render(T(m.Lang, "relic.holy_grail.name.1")), T(m.Lang, "codex.relic_grail_desc")))
+
+	sb.WriteString(cNote.Render(fmt.Sprintf("[↑/↓/PgUp/PgDn] %s  |  [I / Esc / S] %s", T(m.Lang, "ui.scroll"), T(m.Lang, "ui.btn_back"))))
 
 	wrappedText := lipgloss.NewStyle().Width(innerW).Render(sb.String())
 	lines := strings.Split(wrappedText, "\n")
@@ -971,4 +1076,3 @@ func (m Model) View() string {
 		controls,
 	)
 }
-

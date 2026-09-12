@@ -14,7 +14,7 @@ func (m *Model) SelectTarget() *Hero {
 		if !h.IsDead {
 			w := h.Role.AggroWeight
 			if h.HP < h.MaxHP/3 {
-				w += 20
+				w += 25
 			}
 			candidates = append(candidates, h)
 			totalWeight += w
@@ -30,7 +30,7 @@ func (m *Model) SelectTarget() *Hero {
 	for _, h := range candidates {
 		w := h.Role.AggroWeight
 		if h.HP < h.MaxHP/3 {
-			w += 20
+			w += 25
 		}
 		curr += w
 		if r < curr {
@@ -44,11 +44,11 @@ func (m *Model) ApplyDamage(target *Hero, rawDmg int) (actual *Hero, finalDmg in
 	if target.Class != ClassTank {
 		for _, guard := range m.Party {
 			if !guard.IsDead && guard.Role.CanGuard && guard != target && guard.HP > guard.MaxHP/4 {
-				chance := 35
-				mitigation := 0.8
+				chance := 30
+				mitigation := 0.75
 				if guard.Class == ClassTank {
-					chance = 65
-					mitigation = 0.55
+					chance = 60
+					mitigation = 0.50
 				}
 
 				if rand.Intn(100) < chance {
@@ -70,7 +70,7 @@ func (m *Model) startCombat(pos Point, pack *MonsterPack) {
 	combat := &ActiveCombat{
 		Pos:          pos,
 		Pack:         pack,
-		HasBarrel:    rand.Intn(100) < 35,
+		HasBarrel:    rand.Intn(100) < 30,
 		FleeCooldown: 0,
 		Round:        1,
 	}
@@ -129,17 +129,17 @@ func (m *Model) shouldAttemptFlee() bool {
 		return false
 	}
 	hpPercent := float64(curHP) / float64(maxHP)
-	return hpPercent < 0.25 || (livingCount == 1 && hpPercent < 0.50)
+	return hpPercent < 0.25 || (livingCount <= 2 && hpPercent < 0.40)
 }
 
 func (m *Model) attemptFlee() {
 	globalDebugReport.FleeAttempts++
-	chance := 50
+	chance := 45
 
 	for _, h := range m.Party {
 		if !h.IsDead {
 			if h.Class == ClassRogue {
-				chance += 25
+				chance += 20
 			}
 			if h.Class == ClassTank {
 				chance += 10
@@ -147,28 +147,15 @@ func (m *Model) attemptFlee() {
 		}
 	}
 
-	chance -= m.Floor / 3
-	if chance < 35 {
-		chance = 35
+	chance -= m.Floor / 2
+	if chance < 20 {
+		chance = 20
 	}
 
 	roll := rand.Intn(100)
 	if roll < chance {
 		globalDebugReport.FleeSuccesses++
 		m.addLog(healStyle.Render(T(m.Lang, "combat.log.flee_success")))
-
-		evacuatedCount := 0
-		for _, h := range m.Party {
-			if h.IsDead {
-				h.HP = 1
-				h.IsDead = false
-				h.CauseOfDeath = ""
-				evacuatedCount++
-			}
-		}
-		if evacuatedCount > 0 {
-			m.addLog(altarStyle.Render(T(m.Lang, "combat.log.evacuation", evacuatedCount)))
-		}
 
 		m.Combat = nil
 		m.InTown = true
@@ -180,13 +167,13 @@ func (m *Model) attemptFlee() {
 
 		for _, h := range m.Party {
 			if !h.IsDead {
-				chipDamage := int(float64(h.HP) * 0.15)
-				if chipDamage < 1 {
-					chipDamage = 1
+				chipDamage := int(float64(h.HP) * 0.20)
+				if chipDamage < 2 {
+					chipDamage = 2
 				}
 				h.HP -= chipDamage
 				h.Feats.DamageTaken += chipDamage
-				m.addStress(h, 8)
+				m.addStress(h, 15)
 
 				if h.HP <= 0 {
 					h.HP = 0
@@ -241,9 +228,9 @@ func (m *Model) executeCombatTurn() {
 	biome := getBiome(m.Floor)
 
 	enrageMult := 1.0
-	if m.Combat.Round > 20 {
+	if m.Combat.Round > 15 {
 		globalDebugReport.EnrageProcs++
-		enrageMult += float64(m.Combat.Round-20) * 0.10
+		enrageMult += float64(m.Combat.Round-15) * 0.15
 	}
 
 	if current.Type == CombatantHero {
@@ -255,7 +242,7 @@ func (m *Model) executeCombatTurn() {
 		m.checkAndDrinkPotions(h)
 		hName := h.DisplayName(m.Lang)
 
-		if h.Affliction == AfflictionParanoid && rand.Intn(100) < 30 {
+		if h.Affliction == AfflictionParanoid && rand.Intn(100) < 35 {
 			verb := TVerb(m.Lang, h.Gender, "забился", "забилась", "cowered")
 			m.addLog(stressStyle.Render(T(m.Lang, "combat.log.paranoid", hName, verb)))
 			return
@@ -350,7 +337,7 @@ func (m *Model) executeCombatTurn() {
 		if h.Class == ClassCleric {
 			var criticalAlly *Hero
 			for _, ally := range m.Party {
-				if !ally.IsDead && float64(ally.HP)/float64(ally.MaxHP) <= 0.50 {
+				if !ally.IsDead && float64(ally.HP)/float64(ally.MaxHP) <= 0.45 {
 					criticalAlly = ally
 					break
 				}
@@ -358,12 +345,12 @@ func (m *Model) executeCombatTurn() {
 
 			if criticalAlly != nil && h.MP >= skillCost && h.Affliction != AfflictionSelfish {
 				h.MP -= skillCost
-				hAmt := rand.Intn(10) + 16 + (m.Floor * 3)
-				if m.Combat.Round > 20 {
+				hAmt := rand.Intn(8) + 12 + (m.Floor * 2)
+				if m.Combat.Round > 15 {
 					hAmt /= 2
 				}
 				criticalAlly.HP = min(criticalAlly.MaxHP, criticalAlly.HP+hAmt)
-				criticalAlly.Stress = max(0, criticalAlly.Stress-12)
+				criticalAlly.Stress = max(0, criticalAlly.Stress-10)
 				h.Feats.HealsGiven += hAmt
 				verb := TVerb(m.Lang, h.Gender, "исцелил", "исцелила", "healed")
 				m.addLog(healStyle.Render(T(m.Lang, "combat.log.cleric_heal", hName, verb, criticalAlly.DisplayName(m.Lang), hAmt)))
@@ -378,7 +365,7 @@ func (m *Model) executeCombatTurn() {
 				smiteDmg := h.TotalAtk() + 4
 				targetMob.HP -= smiteDmg
 				if lowest := m.getRandomLivingHero(); lowest != nil && lowest.HP < lowest.MaxHP {
-					lowest.HP = min(lowest.MaxHP, lowest.HP+6)
+					lowest.HP = min(lowest.MaxHP, lowest.HP+4)
 				}
 				verb := TVerb(m.Lang, h.Gender, "обрушил", "обрушила", "unleashed")
 				m.addLog(fountStyle.Render(T(m.Lang, "combat.log.cleric_smite", hName, verb, smiteDmg)))
@@ -422,7 +409,7 @@ func (m *Model) executeCombatTurn() {
 				return
 			} else if m.Combat.Pack.LivingCount() >= 2 && h.MP >= skillCost {
 				h.MP -= skillCost
-				aoeDmg := h.TotalAtk() + 6
+				aoeDmg := h.TotalAtk() + 5
 				h.AddManaBurst()
 				h.AddCCDuration()
 				verb := TVerb(m.Lang, h.Gender, "накрыл", "накрыла", "blanketed")
@@ -459,7 +446,7 @@ func (m *Model) executeCombatTurn() {
 
 		mobDisplayName := T(m.Lang, targetMob.NameKey)
 
-		if (targetMob.Type == MobSkeleton || targetMob.Type == MobGolem || targetMob.Type == MobGargoyle) && rand.Intn(100) < 20 {
+		if (targetMob.Type == MobSkeleton || targetMob.Type == MobGolem || targetMob.Type == MobGargoyle) && rand.Intn(100) < 25 {
 			m.addLog(subtleStyle.Render(T(m.Lang, "combat.log.mob_block", mobDisplayName)))
 			return
 		}
@@ -611,30 +598,32 @@ func (m *Model) executeCombatTurn() {
 			m.addLog(healStyle.Render(T(m.Lang, "combat.log.dodge", victimName, verb, mobDisplayName)))
 			return
 		}
-		if mobHit < heroAC && mobRoll < 19 {
+		if mobHit < heroAC && mobRoll < 18 {
 			m.addLog(subtleStyle.Render(T(m.Lang, "combat.log.armor_absorb", victimName, mobDisplayName)))
 			return
 		}
 
-		rawDmg := mob.Atk - (victim.TotalDef() / 2)
+		// Смертоносная формула урона монстров
+		rawDmg := int(float64(mob.Atk)*1.25) - (victim.TotalDef() / 2)
 		if victim.IsGuarding {
 			rawDmg = int(float64(rawDmg) * 0.6)
 		}
 
 		livingCount := m.Combat.Pack.LivingCount()
 		if livingCount >= 6 {
-			rawDmg = int(float64(rawDmg) * 0.65)
+			rawDmg = int(float64(rawDmg) * 0.85)
 		} else if livingCount >= 4 {
-			rawDmg = int(float64(rawDmg) * 0.78)
+			rawDmg = int(float64(rawDmg) * 0.92)
 		}
 
-		if mobRoll >= 19 {
-			rawDmg = int(float64(rawDmg) * 1.5)
-			m.addStress(victim, 25)
+		if mobRoll >= 18 {
+			rawDmg = int(float64(rawDmg) * 2.0)
+			m.addStress(victim, 35)
 			m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.mob_crit", mobDisplayName, victimName)))
 		}
 
-		inDmg := max(3, int(float64(rawDmg)*m.Relic.EnemyDmgMod*enrageMult))
+		floorScale := 1.0 + float64(m.Floor)*0.015
+		inDmg := max(5, int(float64(rawDmg)*m.Relic.EnemyDmgMod*enrageMult*floorScale))
 
 		actualHero := victim
 		guarded := false
@@ -657,7 +646,7 @@ func (m *Model) executeCombatTurn() {
 		}
 
 		actualHero.Feats.DamageTaken += dealtDmg
-		m.addStress(actualHero, 8)
+		m.addStress(actualHero, 12)
 
 		if actualHero.HP <= 0 {
 			actualHero.HP = 0
@@ -667,7 +656,7 @@ func (m *Model) executeCombatTurn() {
 			m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.hero_slain", actualHeroName, verb, mobDisplayName)))
 			for _, ally := range m.Party {
 				if !ally.IsDead {
-					m.addStress(ally, 20)
+					m.addStress(ally, 25)
 				}
 			}
 		} else {
