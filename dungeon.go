@@ -1218,23 +1218,56 @@ func (m *Model) step() {
 
 	if m.LoopDetectCount > 4 {
 		m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.collision_break")))
-		foundSafeSpot := false
-		for y := 0; y < m.MapHeight && !foundSafeSpot; y++ {
-			for x := 0; x < m.MapWidth && !foundSafeSpot; x++ {
-				if m.Grid[y][x] == TileFloor || m.Grid[y][x] == TileExit {
-					dx := x - m.PartyPos.X
-					dy := y - m.PartyPos.Y
-					if dx*dx+dy*dy <= 25 && dx*dx+dy*dy > 1 {
-						m.PartyPos = Point{x, y}
-						foundSafeSpot = true
+
+		// Безопасный BFS-поиск ближайшей лестницы или выхода прямо в step()
+		foundStairs := false
+		var forcedStep Point
+
+		queue := []Point{m.PartyPos}
+		visited := make(map[Point]bool)
+		cameFrom := make(map[Point]Point)
+		visited[m.PartyPos] = true
+		dirs := []Point{{0, -1}, {0, 1}, {-1, 0}, {1, 0}}
+
+		for len(queue) > 0 && !foundStairs {
+			curr := queue[0]
+			queue = queue[1:]
+
+			t := m.Grid[curr.Y][curr.X]
+			if curr != m.PartyPos && (t == TileStairs || t == TileExit) {
+				step := curr
+				for cameFrom[step] != m.PartyPos {
+					step = cameFrom[step]
+				}
+				forcedStep = step
+				foundStairs = true
+				break
+			}
+
+			for _, d := range dirs {
+				next := Point{curr.X + d.X, curr.Y + d.Y}
+				if next.X >= 0 && next.X < m.MapWidth && next.Y >= 0 && next.Y < m.MapHeight {
+					if !visited[next] && m.Grid[next.Y][next.X] != TileWall {
+						visited[next] = true
+						cameFrom[next] = curr
+						queue = append(queue, next)
 					}
 				}
 			}
 		}
+
+		if foundStairs {
+			next = forcedStep
+		} else {
+			// Если выхода/лестницы совсем не найдено — принудительно переходим на следующий этаж
+			m.Floor++
+			m.Stats.FloorsCleared++
+			m.initDungeonForFloor(m.Floor)
+			return
+		}
+
 		m.PathHistory = []Point{}
 		m.LoopDetectCount = 0
-		m.revealFog()
-		return
 	} else {
 		m.PathHistory = append(m.PathHistory, next)
 		if len(m.PathHistory) > 10 {
