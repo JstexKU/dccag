@@ -42,6 +42,42 @@ type DebugReportData struct {
 	AverageAtk         map[string]float64 `json:"average_atk"`
 }
 
+// --- Расы и их свойства ---
+type RaceType string
+
+const (
+	RaceHuman    RaceType = "human"
+	RaceElf      RaceType = "elf"
+	RaceBeastman RaceType = "beastman"
+	RaceOlongr   RaceType = "olongr"
+)
+
+var AllRaces = []RaceType{RaceHuman, RaceElf, RaceBeastman, RaceOlongr}
+
+type RaceModifiers struct {
+	ExpBonusPercent   float64
+	SpeedFlat         int
+	CritChanceBonus   int
+	LifeStealPercent  float64
+	DefBonusPercent   float64
+	MaxHPBonusPercent float64
+	ManaRegen         int
+	StunImmune        bool
+}
+
+func GetRaceModifiers(r RaceType) RaceModifiers {
+	switch r {
+	case RaceElf:
+		return RaceModifiers{SpeedFlat: 4, CritChanceBonus: 2, ManaRegen: 2}
+	case RaceBeastman:
+		return RaceModifiers{SpeedFlat: 2, LifeStealPercent: 0.10, DefBonusPercent: -0.10}
+	case RaceOlongr:
+		return RaceModifiers{SpeedFlat: -3, DefBonusPercent: 0.20, MaxHPBonusPercent: 0.15, StunImmune: true}
+	default: // Human
+		return RaceModifiers{ExpBonusPercent: 0.15}
+	}
+}
+
 // --- Предметы, Зелья, Мутации ---
 type PotionType string
 
@@ -272,7 +308,7 @@ type HeroNameDef struct {
 	Gender  Gender
 }
 
-// Имена героев теперь локализуются через NameKey
+// Имена героев локализуются через NameKey
 var HeroNames = []HeroNameDef{
 	{NameKey: "hero.name.brand", Gender: GenderMale},
 	{NameKey: "hero.name.thorin", Gender: GenderMale},
@@ -330,15 +366,26 @@ func getRandomHeroName() HeroNameDef {
 	return HeroNames[rand.Intn(len(HeroNames))]
 }
 
+// --- Классы героев (10 шт.) ---
 type HeroClass string
 
 const (
-	ClassTank    HeroClass = "tank"
-	ClassWarrior HeroClass = "warrior"
-	ClassRogue   HeroClass = "rogue"
-	ClassMage    HeroClass = "mage"
-	ClassCleric  HeroClass = "cleric"
+	ClassTank     HeroClass = "tank"
+	ClassWarrior  HeroClass = "warrior"
+	ClassRogue    HeroClass = "rogue"
+	ClassMage     HeroClass = "mage"
+	ClassCleric   HeroClass = "cleric"
+	ClassPaladin  HeroClass = "paladin"
+	ClassRanger   HeroClass = "ranger"
+	ClassMonk     HeroClass = "monk"
+	ClassBard     HeroClass = "bard"
+	ClassWarlock  HeroClass = "warlock"
 )
+
+var AllClasses = []HeroClass{
+	ClassTank, ClassWarrior, ClassRogue, ClassMage, ClassCleric,
+	ClassPaladin, ClassRanger, ClassMonk, ClassBard, ClassWarlock,
+}
 
 type CombatRole struct {
 	AggroWeight int
@@ -350,14 +397,24 @@ func GetClassRole(class HeroClass) CombatRole {
 	switch class {
 	case ClassTank:
 		return CombatRole{AggroWeight: 70, CanGuard: true, CanHeal: false}
+	case ClassPaladin:
+		return CombatRole{AggroWeight: 60, CanGuard: true, CanHeal: true}
 	case ClassWarrior:
 		return CombatRole{AggroWeight: 35, CanGuard: true, CanHeal: false}
+	case ClassMonk:
+		return CombatRole{AggroWeight: 30, CanGuard: false, CanHeal: false}
 	case ClassRogue:
 		return CombatRole{AggroWeight: 15, CanGuard: false, CanHeal: false}
+	case ClassRanger:
+		return CombatRole{AggroWeight: 18, CanGuard: false, CanHeal: false}
 	case ClassMage:
 		return CombatRole{AggroWeight: 20, CanGuard: false, CanHeal: false}
+	case ClassWarlock:
+		return CombatRole{AggroWeight: 22, CanGuard: false, CanHeal: false}
 	case ClassCleric:
 		return CombatRole{AggroWeight: 20, CanGuard: false, CanHeal: true}
+	case ClassBard:
+		return CombatRole{AggroWeight: 18, CanGuard: false, CanHeal: true}
 	default:
 		return CombatRole{AggroWeight: 25, CanGuard: false, CanHeal: false}
 	}
@@ -397,6 +454,7 @@ type HeroHeroics struct {
 
 type Hero struct {
 	NameKey      string
+	Race         RaceType
 	Gender       Gender
 	TitleKey     string
 	Class        HeroClass
@@ -436,6 +494,10 @@ func (h *Hero) DisplayName(lang Language) string {
 	return T(lang, h.NameKey)
 }
 
+func (h *Hero) RaceName(lang Language) string {
+	return T(lang, "race."+string(h.Race)+".name")
+}
+
 func (h *Hero) Verb(male, female string) string {
 	if h.Gender == GenderFemale {
 		return female
@@ -467,6 +529,13 @@ func (h *Hero) GainExp(amt int) bool {
 			if h.Level%2 == 0 {
 				h.BaseDef += 1
 			}
+		case ClassPaladin:
+			h.MaxHP += 10
+			h.MaxMP += 4
+			h.BaseAtk += 1
+			if h.Level%2 == 0 {
+				h.BaseDef += 1
+			}
 		case ClassWarrior:
 			h.MaxHP += 8
 			h.MaxMP += 3
@@ -474,19 +543,42 @@ func (h *Hero) GainExp(amt int) bool {
 			if h.Level%3 == 0 {
 				h.BaseDef += 1
 			}
+		case ClassMonk:
+			h.MaxHP += 7
+			h.MaxMP += 3
+			h.BaseAtk += 2
+			h.Speed += 1
 		case ClassRogue:
 			h.MaxHP += 5
 			h.MaxMP += 4
 			h.BaseAtk += 2
 			h.Speed += 1
+		case ClassRanger:
+			h.MaxHP += 6
+			h.MaxMP += 4
+			h.BaseAtk += 2
+			if h.Level%2 == 0 {
+				h.Speed += 1
+			}
 		case ClassMage:
 			h.MaxHP += 4
 			h.MaxMP += 8
 			h.BaseAtk += 3
+		case ClassWarlock:
+			h.MaxHP += 6
+			h.MaxMP += 7
+			h.BaseAtk += 2
 		case ClassCleric:
 			h.MaxHP += 6
 			h.MaxMP += 6
 			h.BaseAtk += 1
+		case ClassBard:
+			h.MaxHP += 5
+			h.MaxMP += 6
+			h.BaseAtk += 1
+			if h.Level%2 == 0 {
+				h.Speed += 1
+			}
 		}
 
 		h.HP = h.MaxHP
@@ -538,18 +630,26 @@ func (h *Hero) TotalDef() int {
 	if h.IsBerserk {
 		b -= 2
 	}
-	if b < 0 {
-		b = 0
+	total := h.BaseDef + b
+	raceMod := GetRaceModifiers(h.Race)
+	if raceMod.DefBonusPercent != 0 {
+		total += int(float64(total) * raceMod.DefBonusPercent)
 	}
-	return h.BaseDef + b
+	if total < 0 {
+		total = 0
+	}
+	return total
 }
 
 func (h *Hero) TotalSpeed() int {
-	spd := h.Speed
+	spd := h.Speed + GetRaceModifiers(h.Race).SpeedFlat
 	for _, it := range []*EquipItem{h.Weapon, h.Head, h.Chest, h.Legs} {
 		if it != nil {
 			spd += it.SpeedBonus
 		}
+	}
+	if spd < 1 {
+		spd = 1
 	}
 	return spd
 }

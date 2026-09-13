@@ -466,8 +466,13 @@ func (m *Model) addStress(h *Hero, amt int) {
 	}
 
 	if h.Stress >= 100 && h.Affliction == AfflictionNone {
-		// Снижаем шанс воодушевления до 20%
-		if rand.Intn(100) < 20 {
+		// Олонграм труднее сломаться духом (бонус стойкости)
+		virtueChance := 20
+		if h.Race == RaceOlongr {
+			virtueChance = 40
+		}
+
+		if rand.Intn(100) < virtueChance {
 			h.Affliction = AfflictionVirtuous
 			h.Stress = 0
 			h.HP = h.MaxHP
@@ -588,12 +593,24 @@ func (m *Model) checkAndAwardTitle(h *Hero) {
 		newTitleKey = "title.treasure_seeker"
 	case h.Feats.SecretsRevealed >= 4:
 		newTitleKey = "title.secret_keeper"
+
+	// 1. Танк
 	case h.Class == ClassTank && h.Feats.Blocks >= 10:
 		newTitleKey = "title.impenetrable"
 	case h.Class == ClassTank && h.Feats.AggroPulled >= 8:
 		newTitleKey = "title.storm_shield"
 	case h.Class == ClassTank && h.Feats.DamageTaken >= 75:
 		newTitleKey = "title.the_wall"
+
+	// 2. Паладин
+	case h.Class == ClassPaladin && h.Feats.HealsGiven >= 80:
+		newTitleKey = "title.paladin_redeemer"
+	case h.Class == ClassPaladin && h.Feats.Blocks >= 8:
+		newTitleKey = "title.paladin_bastion"
+	case h.Class == ClassPaladin && h.Feats.Kills >= 5:
+		newTitleKey = "title.paladin_crusader"
+
+	// 3. Воин
 	case h.Class == ClassWarrior && h.Feats.Kills >= 12:
 		newTitleKey = "title.blood_blade"
 	case h.Class == ClassWarrior && h.Feats.Kills >= 5:
@@ -602,6 +619,16 @@ func (m *Model) checkAndAwardTitle(h *Hero) {
 		newTitleKey = "title.axe"
 	case h.Class == ClassWarrior && h.Feats.CriticalStrikes >= 4:
 		newTitleKey = "title.rank_cleaver"
+
+	// 4. Монах
+	case h.Class == ClassMonk && h.Feats.CCDuration >= 20:
+		newTitleKey = "title.monk_calm"
+	case h.Class == ClassMonk && h.Feats.CritsLanded >= 6:
+		newTitleKey = "title.monk_fist"
+	case h.Class == ClassMonk && h.Feats.DamageDealt >= 85:
+		newTitleKey = "title.monk_wind"
+
+	// 5. Разбойник
 	case h.Class == ClassRogue && h.Feats.CritsLanded >= 6:
 		newTitleKey = "title.phantom_strike"
 	case h.Class == ClassRogue && h.Feats.CritsLanded >= 3:
@@ -612,6 +639,16 @@ func (m *Model) checkAndAwardTitle(h *Hero) {
 		newTitleKey = "title.knife_in_the_back"
 	case h.Class == ClassRogue && h.Feats.LootStolen >= 3:
 		newTitleKey = "title.deft_hand"
+
+	// 6. Следопыт
+	case h.Class == ClassRanger && h.Feats.CCDuration >= 25:
+		newTitleKey = "title.ranger_trapper"
+	case h.Class == ClassRanger && h.Feats.Kills >= 6:
+		newTitleKey = "title.ranger_sniper"
+	case h.Class == ClassRanger && h.Feats.CriticalStrikes >= 5:
+		newTitleKey = "title.ranger_hawkeye"
+
+	// 7. Маг
 	case h.Class == ClassMage && h.Feats.DamageDealt >= 150:
 		newTitleKey = "title.stormbringer"
 	case h.Class == ClassMage && h.Feats.DamageDealt >= 90:
@@ -620,6 +657,16 @@ func (m *Model) checkAndAwardTitle(h *Hero) {
 		newTitleKey = "title.chains_of_the_void"
 	case h.Class == ClassMage && h.Feats.ManaBursts >= 3:
 		newTitleKey = "title.flash"
+
+	// 8. Чернокнижник
+	case h.Class == ClassWarlock && h.Feats.DamageDealt >= 110:
+		newTitleKey = "title.warlock_harvester"
+	case h.Class == ClassWarlock && h.Feats.ManaBursts >= 4:
+		newTitleKey = "title.warlock_void"
+	case h.Class == ClassWarlock && h.Feats.Kills >= 5:
+		newTitleKey = "title.warlock_curser"
+
+	// 9. Клирик
 	case h.Class == ClassCleric && h.Feats.HealsGiven >= 120:
 		newTitleKey = "title.grace"
 	case h.Class == ClassCleric && h.Feats.HealsGiven >= 70:
@@ -628,6 +675,14 @@ func (m *Model) checkAndAwardTitle(h *Hero) {
 		newTitleKey = "title.resurrector"
 	case h.Class == ClassCleric && h.Feats.DoTsRemoved >= 4:
 		newTitleKey = "title.purifier"
+
+	// 10. Бард
+	case h.Class == ClassBard && h.Feats.DoTsRemoved >= 5:
+		newTitleKey = "title.bard_virtuoso"
+	case h.Class == ClassBard && h.Feats.CCDuration >= 20:
+		newTitleKey = "title.bard_siren"
+	case h.Class == ClassBard && h.Feats.DamageDealt >= 60:
+		newTitleKey = "title.bard_rhapsodist"
 	}
 
 	if newTitleKey != "" {
@@ -643,7 +698,6 @@ func (m *Model) handleAltar() {
 	target := m.getRandomLivingHero()
 
 	if target != nil {
-		// Алтарь берет 35% от текущего HP, не меньше 15 урона
 		bloodCost := max(15, target.HP*35/100)
 		target.HP -= bloodCost
 		target.BaseAtk += 3
@@ -690,7 +744,7 @@ func (m *Model) handleTrappedChest() {
 
 	rogueBonus := 0
 	for _, h := range m.Party {
-		if h.Class == ClassRogue && !h.IsDead {
+		if (h.Class == ClassRogue || h.Class == ClassRanger) && !h.IsDead {
 			rogueBonus = 3
 			break
 		}
@@ -908,21 +962,35 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 	}
 
 	var mat MaterialTier
-	if slot == SlotWeapon {
-		if class == ClassMage {
+	var cat ArmorCategory
+
+	switch class {
+	case ClassTank, ClassWarrior, ClassPaladin:
+		cat = ArmorHeavy
+		mat = MetalMaterials[rand.Intn(matIdx+1)]
+	case ClassMage, ClassWarlock:
+		cat = ArmorLight
+		if slot == SlotWeapon {
 			mat = MageWeaponMaterials[rand.Intn(matIdx+1)]
 		} else {
-			mat = MetalMaterials[rand.Intn(matIdx+1)]
-		}
-	} else {
-		switch class {
-		case ClassTank, ClassWarrior:
-			mat = MetalMaterials[rand.Intn(matIdx+1)]
-		case ClassMage:
 			mat = ClothMaterials[rand.Intn(matIdx+1)]
-		default:
+		}
+	case ClassMonk:
+		cat = ArmorLight
+		mat = ClothMaterials[rand.Intn(matIdx+1)]
+	case ClassRogue, ClassRanger:
+		cat = ArmorMedium
+		mat = LeatherMaterials[rand.Intn(matIdx+1)]
+	case ClassCleric, ClassBard:
+		cat = ArmorMedium
+		if slot == SlotWeapon {
+			mat = MetalMaterials[rand.Intn(matIdx+1)]
+		} else {
 			mat = LeatherMaterials[rand.Intn(matIdx+1)]
 		}
+	default:
+		cat = ArmorMedium
+		mat = LeatherMaterials[rand.Intn(matIdx+1)]
 	}
 
 	upg := 0
@@ -964,7 +1032,6 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 	blockBonus := 0
 	stressRes := 0
 	speedBonus := 0
-	cat := ArmorMedium
 
 	switch class {
 	case ClassTank:
@@ -984,6 +1051,24 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 			bonusHP = 5 + tier*5
 		}
 
+	case ClassPaladin:
+		cat = ArmorHeavy
+		switch slot {
+		case SlotWeapon:
+			baseStat = 4 + tier*2
+			blockBonus = 2 + tier
+		case SlotChest:
+			baseStat = 4 + tier*3
+			bonusHP = 10 + tier*8
+			bonusMP = 5 + tier*4
+		case SlotHead:
+			baseStat = 2 + tier*2
+			stressRes = 5 + tier*5
+		case SlotLegs:
+			baseStat = 2 + tier*2
+			bonusHP = 5 + tier*4
+		}
+
 	case ClassWarrior:
 		cat = ArmorHeavy
 		switch slot {
@@ -998,6 +1083,23 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 			critBonus = 1
 		case SlotLegs:
 			baseStat = 2 + tier*2
+		}
+
+	case ClassMonk:
+		cat = ArmorLight
+		switch slot {
+		case SlotWeapon:
+			baseStat = 4 + tier*2
+			speedBonus = 2 + tier
+		case SlotChest:
+			baseStat = 1 + tier*2
+			speedBonus = 1 + tier
+		case SlotHead:
+			baseStat = 1 + tier
+			stressRes = 10 + tier*5
+		case SlotLegs:
+			baseStat = 1 + tier*2
+			speedBonus = 1 + tier
 		}
 
 	case ClassRogue:
@@ -1017,6 +1119,23 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 			critBonus = 1
 		case SlotLegs:
 			baseStat = 1 + tier*2
+		}
+
+	case ClassRanger:
+		cat = ArmorMedium
+		switch slot {
+		case SlotWeapon:
+			baseStat = 5 + tier*3
+			critBonus = 2 + tier
+		case SlotChest:
+			baseStat = 2 + tier*2
+			speedBonus = 1 + tier
+		case SlotHead:
+			baseStat = 1 + tier*2
+			critBonus = 1 + tier
+		case SlotLegs:
+			baseStat = 1 + tier*2
+			speedBonus = 1 + tier
 		}
 
 	case ClassMage:
@@ -1039,6 +1158,23 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 			bonusMP = 6 + tier*4
 		}
 
+	case ClassWarlock:
+		cat = ArmorLight
+		switch slot {
+		case SlotWeapon:
+			baseStat = 5 + tier*3
+			critBonus = 1 + tier
+		case SlotChest:
+			baseStat = 2 + tier*2
+			bonusMP = 10 + tier*8
+		case SlotHead:
+			baseStat = 1 + tier*2
+			bonusMP = 8 + tier*6
+		case SlotLegs:
+			baseStat = 1 + tier*2
+			bonusHP = 6 + tier*4
+		}
+
 	case ClassCleric:
 		cat = ArmorMedium
 		switch slot {
@@ -1054,6 +1190,23 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 		case SlotLegs:
 			baseStat = 2 + tier*2
 			bonusHP = 6 + tier*6
+		}
+
+	case ClassBard:
+		cat = ArmorMedium
+		switch slot {
+		case SlotWeapon:
+			baseStat = 3 + tier*2
+			bonusMP = 6 + tier*4
+		case SlotChest:
+			baseStat = 2 + tier*2
+			stressRes = 12 + tier*6
+		case SlotHead:
+			baseStat = 1 + tier*2
+			stressRes = 8 + tier*4
+		case SlotLegs:
+			baseStat = 1 + tier*2
+			speedBonus = 1 + tier
 		}
 	}
 

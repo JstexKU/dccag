@@ -64,6 +64,7 @@ func menuTickCmd() tea.Cmd {
 
 func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
 	targetLevel := max(1, floor/2)
+	race := AllRaces[rand.Intn(len(AllRaces))]
 
 	maxHP := 42
 	baseDef := 2
@@ -80,6 +81,13 @@ func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
 		skillNameKey = "skill.tank_stance"
 		skillCost = 8
 		maxMP = 30
+	case ClassPaladin:
+		maxHP = 54
+		baseDef = 3
+		speed = 9
+		skillNameKey = "skill.paladin_holy"
+		skillCost = 10
+		maxMP = 35
 	case ClassWarrior:
 		maxHP = 48
 		baseDef = 2
@@ -87,6 +95,13 @@ func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
 		skillNameKey = "skill.warrior_rage"
 		skillCost = 10
 		maxMP = 25
+	case ClassMonk:
+		maxHP = 44
+		baseDef = 1
+		speed = 13
+		skillNameKey = "skill.monk_flurry"
+		skillCost = 8
+		maxMP = 30
 	case ClassRogue:
 		maxHP = 35
 		baseDef = 1
@@ -94,6 +109,13 @@ func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
 		skillNameKey = "skill.rogue_stealth"
 		skillCost = 12
 		maxMP = 35
+	case ClassRanger:
+		maxHP = 38
+		baseDef = 1
+		speed = 13
+		skillNameKey = "skill.ranger_shot"
+		skillCost = 9
+		maxMP = 30
 	case ClassMage:
 		maxHP = 28
 		baseDef = 0
@@ -101,6 +123,13 @@ func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
 		skillNameKey = "skill.mage_charge"
 		skillCost = 15
 		maxMP = 45
+	case ClassWarlock:
+		maxHP = 34
+		baseDef = 1
+		speed = 10
+		skillNameKey = "skill.warlock_curse"
+		skillCost = 11
+		maxMP = 40
 	case ClassCleric:
 		maxHP = 34
 		baseDef = 2
@@ -108,12 +137,25 @@ func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
 		skillNameKey = "skill.cleric_aura"
 		skillCost = 12
 		maxMP = 40
+	case ClassBard:
+		maxHP = 36
+		baseDef = 1
+		speed = 12
+		skillNameKey = "skill.bard_song"
+		skillCost = 9
+		maxMP = 40
+	}
+
+	raceMod := GetRaceModifiers(race)
+	if raceMod.MaxHPBonusPercent != 0 {
+		maxHP += int(float64(maxHP) * raceMod.MaxHPBonusPercent)
 	}
 
 	nameDef := getRandomHeroName()
 
 	h := &Hero{
 		NameKey:      nameDef.NameKey,
+		Race:         race,
 		Gender:       nameDef.Gender,
 		Class:        class,
 		Role:         GetClassRole(class),
@@ -233,7 +275,13 @@ func (m *Model) distributePartyExp(expAmt int) {
 	}
 
 	for _, h := range living {
-		if h.GainExp(expPerHero) {
+		actualExp := expPerHero
+		raceMod := GetRaceModifiers(h.Race)
+		if raceMod.ExpBonusPercent > 0 {
+			actualExp += int(float64(actualExp) * raceMod.ExpBonusPercent)
+		}
+
+		if h.GainExp(actualExp) {
 			verb := TVerb(m.Lang, h.Gender, "достиг", "достигла", "reached")
 			m.addLog(healStyle.Render(T(m.Lang, "dungeon.log.lvl_up", h.DisplayName(m.Lang), verb, h.Level)))
 		}
@@ -727,4 +775,3 @@ func main() {
 		saveDebugReportToFile()
 	}
 }
-

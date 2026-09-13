@@ -89,10 +89,7 @@ func GetClassMutationPreference(h *Hero, floor int, fallenHistory []FallenHeroRe
 		}
 	}
 
-	// 2. Индикаторы дефицита живучести:
-	// - Недавняя смерть и воскрешение
-	// - Критическое проседание по HP к моменту привала (HP <= 45% от MaxHP)
-	// - MaxHP ниже расчетного порога выживания под урон текущего этажа
+	// 2. Индикаторы дефицита живучести (v2.4.3):
 	hpThreshold := 30 + (floor * 6)
 	isCriticallyWounded := float64(h.HP)/float64(h.MaxHP) <= 0.45
 	isFragile := h.MaxHP < hpThreshold
@@ -102,7 +99,7 @@ func GetClassMutationPreference(h *Hero, floor int, fallenHistory []FallenHeroRe
 		return MutTitan
 	}
 
-	// 3. Базовая ролевая прогрессия, если здоровье персонажа вне опасности
+	// 3. Базовая ролевая прогрессия под 10 классов
 	switch h.Class {
 	case ClassTank:
 		if muts.BastionCount < muts.TitanCount {
@@ -110,14 +107,38 @@ func GetClassMutationPreference(h *Hero, floor int, fallenHistory []FallenHeroRe
 		}
 		return MutChimera // +8 HP, +5 MP, +1 Atk, +1 Def
 
+	case ClassPaladin:
+		if muts.BastionCount <= muts.TitanCount {
+			return MutBastion
+		}
+		if muts.AetherCount < 2 {
+			return MutAether
+		}
+		return MutTitan
+
 	case ClassWarrior:
 		if muts.FuryCount <= muts.TitanCount {
 			return MutFury // +3 Atk, +2 HP
 		}
 		return MutChimera
 
+	case ClassMonk:
+		if muts.FuryCount <= muts.ChimeraCount {
+			return MutFury
+		}
+		if muts.TitanCount < 2 {
+			return MutTitan
+		}
+		return MutChimera
+
 	case ClassRogue:
 		if muts.FuryCount <= muts.ChimeraCount*2 {
+			return MutFury
+		}
+		return MutChimera
+
+	case ClassRanger:
+		if muts.FuryCount <= muts.ChimeraCount {
 			return MutFury
 		}
 		return MutChimera
@@ -128,9 +149,27 @@ func GetClassMutationPreference(h *Hero, floor int, fallenHistory []FallenHeroRe
 		}
 		return MutFury
 
+	case ClassWarlock:
+		if muts.AetherCount <= muts.TitanCount {
+			return MutAether
+		}
+		if muts.TitanCount < 3 {
+			return MutTitan // Варлоку нужно HP для жертвенных навыков
+		}
+		return MutFury
+
 	case ClassCleric:
 		if muts.AetherCount <= muts.BastionCount {
 			return MutAether
+		}
+		return MutBastion
+
+	case ClassBard:
+		if muts.AetherCount <= muts.ChimeraCount {
+			return MutAether
+		}
+		if muts.ChimeraCount < 2 {
+			return MutChimera
 		}
 		return MutBastion
 
@@ -317,22 +356,22 @@ func (m *Model) stepTown() {
 		recruitCost := max(45, 60+(m.Floor*25)-(m.Legacy.ChurchLevel*8))
 		for i, h := range m.Party {
 			if h.IsDead {
-				classes := []HeroClass{ClassTank, ClassWarrior, ClassRogue, ClassMage, ClassCleric}
-				newClass := classes[rand.Intn(len(classes))]
+				// Автоматический найм любого из 10 классов
+				newClass := AllClasses[rand.Intn(len(AllClasses))]
 
 				if m.Gold >= recruitCost {
 					m.Gold -= recruitCost
 					globalDebugReport.GoldSpentBreakdown["Найм ветеранов"] += recruitCost
 					m.Party[i] = createHero(newClass, m.Floor, m.Legacy.SmithyLevel)
 					m.addLog(healStyle.Render(T(m.Lang, "town.log.guild_veteran",
-						guildName, m.Party[i].DisplayName(m.Lang), m.Party[i].ShortClass(m.Lang), m.Party[i].Level, recruitCost)))
+						guildName, m.Party[i].DisplayName(m.Lang), m.Party[i].RaceName(m.Lang), m.Party[i].ShortClass(m.Lang), m.Party[i].Level, recruitCost)))
 					m.logTownAction("⚔️", guildName, T(m.Lang, "town.log.guild_vet_hist",
 						m.Party[i].DisplayName(m.Lang), m.Party[i].ShortClass(m.Lang), m.Party[i].Level, recruitCost))
 				} else {
 					m.Party[i] = createHero(newClass, 1, 0)
 					m.Party[i].TitleKey = "title.militia"
 					m.addLog(subtleStyle.Render(T(m.Lang, "town.log.guild_militia",
-						guildName, m.Party[i].DisplayName(m.Lang), m.Party[i].ShortClass(m.Lang))))
+						guildName, m.Party[i].DisplayName(m.Lang), m.Party[i].RaceName(m.Lang), m.Party[i].ShortClass(m.Lang))))
 					m.logTownAction("🤝", guildName, T(m.Lang, "town.log.guild_mil_hist",
 						m.Party[i].DisplayName(m.Lang), m.Party[i].ShortClass(m.Lang)))
 				}
@@ -357,6 +396,8 @@ func (m *Model) stepTown() {
 			return max(35*matMult, cost)
 		}
 
+		// Кузница точит металл и тяжелые латы: Танк, Воин, Паладин
+		// + Металлическое оружие ближнего боя Клирика и Барда
 		for smithyBudget > 0 {
 			var bestHero *Hero
 			var bestSlot EquipSlot
@@ -369,7 +410,20 @@ func (m *Model) stepTown() {
 				}
 				for _, slot := range []EquipSlot{SlotWeapon, SlotHead, SlotChest, SlotLegs} {
 					it := h.GetItemInSlot(slot)
-					canForge := it != nil && it.UpgradeLevel < 6 && (it.Slot == SlotWeapon || it.Category == ArmorHeavy)
+					if it == nil || it.UpgradeLevel >= 6 {
+						continue
+					}
+
+					canForge := false
+					if it.Category == ArmorHeavy {
+						canForge = true
+					} else if it.Slot == SlotWeapon {
+						switch h.Class {
+						case ClassTank, ClassWarrior, ClassPaladin, ClassCleric, ClassBard:
+							canForge = true
+						}
+					}
+
 					if canForge {
 						cost := getUpgradeCost(it)
 						if cost < minCost && smithyBudget >= cost && m.Gold >= cost {
@@ -424,7 +478,7 @@ func (m *Model) stepTown() {
 			}
 		}
 
-		// 2. Выделка легкой и средней брони
+		// 2. Выделка легкой и средней брони, а также дистанционного/магического оружия
 		getUpgradeCost := func(it *EquipItem) int {
 			if it == nil {
 				return 999999
@@ -446,9 +500,22 @@ func (m *Model) stepTown() {
 				if h.IsDead {
 					continue
 				}
-				for _, slot := range []EquipSlot{SlotHead, SlotChest, SlotLegs} {
+				for _, slot := range []EquipSlot{SlotHead, SlotChest, SlotLegs, SlotWeapon} {
 					it := h.GetItemInSlot(slot)
-					canTan := it != nil && (it.Category == ArmorMedium || it.Category == ArmorLight) && it.UpgradeLevel < 6
+					if it == nil || it.UpgradeLevel >= 6 {
+						continue
+					}
+
+					canTan := false
+					if it.Category == ArmorMedium || it.Category == ArmorLight {
+						canTan = true
+					} else if it.Slot == SlotWeapon {
+						switch h.Class {
+						case ClassRogue, ClassRanger, ClassMonk, ClassMage, ClassWarlock:
+							canTan = true
+						}
+					}
+
 					if canTan {
 						cost := getUpgradeCost(it)
 						if cost < minCost && tanneryBudget >= cost && m.Gold >= cost {
@@ -504,7 +571,7 @@ func (m *Model) stepTown() {
 			})
 			target := candidates[0]
 
-			// Адаптивный расчет мутации с учетом выживаемости и дефицита HP
+			// Адаптивный расчет мутации с учетом выживаемости и дефицита HP (v2.4.3)
 			pref := GetClassMutationPreference(target, m.Floor, m.Stats.FallenHeroes)
 			baseCost := 240
 			switch pref {
@@ -577,7 +644,7 @@ func (m *Model) stepTown() {
 				pType := PotionHP
 				if h.Stress > 30 || h.Affliction != AfflictionNone {
 					pType = PotionStress
-				} else if h.Class == ClassMage || h.Class == ClassCleric {
+				} else if h.Class == ClassMage || h.Class == ClassCleric || h.Class == ClassWarlock || h.Class == ClassBard {
 					pType = PotionMP
 				}
 
@@ -609,4 +676,3 @@ func (m *Model) stepTown() {
 		m.addLog(accentStyle.Render(T(m.Lang, "town.log.depart")))
 	}
 }
-

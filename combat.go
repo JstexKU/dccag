@@ -41,7 +41,7 @@ func (m *Model) SelectTarget() *Hero {
 }
 
 func (m *Model) ApplyDamage(target *Hero, rawDmg int) (actual *Hero, finalDmg int, guarded bool) {
-	if target.Class != ClassTank {
+	if target.Class != ClassTank && target.Class != ClassPaladin {
 		for _, guard := range m.Party {
 			if !guard.IsDead && guard.Role.CanGuard && guard != target && guard.HP > guard.MaxHP/4 {
 				chance := 30
@@ -49,6 +49,9 @@ func (m *Model) ApplyDamage(target *Hero, rawDmg int) (actual *Hero, finalDmg in
 				if guard.Class == ClassTank {
 					chance = 60
 					mitigation = 0.50
+				} else if guard.Class == ClassPaladin {
+					chance = 50
+					mitigation = 0.60
 				}
 
 				if rand.Intn(100) < chance {
@@ -138,10 +141,10 @@ func (m *Model) attemptFlee() {
 
 	for _, h := range m.Party {
 		if !h.IsDead {
-			if h.Class == ClassRogue {
+			if h.Class == ClassRogue || h.Class == ClassRanger {
 				chance += 20
 			}
-			if h.Class == ClassTank {
+			if h.Class == ClassTank || h.Class == ClassPaladin {
 				chance += 10
 			}
 		}
@@ -156,6 +159,51 @@ func (m *Model) attemptFlee() {
 	if roll < chance {
 		globalDebugReport.FleeSuccesses++
 		m.addLog(healStyle.Render(T(m.Lang, "combat.log.flee_success")))
+
+		var survivors []*Hero
+		var fallen []*Hero
+		for _, h := range m.Party {
+			if !h.IsDead {
+				survivors = append(survivors, h)
+			} else {
+				fallen = append(fallen, h)
+			}
+		}
+
+		carryCapacity := len(survivors)
+		if len(fallen) > 0 {
+			// Эвристическая сортировка павших по ценности (мутации > уровень > роль)
+			sort.Slice(fallen, func(i, j int) bool {
+				score := func(hero *Hero) int {
+					s := hero.Mutations.Total()*200 + hero.Level*50
+					if hero.Class == ClassTank || hero.Class == ClassPaladin {
+						s += 400
+					} else if hero.Class == ClassCleric || hero.Class == ClassBard {
+						s += 300
+					}
+					return s
+				}
+				return score(fallen[i]) > score(fallen[j])
+			})
+
+			rescuedCount := 0
+			for i, hero := range fallen {
+				if i < carryCapacity {
+					hero.HP = 1 // Тело спасено, ждёт службы в Храме
+					rescuedCount++
+				} else {
+					hero.CauseOfDeath = T(m.Lang, "combat.log.left_in_abyss")
+					m.recordFallenHero(hero)
+				}
+			}
+
+			if rescuedCount > 0 {
+				m.addLog(altarStyle.Render(T(m.Lang, "combat.log.evacuation", rescuedCount)))
+			}
+			if len(fallen) > rescuedCount {
+				m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.left_behind", len(fallen)-rescuedCount)))
+			}
+		}
 
 		m.Combat = nil
 		m.InTown = true
@@ -239,6 +287,12 @@ func (m *Model) executeCombatTurn() {
 			return
 		}
 
+		// Расовая пассивка: регенерация маны эльфа
+		raceMod := GetRaceModifiers(h.Race)
+		if raceMod.ManaRegen > 0 && h.MP < h.MaxMP {
+			h.MP = min(h.MaxMP, h.MP+raceMod.ManaRegen)
+		}
+
 		m.checkAndDrinkPotions(h)
 		hName := h.DisplayName(m.Lang)
 
@@ -254,6 +308,8 @@ func (m *Model) executeCombatTurn() {
 		}
 
 		targetMob := m.Combat.Pack.GetLowestHPFocus()
+
+		// ==================== БОЛЬШИЕ И СРЕДНИЕ УМЕНИЯ (10 КЛАССОВ) ====================
 
 		// 1. ТАНК
 		if h.Class == ClassTank {
@@ -281,7 +337,44 @@ func (m *Model) executeCombatTurn() {
 			}
 		}
 
-		// 2. ВОИН
+		// 2. ПАЛАДИН
+		if h.Class == ClassPaladin {
+			var woundedAlly *Hero
+			for _, ally := range m.Party {
+				if !ally.IsDead && float64(ally.HP)/float64(ally.MaxHP) <= 0.45 {
+					woundedAlly = ally
+					break
+				}
+			}
+
+			if woundedAlly != nil && h.MP >= skillCost {
+				h.MP -= skillCost
+				healAmt := 14 + (m.Floor * 2) + (h.TotalDef() / 2)
+				woundedAlly.HP = min(woundedAlly.MaxHP, woundedAlly.HP+healAmt)
+				woundedAlly.Stress = max(0, woundedAlly.Stress-10)
+				h.Feats.HealsGiven += healAmt
+				verb := TVerb(m.Lang, h.Gender, "совершил", "совершила", "performed")
+				m.addLog(healStyle.Render(T(m.Lang, "combat.log.paladin_heal", hName, verb, woundedAlly.DisplayName(m.Lang), healAmt)))
+				m.checkAndAwardTitle(h)
+				return
+			} else if h.MP >= 6 && targetMob != nil && rand.Intn(100) < 50 {
+				h.MP -= 6
+				smiteDmg := h.TotalAtk() + (h.TotalDef() / 3) + 3
+				targetMob.HP -= smiteDmg
+				h.IsGuarding = true
+				h.AddBlock()
+				m.addLog(goldStyle.Render(T(m.Lang, "combat.log.paladin_smite", hName, smiteDmg)))
+				if targetMob.HP <= 0 {
+					targetMob.HP = 0
+					targetMob.IsDead = true
+					h.Feats.Kills++
+					m.distributePartyExp(targetMob.Exp)
+				}
+				return
+			}
+		}
+
+		// 3. ВОИН
 		if h.Class == ClassWarrior {
 			if h.MP >= skillCost && !h.IsBerserk {
 				h.MP -= skillCost
@@ -309,7 +402,46 @@ func (m *Model) executeCombatTurn() {
 			}
 		}
 
-		// 3. РАЗБОЙНИК
+		// 4. МОНАХ
+		if h.Class == ClassMonk {
+			if m.Combat.Pack.LivingCount() > 0 && h.MP >= skillCost {
+				h.MP -= skillCost
+				h.IsCharged = true
+				flurryDmg := (h.TotalAtk() / 2) + 3
+				hits := 0
+				for _, mob := range m.Combat.Pack.Members {
+					if !mob.IsDead && hits < 3 {
+						mob.HP -= flurryDmg
+						h.Feats.DamageDealt += flurryDmg
+						if mob.HP <= 0 {
+							mob.HP = 0
+							mob.IsDead = true
+							h.Feats.Kills++
+							m.distributePartyExp(mob.Exp)
+						}
+						hits++
+					}
+				}
+				m.addLog(accentStyle.Render(T(m.Lang, "combat.log.monk_flurry", hName, hits, flurryDmg)))
+				return
+			} else if h.MP >= 6 && targetMob != nil {
+				h.MP -= 6
+				palmDmg := h.TotalAtk() + 3
+				targetMob.HP -= palmDmg
+				targetMob.Speed = max(1, targetMob.Speed-4)
+				h.AddCCDuration()
+				m.addLog(fountStyle.Render(T(m.Lang, "combat.log.monk_palm", hName, palmDmg)))
+				if targetMob.HP <= 0 {
+					targetMob.HP = 0
+					targetMob.IsDead = true
+					h.Feats.Kills++
+					m.distributePartyExp(targetMob.Exp)
+				}
+				return
+			}
+		}
+
+		// 5. РАЗБОЙНИК
 		if h.Class == ClassRogue {
 			if h.MP >= skillCost && !h.IsStealthed {
 				h.MP -= skillCost
@@ -333,7 +465,43 @@ func (m *Model) executeCombatTurn() {
 			}
 		}
 
-		// 4. КЛИРИК
+		// 6. СЛЕДОПЫТ
+		if h.Class == ClassRanger {
+			if targetMob != nil && h.MP >= skillCost && targetMob.Atk >= 12 && rand.Intn(100) < 60 {
+				h.MP -= skillCost
+				trapDmg := 8 + (m.Floor * 2)
+				targetMob.HP -= trapDmg
+				targetMob.Atk = max(2, targetMob.Atk-5)
+				h.AddCCDuration()
+				m.addLog(accentStyle.Render(T(m.Lang, "combat.log.ranger_trap", hName, T(m.Lang, targetMob.NameKey), trapDmg)))
+				if targetMob.HP <= 0 {
+					targetMob.HP = 0
+					targetMob.IsDead = true
+					h.Feats.Kills++
+					m.distributePartyExp(targetMob.Exp)
+				}
+				return
+			} else if h.MP >= 6 && m.Combat.Pack.LivingCount() >= 2 {
+				h.MP -= 6
+				volleyDmg := h.TotalAtk() + 1
+				for _, mob := range m.Combat.Pack.Members {
+					if !mob.IsDead && (mob.Type == MobImp || mob.Type == MobPhantom || mob.Type == MobVoidDemon) {
+						mob.HP -= volleyDmg
+						h.Feats.DamageDealt += volleyDmg
+						if mob.HP <= 0 {
+							mob.HP = 0
+							mob.IsDead = true
+							h.Feats.Kills++
+							m.distributePartyExp(mob.Exp)
+						}
+					}
+				}
+				m.addLog(fireStyle.Render(T(m.Lang, "combat.log.ranger_volley", hName, volleyDmg)))
+				return
+			}
+		}
+
+		// 7. КЛИРИК
 		if h.Class == ClassCleric {
 			var criticalAlly *Hero
 			for _, ally := range m.Party {
@@ -379,7 +547,50 @@ func (m *Model) executeCombatTurn() {
 			}
 		}
 
-		// 5. МАГ
+		// 8. БАРД
+		if h.Class == ClassBard {
+			hasHighStress := false
+			for _, ally := range m.Party {
+				if !ally.IsDead && ally.Stress >= 50 {
+					hasHighStress = true
+					break
+				}
+			}
+
+			if hasHighStress && h.MP >= skillCost {
+				h.MP -= skillCost
+				for _, ally := range m.Party {
+					if !ally.IsDead {
+						ally.Stress = max(0, ally.Stress-15)
+						if ally.Stress < 60 {
+							ally.Affliction = AfflictionNone
+						}
+					}
+				}
+				h.RemoveDot()
+				m.addLog(potionStyle.Render(T(m.Lang, "combat.log.bard_ballad", hName)))
+				return
+			} else if h.MP >= 6 && m.Combat.Pack.LivingCount() >= 2 {
+				h.MP -= 6
+				dissonanceDmg := (h.TotalAtk() / 2) + 2
+				for _, mob := range m.Combat.Pack.Members {
+					if !mob.IsDead {
+						mob.HP -= dissonanceDmg
+						mob.Atk = max(1, mob.Atk-2)
+						if mob.HP <= 0 {
+							mob.HP = 0
+							mob.IsDead = true
+							h.Feats.Kills++
+							m.distributePartyExp(mob.Exp)
+						}
+					}
+				}
+				m.addLog(stressStyle.Render(T(m.Lang, "combat.log.bard_dissonance", hName, dissonanceDmg)))
+				return
+			}
+		}
+
+		// 9. МАГ
 		if h.Class == ClassMage {
 			if m.Combat.HasBarrel && h.MP >= skillCost {
 				h.MP -= skillCost
@@ -433,10 +644,72 @@ func (m *Model) executeCombatTurn() {
 				}
 				m.checkAndAwardTitle(h)
 				return
+			} else if h.MP >= 6 && m.Combat.Pack.LivingCount() >= 2 {
+				h.MP -= 6
+				chainDmg := h.TotalAtk() + 3
+				hits := 0
+				for _, mob := range m.Combat.Pack.Members {
+					if !mob.IsDead && hits < 2 {
+						mob.HP -= chainDmg
+						h.Feats.DamageDealt += chainDmg
+						if mob.HP <= 0 {
+							mob.HP = 0
+							mob.IsDead = true
+							h.Feats.Kills++
+							m.distributePartyExp(mob.Exp)
+						}
+						hits++
+					}
+				}
+				m.addLog(accentStyle.Render(T(m.Lang, "combat.log.mage_lightning", hName, chainDmg)))
+				return
 			} else {
 				if eliteMob := m.Combat.Pack.GetHighestHPFocus(); eliteMob != nil {
 					targetMob = eliteMob
 				}
+			}
+		}
+
+		// 10. ЧЕРНОКНИЖНИК
+		if h.Class == ClassWarlock {
+			if h.HP > 15 && h.MP >= skillCost {
+				needMana := false
+				for _, ally := range m.Party {
+					if !ally.IsDead && ally != h && float64(ally.MP)/float64(ally.MaxMP) <= 0.30 {
+						needMana = true
+						break
+					}
+				}
+
+				if needMana {
+					h.MP -= skillCost
+					h.HP -= 6
+					for _, ally := range m.Party {
+						if !ally.IsDead && ally != h {
+							ally.MP = min(ally.MaxMP, ally.MP+12)
+						}
+					}
+					h.AddManaBurst()
+					m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.warlock_sacrifice", hName)))
+					return
+				}
+			}
+
+			if h.MP >= 6 && targetMob != nil {
+				h.MP -= 6
+				drainDmg := h.TotalAtk() + 4
+				targetMob.HP -= drainDmg
+				healSelf := drainDmg / 2
+				h.HP = min(h.MaxHP, h.HP+healSelf)
+				h.Feats.DamageDealt += drainDmg
+				m.addLog(fireStyle.Render(T(m.Lang, "combat.log.warlock_drain", hName, drainDmg, healSelf)))
+				if targetMob.HP <= 0 {
+					targetMob.HP = 0
+					targetMob.IsDead = true
+					h.Feats.Kills++
+					m.distributePartyExp(targetMob.Exp)
+				}
+				return
 			}
 		}
 
@@ -460,6 +733,9 @@ func (m *Model) executeCombatTurn() {
 				critThreshold -= it.CritBonus
 			}
 		}
+		if raceMod.CritChanceBonus > 0 {
+			critThreshold -= raceMod.CritChanceBonus
+		}
 		if h.IsStealthed {
 			critThreshold = 1
 		}
@@ -469,6 +745,7 @@ func (m *Model) executeCombatTurn() {
 		bonusDmg := 0
 		armorPierce := 0
 
+		// ==================== МАЛЫЕ НАВЫКИ (3-5 MP) ====================
 		switch h.Class {
 		case ClassMage:
 			if h.MP >= 5 {
@@ -509,6 +786,44 @@ func (m *Model) executeCombatTurn() {
 				h.PullAggro()
 				m.addLog(healStyle.Render(T(m.Lang, "combat.log.taunt", hName)))
 			}
+		case ClassPaladin:
+			if h.MP >= 3 {
+				h.MP -= 3
+				h.BaseDef += 2
+				h.Stress = max(0, h.Stress-4)
+				m.addLog(healStyle.Render(T(m.Lang, "combat.log.paladin_minor", hName)))
+			}
+		case ClassRanger:
+			if h.MP >= 4 {
+				h.MP -= 4
+				armorPierce = 4
+				bonusDmg += 3
+				m.addLog(fireStyle.Render(T(m.Lang, "combat.log.ranger_minor", hName)))
+			}
+		case ClassMonk:
+			if h.MP >= 3 {
+				h.MP -= 3
+				bonusDmg += 4
+				m.addLog(accentStyle.Render(T(m.Lang, "combat.log.monk_minor", hName)))
+			}
+		case ClassBard:
+			if h.MP >= 3 {
+				h.MP -= 3
+				for _, ally := range m.Party {
+					if !ally.IsDead && (ally.Class == ClassMage || ally.Class == ClassCleric || ally.Class == ClassWarlock) && ally.MP < ally.MaxMP {
+						ally.MP = min(ally.MaxMP, ally.MP+5)
+						m.addLog(potionStyle.Render(T(m.Lang, "combat.log.bard_minor", hName, ally.DisplayName(m.Lang))))
+						break
+					}
+				}
+			}
+		case ClassWarlock:
+			if h.MP >= 4 {
+				h.MP -= 4
+				armorPierce = 6
+				bonusDmg += 2
+				m.addLog(stressStyle.Render(T(m.Lang, "combat.log.warlock_minor", hName)))
+			}
 		}
 
 		isCrit := d20 >= critThreshold || h.IsStealthed
@@ -540,6 +855,19 @@ func (m *Model) executeCombatTurn() {
 
 		targetMob.HP -= dmg
 		h.Feats.DamageDealt += dmg
+
+		// Вампиризм (Зверолюди или экипировка)
+		lifesteal := raceMod.LifeStealPercent
+		if it := h.Weapon; it != nil && it.Suffix != nil && it.Suffix.Effect == SuffVampirism {
+			lifesteal += 0.25
+		}
+		if lifesteal > 0 {
+			leechHP := int(float64(dmg) * lifesteal)
+			if leechHP > 0 {
+				h.HP = min(h.MaxHP, h.HP+leechHP)
+			}
+		}
+
 		m.checkAndAwardTitle(h)
 		hitVerb := TVerb(m.Lang, h.Gender, "нанес", "нанесла", "dealt")
 		m.addLog(fmt.Sprintf("⚔️ %s %s %d урона [%s] (%d HP).", hName, hitVerb, dmg, mobDisplayName, targetMob.HP))
@@ -603,7 +931,7 @@ func (m *Model) executeCombatTurn() {
 			return
 		}
 
-		// Смертоносная формула урона монстров
+		// Смертоносная формула урона монстров v2.4.3
 		rawDmg := int(float64(mob.Atk)*1.25) - (victim.TotalDef() / 2)
 		if victim.IsGuarding {
 			rawDmg = int(float64(rawDmg) * 0.6)
@@ -667,4 +995,3 @@ func (m *Model) executeCombatTurn() {
 		}
 	}
 }
-
