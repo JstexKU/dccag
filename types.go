@@ -978,6 +978,28 @@ type PartyRelic struct {
 	StressRes   int
 }
 
+// --- Retreat: причины отступления в город ---
+type RetreatReason int
+
+const (
+	RetreatNone        RetreatReason = iota // Отступать не нужно
+	RetreatBagFull                          // Мешок полон
+	RetreatQuestDone                        // Квест выполнен
+	RetreatTooFewAlive                      // Живых бойцов осталось мало
+	RetreatLowHP                            // Суммарное HP отряда низкое
+	RetreatNoResources                      // Нет зелий и высокий стресс
+)
+
+// --- Healing Urgency: срочность поиска источника ---
+type HealingUrgency int
+
+const (
+	HealingNone     HealingUrgency = iota // Исцеление не нужно
+	HealingOptional                       // Можно посетить, если по пути
+	HealingUrgent                         // Стоит свернуть с маршрута
+	HealingCritical                       // Идти прямо сейчас, любой ценой
+)
+
 type Model struct {
 	Lang             Language
 	State            GameState
@@ -1015,6 +1037,8 @@ type Model struct {
 	Relic            *PartyRelic
 	Legacy           TownLegacy
 	Stats            RunStats
+	RunCounted       bool // защита от двойного учёта рана в accumulateDebugReport
+	RestTurnsLeft    int  // сколько шагов отряд ещё сидит на привале (0 — не на привале)
 }
 
 type (

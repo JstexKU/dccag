@@ -89,7 +89,7 @@ func GetClassMutationPreference(h *Hero, floor int, fallenHistory []FallenHeroRe
 		}
 	}
 
-	// 2. Индикаторы дефицита живучести (v2.4.3):
+	// 2. Индикаторы дефицита живучести
 	hpThreshold := 30 + (floor * 6)
 	isCriticallyWounded := float64(h.HP)/float64(h.MaxHP) <= 0.45
 	isFragile := h.MaxHP < hpThreshold
@@ -132,6 +132,10 @@ func GetClassMutationPreference(h *Hero, floor int, fallenHistory []FallenHeroRe
 		return MutChimera
 
 	case ClassRogue:
+		// Приоритет 2:1 в пользу Fury (muts.FuryCount <= muts.ChimeraCount*2).
+		// Обоснование: рога компенсирует низкий базовый MaxHP уклонением,
+		// стелсом и лёгкой/средней бронёй, поэтому вкладывается в урон.
+		// Химера подключается, только когда ярости уже вдвое больше, чем химер.
 		if muts.FuryCount <= muts.ChimeraCount*2 {
 			return MutFury
 		}
@@ -356,8 +360,26 @@ func (m *Model) stepTown() {
 		recruitCost := max(45, 60+(m.Floor*25)-(m.Legacy.ChurchLevel*8))
 		for i, h := range m.Party {
 			if h.IsDead {
-				// Автоматический найм любого из 10 классов
-				newClass := AllClasses[rand.Intn(len(AllClasses))]
+				// Классы, которые уже есть у живых участников отряда
+				usedClasses := make(map[HeroClass]bool)
+				for _, ally := range m.Party {
+					if !ally.IsDead {
+						usedClasses[ally.Class] = true
+					}
+				}
+
+				// Фильтруем пул доступных классов без повторов
+				var availableClasses []HeroClass
+				for _, c := range AllClasses {
+					if !usedClasses[c] {
+						availableClasses = append(availableClasses, c)
+					}
+				}
+				if len(availableClasses) == 0 {
+					availableClasses = AllClasses
+				}
+
+				newClass := availableClasses[rand.Intn(len(availableClasses))]
 
 				if m.Gold >= recruitCost {
 					m.Gold -= recruitCost
@@ -396,8 +418,6 @@ func (m *Model) stepTown() {
 			return max(35*matMult, cost)
 		}
 
-		// Кузница точит металл и тяжелые латы: Танк, Воин, Паладин
-		// + Металлическое оружие ближнего боя Клирика и Барда
 		for smithyBudget > 0 {
 			var bestHero *Hero
 			var bestSlot EquipSlot
@@ -478,7 +498,7 @@ func (m *Model) stepTown() {
 			}
 		}
 
-		// 2. Выделка легкой и средней брони, а также дистанционного/магического оружия
+		// 2. Выделка легкой и средней брони, а также легкого оружия
 		getUpgradeCost := func(it *EquipItem) int {
 			if it == nil {
 				return 999999
@@ -571,7 +591,6 @@ func (m *Model) stepTown() {
 			})
 			target := candidates[0]
 
-			// Адаптивный расчет мутации с учетом выживаемости и дефицита HP (v2.4.3)
 			pref := GetClassMutationPreference(target, m.Floor, m.Stats.FallenHeroes)
 			baseCost := 240
 			switch pref {

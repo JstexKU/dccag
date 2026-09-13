@@ -255,23 +255,190 @@ func (m *Model) revealFog() {
 	}
 }
 
-func (m *Model) findNextStep() Point {
-	retreat := m.checkRetreat()
-	seekingFountain := m.needsHealing()
-	forceDeeper := (m.CurrentQuest.Type == QuestEscapeTrap) && !m.CurrentQuest.Completed
+// ============================================================
+// RETREAT / HEALING URGENCY / REST — вспомогательные функции
+// ============================================================
 
-	hasFountainOnMap := false
-	for y := 0; y < m.MapHeight; y++ {
-		for x := 0; x < m.MapWidth; x++ {
-			if m.Grid[y][x] == TileFountain {
-				hasFountainOnMap = true
-				break
-			}
+// evaluateRetreat возвращает причину отступления в город (или RetreatNone).
+// Приоритет проверок: мешок → квест → мало живых → низкое HP → нет ресурсов.
+func (m *Model) evaluateRetreat() RetreatReason {
+	if len(m.Bag) >= m.currentBagCapacity() {
+		return RetreatBagFull
+	}
+	if m.CurrentQuest.Completed {
+		return RetreatQuestDone
+	}
+
+	living := 0
+	curHP, maxHP := 0, 0
+	totalPotions := 0
+	totalStress := 0
+	for _, h := range m.Party {
+		if h.IsDead {
+			continue
 		}
-		if hasFountainOnMap {
-			break
+		living++
+		curHP += h.HP
+		maxHP += h.MaxHP
+		totalPotions += len(h.Potions)
+		totalStress += h.Stress
+	}
+
+	if living <= 2 {
+		return RetreatTooFewAlive
+	}
+	if maxHP > 0 && float64(curHP)/float64(maxHP) < 0.35 {
+		return RetreatLowHP
+	}
+	if living > 0 {
+		avgStress := totalStress / living
+		if totalPotions == 0 && avgStress >= 100 {
+			return RetreatNoResources
 		}
 	}
+
+	return RetreatNone
+}
+
+// evaluateHealingUrgency оценивает, насколько срочно отряду нужно к источнику.
+func (m *Model) evaluateHealingUrgency() HealingUrgency {
+	living := 0
+	criticalCount := 0
+	lowCount := 0
+	needsMP := 0
+	totalStress := 0
+
+	for _, h := range m.Party {
+		if h.IsDead {
+			continue
+		}
+		living++
+		hpPct := float64(h.HP) / float64(h.MaxHP)
+		mpPct := 0.0
+		if h.MaxMP > 0 {
+			mpPct = float64(h.MP) / float64(h.MaxMP)
+		}
+
+		if hpPct <= 0.25 || h.Stress >= 160 {
+			criticalCount++
+		} else if hpPct <= 0.50 || h.Stress >= 100 {
+			lowCount++
+		}
+
+		if mpPct <= 0.30 {
+			switch h.Class {
+			case ClassMage, ClassCleric, ClassWarlock, ClassBard, ClassPaladin:
+				needsMP++
+			}
+		}
+		totalStress += h.Stress
+	}
+	if living == 0 {
+		return HealingNone
+	}
+	avgStress := totalStress / living
+
+	switch {
+	case criticalCount >= 2 || avgStress >= 130:
+		return HealingCritical
+	case criticalCount >= 1 || lowCount >= 2 || avgStress >= 80:
+		return HealingUrgent
+	case lowCount >= 1 || needsMP >= 2 || avgStress >= 50:
+		return HealingOptional
+	default:
+		return HealingNone
+	}
+}
+
+// distanceToNearest ищет кратчайшее расстояние (число шагов) до ближайшего
+// тайла, удовлетворяющего условию. Не строит путь, только считает дистанцию.
+func (m *Model) distanceToNearest(cond func(Point, Tile) bool) (int, bool) {
+	if cond(m.PartyPos, m.Grid[m.PartyPos.Y][m.PartyPos.X]) {
+		return 0, true
+	}
+	visited := make(map[Point]bool)
+	visited[m.PartyPos] = true
+	type entry struct {
+		p    Point
+		dist int
+	}
+	queue := []entry{{m.PartyPos, 0}}
+	dirs := []Point{{0, -1}, {0, 1}, {-1, 0}, {1, 0}}
+
+	for len(queue) > 0 {
+		curr := queue[0]
+		queue = queue[1:]
+		for _, d := range dirs {
+			next := Point{curr.p.X + d.X, curr.p.Y + d.Y}
+			if next.X < 0 || next.X >= m.MapWidth || next.Y < 0 || next.Y >= m.MapHeight {
+				continue
+			}
+			if visited[next] {
+				continue
+			}
+			if m.Grid[next.Y][next.X] == TileWall {
+				continue
+			}
+			if cond(next, m.Grid[next.Y][next.X]) {
+				return curr.dist + 1, true
+			}
+			visited[next] = true
+			queue = append(queue, entry{next, curr.dist + 1})
+		}
+	}
+	return 0, false
+}
+
+// shouldSeekFountain решает, стоит ли идти к источнику при данной urgency.
+// Optional — только если близко (≤6 шагов), Urgent — ≤15, Critical — всегда.
+func (m *Model) shouldSeekFountain(urgency HealingUrgency) bool {
+	if urgency == HealingNone {
+		return false
+	}
+	dist, found := m.distanceToNearest(func(p Point, t Tile) bool {
+		return t == TileFountain
+	})
+	if !found {
+		return false
+	}
+	switch urgency {
+	case HealingCritical:
+		return true
+	case HealingUrgent:
+		return dist <= 15
+	case HealingOptional:
+		return dist <= 6
+	}
+	return false
+}
+
+// isMonsterNearby проверяет, есть ли вражеский пак в радиусе 3 тайлов.
+// Используется для запрета привала рядом с врагами.
+func (m *Model) isMonsterNearby() bool {
+	for y := m.PartyPos.Y - 3; y <= m.PartyPos.Y+3; y++ {
+		for x := m.PartyPos.X - 3; x <= m.PartyPos.X+3; x++ {
+			if x < 0 || x >= m.MapWidth || y < 0 || y >= m.MapHeight {
+				continue
+			}
+			if _, hasPack := m.Packs[Point{x, y}]; hasPack {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// ============================================================
+// FIND NEXT STEP
+// ============================================================
+
+func (m *Model) findNextStep() Point {
+	retreatReason := m.evaluateRetreat()
+	retreat := retreatReason != RetreatNone
+	urgency := m.evaluateHealingUrgency()
+	seekingFountain := m.shouldSeekFountain(urgency)
+	forceDeeper := (m.CurrentQuest.Type == QuestEscapeTrap) && !m.CurrentQuest.Completed
+	bagFull := len(m.Bag) >= m.currentBagCapacity()
 
 	findPath := func(avoidMonsters bool, targetCondition func(Point, Tile) bool) (Point, bool) {
 		queue := []Point{m.PartyPos}
@@ -311,15 +478,7 @@ func (m *Model) findNextStep() Point {
 		return m.PartyPos, false
 	}
 
-	if seekingFountain && hasFountainOnMap {
-		step, found := findPath(true, func(p Point, t Tile) bool {
-			return t == TileFountain
-		})
-		if found {
-			return step
-		}
-	}
-
+	// 1. Retreat — ищем выход
 	if retreat && !forceDeeper {
 		step, found := findPath(true, func(p Point, t Tile) bool {
 			return t == TileExit
@@ -335,6 +494,17 @@ func (m *Model) findNextStep() Point {
 		}
 	}
 
+	// 2. Источник по urgency
+	if seekingFountain {
+		step, found := findPath(true, func(p Point, t Tile) bool {
+			return t == TileFountain
+		})
+		if found {
+			return step
+		}
+	}
+
+	// 3. Обычные цели
 	isExplorationQuest := m.CurrentQuest.Type == QuestReachFloor && !m.CurrentQuest.Completed
 
 	isTarget := func(p Point, t Tile) bool {
@@ -348,13 +518,21 @@ func (m *Model) findNextStep() Point {
 		if t == TileStairs && isExplorationQuest {
 			return true
 		}
+
+		// Сундуки — только если мешок не полон
+		if t == TileChest || t == TileTrappedChest {
+			if bagFull {
+				return false
+			}
+		}
+
 		if t == TileStairs && !forceDeeper {
 			hasVisibleLoot := false
 			for y := 0; y < m.MapHeight; y++ {
 				for x := 0; x < m.MapWidth; x++ {
 					if m.Explored[y][x] {
 						tile := m.Grid[y][x]
-						if tile == TileChest || tile == TileRelic {
+						if (tile == TileChest || tile == TileRelic) && !bagFull {
 							hasVisibleLoot = true
 							break
 						}
@@ -368,49 +546,12 @@ func (m *Model) findNextStep() Point {
 		return t == TileChest || t == TileStairs || t == TileAltar || t == TileFountain || t == TileTrappedChest || t == TileBarrel || t == TileRelic
 	}
 
-	if seekingFountain {
-		step, found := findPath(true, isTarget)
-		if found {
-			return step
-		}
-	}
-
 	step, found := findPath(false, isTarget)
 	if found {
 		return step
 	}
 
 	return m.PartyPos
-}
-
-func (m *Model) needsHealing() bool {
-	for _, h := range m.Party {
-		if !h.IsDead && (float64(h.HP)/float64(h.MaxHP) <= 0.40 || h.Stress >= 80) {
-			return true
-		}
-	}
-	return false
-}
-
-func (m *Model) checkRetreat() bool {
-	if len(m.Bag) >= m.currentBagCapacity() {
-		return true
-	}
-
-	living := 0
-	criticallyWounded := 0
-	for _, h := range m.Party {
-		if !h.IsDead {
-			living++
-			if float64(h.HP)/float64(h.MaxHP) <= 0.30 || h.Stress >= 140 {
-				criticallyWounded++
-			}
-		}
-	}
-	if living <= 2 || criticallyWounded >= 2 {
-		return true
-	}
-	return false
 }
 
 func (m *Model) isPartyWiped() bool {
@@ -434,6 +575,10 @@ func (m *Model) getRandomLivingHero() *Hero {
 	}
 	return living[rand.Intn(len(living))]
 }
+
+// ============================================================
+// STRESS / POTIONS / TITLES (без изменений, кроме MP-зелий)
+// ============================================================
 
 func (m *Model) addStress(h *Hero, amt int) {
 	if h.IsDead {
@@ -541,7 +686,8 @@ func (m *Model) checkAndDrinkPotions(h *Hero) {
 		case PotionMP:
 			missingMP := h.MaxMP - h.MP
 			skillNeeded := h.SkillCost
-			if h.MP < skillNeeded || (h.MaxMP > 0 && float64(h.MP)/float64(h.MaxHP) <= 0.30) || missingMP >= p.Power {
+			// Патч 2: знаменатель — MaxMP, а не MaxHP.
+			if h.MP < skillNeeded || (h.MaxMP > 0 && float64(h.MP)/float64(h.MaxMP) <= 0.30) || missingMP >= p.Power {
 				shouldDrink = true
 			}
 		case PotionStress:
@@ -692,6 +838,10 @@ func (m *Model) checkAndAwardTitle(h *Hero) {
 	}
 }
 
+// ============================================================
+// TILES / RELIC / TRAPPED CHEST
+// ============================================================
+
 func (m *Model) handleAltar() {
 	m.Stats.AltarsUsed++
 	m.checkQuestProgress(QuestUseAltar, "", 1)
@@ -787,10 +937,19 @@ func (m *Model) handleTrappedChest() {
 
 func (m *Model) handleRelicTile() {
 	m.checkQuestProgress(QuestFindRelic, "", 1)
+
+	// Патч 8: каскадная логика апгрейда реликвий.
+	//  - Этажи 1–5:  ур.2.
+	//  - Этажи 6–10: ур.3 только если уже носим ур.2, иначе ур.2.
+	//  - Этажи 11+:  ур.3 гарантированно.
 	newLevel := 2
-	if m.Floor >= 6 {
+	switch {
+	case m.Floor >= 11:
+		newLevel = 3
+	case m.Floor >= 6 && m.Relic != nil && m.Relic.Level >= 2:
 		newLevel = 3
 	}
+
 	newRelic := generateRelic(newLevel)
 
 	if m.Relic == nil || newRelic.Level > m.Relic.Level {
@@ -803,6 +962,10 @@ func (m *Model) handleRelicTile() {
 	}
 }
 
+// ============================================================
+// MONSTER PACKS
+// ============================================================
+
 func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 	pack := &MonsterPack{IsBoss: isBoss}
 	scaleMult := 1 + (floor / 8)
@@ -810,7 +973,8 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 	if isBoss {
 		if floor%10 == 0 {
 			dragonLvl := floor
-			dragonHP := (320 + (floor * 25)) * scaleMult
+			// Патч 4: формула HP дракона 300+floor*20 (синхронизировано с ui.go).
+			dragonHP := (300 + (floor * 20)) * scaleMult
 			dragon := &Monster{
 				ID: 1, Type: MobDragon, NameKey: "mob.boss_dragon", Level: dragonLvl, Affix: AffixFire,
 				Glyph: 'D', Color: "196", HP: dragonHP, MaxHP: dragonHP,
@@ -954,6 +1118,228 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 	}
 	return pack
 }
+
+// ============================================================
+// STEP — главный игровой цикл
+// ============================================================
+
+func (m *Model) step() {
+	if m.State != StatePlaying {
+		return
+	}
+	if m.isPartyWiped() {
+		m.State = StateDefeat
+		m.RestartCountdown = 10
+		return
+	}
+
+	// 0. Город — отдельный поток, шаги подземелья не считаются
+	if m.InTown {
+		m.stepTown()
+		return
+	}
+
+	m.Stats.TotalSteps++
+
+	// 1. Продолжение привала (RestTurnsLeft > 0) — сидим на месте
+	if m.RestTurnsLeft > 0 {
+		m.RestTurnsLeft--
+		for _, h := range m.Party {
+			if h.IsDead {
+				continue
+			}
+			if h.HP < h.MaxHP {
+				h.HP++
+			}
+			if h.MP < h.MaxMP {
+				h.MP++
+			}
+			if h.Stress > 0 {
+				h.Stress--
+			}
+		}
+		return
+	}
+
+	// 2. Бой — раньше всего остального
+	if m.Combat != nil {
+		m.executeCombatTurn()
+		return
+	}
+
+	// 3. Проверка retreat: если отряд на выходе и причина есть — уходим в город
+	if m.evaluateRetreat() != RetreatNone &&
+		m.Grid[m.PartyPos.Y][m.PartyPos.X] == TileExit &&
+		m.Stats.TotalSteps > 0 {
+		m.InTown = true
+		m.TownPhase = TownPhaseSellLoot
+		m.TownDialog = T(m.Lang, "town.log.enter_gate")
+		return
+	}
+
+	// 4. Возможный старт нового привала
+	urgency := m.evaluateHealingUrgency()
+	restInterval := 50
+	if urgency == HealingCritical {
+		restInterval = 25
+	}
+	if m.Stats.TotalSteps%restInterval == 0 &&
+		m.evaluateRetreat() == RetreatNone &&
+		!m.isMonsterNearby() {
+
+		m.RestTurnsLeft = rand.Intn(6) + 5 // 5..10 шагов
+		biome := getBiome(m.Floor)
+		variant := rand.Intn(4) + 1
+		key := fmt.Sprintf("dungeon.log.rest.%s.%d", biome.Name, variant)
+		m.addLog(healStyle.Render(T(m.Lang, key)))
+		return
+	}
+
+	// 5. Зелья
+	for _, h := range m.Party {
+		m.checkAndDrinkPotions(h)
+	}
+
+	// 6. Поиск следующего шага
+	next := m.findNextStep()
+
+	// 6a. Защита от зацикливания
+	loopHit := false
+	for _, p := range m.PathHistory {
+		if p == next {
+			m.LoopDetectCount++
+			loopHit = true
+			break
+		}
+	}
+	if !loopHit {
+		m.LoopDetectCount = 0
+	}
+
+	if m.LoopDetectCount > 4 {
+		m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.collision_break")))
+		foundSafeSpot := false
+		for y := 0; y < m.MapHeight && !foundSafeSpot; y++ {
+			for x := 0; x < m.MapWidth && !foundSafeSpot; x++ {
+				if m.Grid[y][x] == TileFloor || m.Grid[y][x] == TileExit {
+					dx := x - m.PartyPos.X
+					dy := y - m.PartyPos.Y
+					if dx*dx+dy*dy <= 25 && dx*dx+dy*dy > 1 {
+						m.PartyPos = Point{x, y}
+						foundSafeSpot = true
+					}
+				}
+			}
+		}
+		m.PathHistory = []Point{}
+		m.LoopDetectCount = 0
+		m.revealFog()
+		return
+	} else {
+		m.PathHistory = append(m.PathHistory, next)
+		if len(m.PathHistory) > 10 {
+			m.PathHistory = m.PathHistory[1:]
+		}
+	}
+
+	// 7. Пак на следующем тайле
+	if pack, exists := m.Packs[next]; exists {
+		m.startCombat(next, pack)
+		return
+	}
+
+	// 8. Отряд застрял — переход на новый этаж
+	if next == m.PartyPos {
+		m.Floor++
+		m.Stats.FloorsCleared++
+		m.checkQuestProgress(QuestReachFloor, "", m.Floor)
+		m.checkQuestProgress(QuestEscapeTrap, "", 1)
+
+		if m.Floor%10 == 0 {
+			m.addLog(accentStyle.Render(T(m.Lang, "dungeon.log.floor_cleared_boss", m.Floor)))
+		} else {
+			m.addLog(accentStyle.Render(T(m.Lang, "dungeon.log.floor_cleared", m.Floor)))
+		}
+
+		m.initDungeonForFloor(m.Floor)
+		return
+	}
+
+	// 9. Тайл, на который встаём
+	switch m.Grid[next.Y][next.X] {
+	case TileChest:
+		if len(m.Bag) >= m.currentBagCapacity() {
+			m.addLog(subtleStyle.Render(T(m.Lang, "dungeon.log.bag_full_skip")))
+			// Тайл не открываем, идём дальше
+			m.PartyPos = next
+			m.revealFog()
+			return
+		}
+		m.Stats.ChestsOpened++
+		m.checkQuestProgress(QuestOpenChests, "", 1)
+		gold := int(float64(rand.Intn(16)+10+(m.Floor*2)) * m.Relic.GoldMult)
+		m.Gold += gold
+		m.Stats.TotalGoldEarned += gold
+
+		targetClass := ClassWarrior
+		if lh := m.getRandomLivingHero(); lh != nil {
+			targetClass = lh.Class
+			lh.AddTreasure()
+			m.checkAndAwardTitle(lh)
+		}
+		item := generateItemForClass(targetClass, m.Floor)
+		m.addLog(goldStyle.Render(T(m.Lang, "dungeon.log.chest_open", gold, item.DisplayName(m.Lang))))
+		m.equipOrBag(item)
+		m.Grid[next.Y][next.X] = TileFloor
+
+	case TileRelic:
+		m.handleRelicTile()
+		m.Grid[next.Y][next.X] = TileFloor
+
+	case TileAltar:
+		m.handleAltar()
+		m.Grid[next.Y][next.X] = TileFloor
+
+	case TileFountain:
+		m.handleFountain()
+		m.Grid[next.Y][next.X] = TileFloor
+
+	case TileTrappedChest:
+		if len(m.Bag) >= m.currentBagCapacity() {
+			m.addLog(subtleStyle.Render(T(m.Lang, "dungeon.log.bag_full_skip")))
+			m.PartyPos = next
+			m.revealFog()
+			return
+		}
+		m.handleTrappedChest()
+		m.Grid[next.Y][next.X] = TileFloor
+
+	case TileBarrel:
+		m.Grid[next.Y][next.X] = TileFloor
+
+	case TileStairs:
+		m.Floor++
+		m.Stats.FloorsCleared++
+		m.checkQuestProgress(QuestReachFloor, "", m.Floor)
+		m.checkQuestProgress(QuestEscapeTrap, "", 1)
+
+		if m.Floor%10 == 0 {
+			m.addLog(accentStyle.Render(T(m.Lang, "dungeon.log.floor_cleared_boss", m.Floor)))
+		} else {
+			m.addLog(accentStyle.Render(T(m.Lang, "dungeon.log.stairs_descend", m.Floor)))
+		}
+
+		m.initDungeonForFloor(m.Floor)
+		return
+	}
+
+	m.PartyPos = next
+	m.revealFog()
+}
+
+// ============================================================
+// ITEMS (без изменений)
+// ============================================================
 
 func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipItem {
 	matIdx := floor / 4

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -13,6 +14,12 @@ import (
 )
 
 func (m *Model) accumulateDebugReport() {
+	// Защита от двойного учёта рана.
+	if m.RunCounted {
+		return
+	}
+	m.RunCounted = true
+
 	globalDebugReport.TotalRuns++
 	if m.Floor > globalDebugReport.MaxFloorReached {
 		globalDebugReport.MaxFloorReached = m.Floor
@@ -194,11 +201,17 @@ func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
 }
 
 func initialModelWithLegacy(legacy TownLegacy) Model {
-	rand.Seed(time.Now().UnixNano())
+	// rand.Seed убран: начиная с Go 1.20 глобальный math/rand автосидируется.
 
-	classes := []HeroClass{ClassTank, ClassWarrior, ClassRogue, ClassMage, ClassCleric}
+	// Перемешиваем все 10 классов и отбираем ровно 5 уникальных
+	shuffledClasses := make([]HeroClass, len(AllClasses))
+	copy(shuffledClasses, AllClasses)
+	rand.Shuffle(len(shuffledClasses), func(i, j int) {
+		shuffledClasses[i], shuffledClasses[j] = shuffledClasses[j], shuffledClasses[i]
+	})
+
 	var heroes []*Hero
-	for _, c := range classes {
+	for _, c := range shuffledClasses[:5] {
 		heroes = append(heroes, createHero(c, 1, legacy.SmithyLevel))
 	}
 
@@ -234,6 +247,8 @@ func initialModelWithLegacy(legacy TownLegacy) Model {
 		Packs:            make(map[Point]*MonsterPack),
 		TermWidth:        120,
 		TermHeight:       36,
+		RunCounted:       false,
+		RestTurnsLeft:    0,
 	}
 	m.TownDialog = T(m.Lang, "town.log.enter_gate")
 	m.Logs = append(m.Logs, T(m.Lang, "dungeon.log.start"))
@@ -341,7 +356,13 @@ func (m *Model) equipOrBag(item EquipItem) {
 	if bestHero != nil && maxDiff > 0 {
 		oldItem := bestHero.GetItemInSlot(item.Slot)
 		if oldItem != nil {
-			m.Bag = append(m.Bag, *oldItem)
+			// При смене экипировки старый предмет идёт в мешок.
+			// Если мешок полон — старый предмет теряется (не кладём сверх лимита).
+			if len(m.Bag) < m.currentBagCapacity() {
+				m.Bag = append(m.Bag, *oldItem)
+			} else {
+				m.addLog(subtleStyle.Render(T(m.Lang, "dungeon.log.bag_full", oldItem.DisplayName(m.Lang))))
+			}
 		}
 		newItem := item
 		bestHero.SetItemInSlot(newItem.Slot, &newItem)
@@ -350,6 +371,11 @@ func (m *Model) equipOrBag(item EquipItem) {
 		m.addLog(healStyle.Render(T(m.Lang, "dungeon.log.equip_swap",
 			bestHero.DisplayName(m.Lang), verb, slotName, newItem.DisplayName(m.Lang), newItem.TotalStat())))
 	} else {
+		// Страховка: не класть в переполненный мешок.
+		if len(m.Bag) >= m.currentBagCapacity() {
+			m.addLog(subtleStyle.Render(T(m.Lang, "dungeon.log.bag_full", item.DisplayName(m.Lang))))
+			return
+		}
 		m.Bag = append(m.Bag, item)
 		m.addLog(subtleStyle.Render(T(m.Lang, "dungeon.log.bag_stored", item.DisplayName(m.Lang))))
 	}
@@ -385,187 +411,6 @@ func (m *Model) recordFallenHero(h *Hero) {
 	}
 }
 
-func (m *Model) step() {
-	if m.State != StatePlaying {
-		return
-	}
-	if m.isPartyWiped() {
-		m.State = StateDefeat
-		m.RestartCountdown = 10
-		return
-	}
-
-	m.Stats.TotalSteps++
-
-	// Отдых на привале работает ТОЛЬКО до 5 этажа! Дальше — чистый хардкор
-	if m.Floor <= 5 && m.Stats.TotalSteps > 0 && m.Stats.TotalSteps%30 == 0 {
-		healedCount := 0
-		for _, h := range m.Party {
-			if h.IsDead {
-				continue
-			}
-			changed := false
-			if h.HP < h.MaxHP {
-				h.HP++
-				changed = true
-			}
-			if h.MP < h.MaxMP {
-				h.MP++
-				changed = true
-			}
-			if h.Stress > 0 {
-				h.Stress--
-				changed = true
-			}
-			if changed {
-				healedCount++
-			}
-		}
-		if healedCount > 0 {
-			m.addLog(healStyle.Render(T(m.Lang, "dungeon.log.rest_tick")))
-		}
-	}
-
-	for _, h := range m.Party {
-		m.checkAndDrinkPotions(h)
-	}
-
-	if m.Combat != nil {
-		m.executeCombatTurn()
-		return
-	}
-
-	if m.InTown {
-		m.stepTown()
-		return
-	}
-
-	if m.checkRetreat() && m.Grid[m.PartyPos.Y][m.PartyPos.X] == TileExit && m.Stats.TotalSteps > 0 {
-		m.InTown = true
-		m.TownPhase = TownPhaseSellLoot
-		m.TownDialog = T(m.Lang, "town.log.enter_gate")
-		return
-	}
-
-	next := m.findNextStep()
-
-	loopHit := false
-	for _, p := range m.PathHistory {
-		if p == next {
-			m.LoopDetectCount++
-			loopHit = true
-			break
-		}
-	}
-	if !loopHit {
-		m.LoopDetectCount = 0
-	}
-
-	if m.LoopDetectCount > 4 {
-		m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.collision_break")))
-		foundSafeSpot := false
-		for y := 0; y < m.MapHeight && !foundSafeSpot; y++ {
-			for x := 0; x < m.MapWidth && !foundSafeSpot; x++ {
-				if m.Grid[y][x] == TileFloor || m.Grid[y][x] == TileExit {
-					dx := x - m.PartyPos.X
-					dy := y - m.PartyPos.Y
-					if dx*dx+dy*dy <= 25 && dx*dx+dy*dy > 1 {
-						m.PartyPos = Point{x, y}
-						foundSafeSpot = true
-					}
-				}
-			}
-		}
-		m.PathHistory = []Point{}
-		m.LoopDetectCount = 0
-		m.revealFog()
-		return
-	} else {
-		m.PathHistory = append(m.PathHistory, next)
-		if len(m.PathHistory) > 10 {
-			m.PathHistory = m.PathHistory[1:]
-		}
-	}
-
-	if pack, exists := m.Packs[next]; exists {
-		m.startCombat(next, pack)
-		return
-	}
-
-	if next == m.PartyPos {
-		m.Floor++
-		m.Stats.FloorsCleared++
-		m.checkQuestProgress(QuestReachFloor, "", m.Floor)
-		m.checkQuestProgress(QuestEscapeTrap, "", 1)
-
-		if m.Floor%10 == 0 {
-			m.addLog(accentStyle.Render(T(m.Lang, "dungeon.log.floor_cleared_boss", m.Floor)))
-		} else {
-			m.addLog(accentStyle.Render(T(m.Lang, "dungeon.log.floor_cleared", m.Floor)))
-		}
-
-		m.initDungeonForFloor(m.Floor)
-		return
-	}
-
-	switch m.Grid[next.Y][next.X] {
-	case TileChest:
-		m.Stats.ChestsOpened++
-		m.checkQuestProgress(QuestOpenChests, "", 1)
-		gold := int(float64(rand.Intn(16)+10+(m.Floor*2)) * m.Relic.GoldMult)
-		m.Gold += gold
-		m.Stats.TotalGoldEarned += gold
-
-		targetClass := ClassWarrior
-		if lh := m.getRandomLivingHero(); lh != nil {
-			targetClass = lh.Class
-			lh.AddTreasure()
-			m.checkAndAwardTitle(lh)
-		}
-		item := generateItemForClass(targetClass, m.Floor)
-		m.addLog(goldStyle.Render(T(m.Lang, "dungeon.log.chest_open", gold, item.DisplayName(m.Lang))))
-		m.equipOrBag(item)
-		m.Grid[next.Y][next.X] = TileFloor
-
-	case TileRelic:
-		m.handleRelicTile()
-		m.Grid[next.Y][next.X] = TileFloor
-
-	case TileAltar:
-		m.handleAltar()
-		m.Grid[next.Y][next.X] = TileFloor
-
-	case TileFountain:
-		m.handleFountain()
-		m.Grid[next.Y][next.X] = TileFloor
-
-	case TileTrappedChest:
-		m.handleTrappedChest()
-		m.Grid[next.Y][next.X] = TileFloor
-
-	case TileBarrel:
-		m.Grid[next.Y][next.X] = TileFloor
-
-	case TileStairs:
-		m.Floor++
-		m.Stats.FloorsCleared++
-		m.checkQuestProgress(QuestReachFloor, "", m.Floor)
-		m.checkQuestProgress(QuestEscapeTrap, "", 1)
-
-		if m.Floor%10 == 0 {
-			m.addLog(accentStyle.Render(T(m.Lang, "dungeon.log.floor_cleared_boss", m.Floor)))
-		} else {
-			m.addLog(accentStyle.Render(T(m.Lang, "dungeon.log.stairs_descend", m.Floor)))
-		}
-
-		m.initDungeonForFloor(m.Floor)
-		return
-	}
-
-	m.PartyPos = next
-	m.revealFog()
-}
-
 func resetGameStatic(m Model) (Model, tea.Cmd) {
 	m.accumulateDebugReport()
 	saveDebugReportToFile()
@@ -585,6 +430,9 @@ func resetGameStatic(m Model) (Model, tea.Cmd) {
 func (m Model) resetGame() (Model, tea.Cmd) {
 	return resetGameStatic(m)
 }
+
+// step() живёт в dungeon.go.
+// resetGameStatic() и resetGame() — выше, в этом же файле.
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -615,10 +463,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else {
 				m.Lang = LangRU
 			}
-		case "1", "2", "3", "4":
+		case "1", "2", "3", "4", "5", "6", "7":
 			if m.State == StateInfoBook {
 				tabIdx, _ := strconv.Atoi(msg.String())
-				m.CodexTab = tabIdx - 1
+				m.CodexTab = (tabIdx - 1) % codexTabCount
 				m.StatsScroll = 0
 			} else {
 				if msg.String() == "1" {
@@ -629,7 +477,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "tab":
 			if m.State == StateInfoBook {
-				m.CodexTab = (m.CodexTab + 1) % 4
+				m.CodexTab = (m.CodexTab + 1) % codexTabCount
+				m.StatsScroll = 0
+			}
+		case "shift+tab":
+			if m.State == StateInfoBook {
+				m.CodexTab = (m.CodexTab + codexTabCount - 1) % codexTabCount
 				m.StatsScroll = 0
 			}
 		case "f":
@@ -756,6 +609,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func main() {
+	// Фиксация 1 потока для стабильной работы на 32-битных архитектурах и в iSH
+	runtime.GOMAXPROCS(1)
+
 	flag.Parse()
 
 	m := initialModel()

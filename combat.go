@@ -115,10 +115,63 @@ func (m *Model) startCombat(pos Point, pack *MonsterPack) {
 	m.addLog(accentStyle.Render(T(m.Lang, "combat.log.start", pack.LivingCount())))
 }
 
+// ============================================================
+// RETREAT ИЗ БОЯ — экстренное бегство в город
+// ============================================================
+
+// shouldForceRetreatFromCombat решает, критично ли отступать прямо из боя.
+// BagFull/QuestDone — не критично (сначала добиваем пак).
+// LowHP/NoResources/TooFewAlive — критично, телепорт в город.
+func (m *Model) shouldForceRetreatFromCombat(reason RetreatReason) bool {
+	switch reason {
+	case RetreatLowHP, RetreatNoResources, RetreatTooFewAlive:
+		return true
+	}
+	return false
+}
+
+// forceRetreatToTown — экстренное отступление в город со штрафом 20% золота.
+func (m *Model) forceRetreatToTown(reason RetreatReason) {
+	globalDebugReport.FleeAttempts++ // считаем как попытку бегства
+
+	// Штраф −20% золота за паническое бегство
+	goldPenalty := int(float64(m.Gold) * 0.20)
+	m.Gold -= goldPenalty
+
+	// Запись в историю города
+	reasonKey := "town.log.retreat_reason.low_hp"
+	switch reason {
+	case RetreatLowHP:
+		reasonKey = "town.log.retreat_reason.low_hp"
+	case RetreatNoResources:
+		reasonKey = "town.log.retreat_reason.no_resources"
+	case RetreatTooFewAlive:
+		reasonKey = "town.log.retreat_reason.too_few_alive"
+	}
+	m.logTownAction("🏃", T(m.Lang, "town.market"), T(m.Lang, "town.log.retreat_penalty", goldPenalty, T(m.Lang, reasonKey)))
+
+	m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.emergency_retreat", goldPenalty)))
+
+	m.Combat = nil
+	m.InTown = true
+	m.TownPhase = TownPhaseSellLoot
+	m.TownDialog = T(m.Lang, "combat.log.emergency_retreat_dialog")
+}
+
+// ============================================================
+// FLEE — обычный побег от пака
+// ============================================================
+
 func (m *Model) shouldAttemptFlee() bool {
 	if m.Combat == nil || m.Combat.FleeCooldown > 0 {
 		return false
 	}
+
+	// Если retreat критичен — пытаемся бежать даже при высоком HP
+	if m.shouldForceRetreatFromCombat(m.evaluateRetreat()) {
+		return true
+	}
+
 	curHP, maxHP := 0, 0
 	livingCount := 0
 	for _, h := range m.Party {
@@ -234,6 +287,10 @@ func (m *Model) attemptFlee() {
 	}
 }
 
+// ============================================================
+// EXECUTE COMBAT TURN
+// ============================================================
+
 func (m *Model) executeCombatTurn() {
 	if m.Combat == nil {
 		return
@@ -243,13 +300,7 @@ func (m *Model) executeCombatTurn() {
 		m.Combat.FleeCooldown--
 	}
 
-	if m.shouldAttemptFlee() {
-		m.attemptFlee()
-		if m.Combat == nil {
-			return
-		}
-	}
-
+	// 1. Победа
 	if m.Combat.Pack.LivingCount() == 0 {
 		m.addLog(healStyle.Render(T(m.Lang, "combat.log.pack_defeated")))
 		delete(m.Packs, m.Combat.Pos)
@@ -259,6 +310,7 @@ func (m *Model) executeCombatTurn() {
 		return
 	}
 
+	// 2. Поражение
 	if m.isPartyWiped() {
 		m.State = StateDefeat
 		m.Combat = nil
@@ -266,6 +318,22 @@ func (m *Model) executeCombatTurn() {
 		return
 	}
 
+	// 3. Экстренный retreat из боя (критические причины)
+	retreatReason := m.evaluateRetreat()
+	if m.shouldForceRetreatFromCombat(retreatReason) {
+		m.forceRetreatToTown(retreatReason)
+		return
+	}
+
+	// 4. Обычная попытка побега
+	if m.shouldAttemptFlee() {
+		m.attemptFlee()
+		if m.Combat == nil {
+			return
+		}
+	}
+
+	// 5. Обычный ход
 	if m.Combat.TurnIdx >= len(m.Combat.TurnQueue) {
 		m.Combat.TurnIdx = 0
 		m.Combat.Round++
