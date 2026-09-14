@@ -721,7 +721,8 @@ func (m *Model) checkAndDrinkPotions(h *Hero) {
 }
 
 func (m *Model) checkAndAwardTitle(h *Hero) {
-	if h.TitleKey != "" && h.TitleKey != "title.militia" {
+	// NEW: любой милицейский титул может быть заменён боевым достижением.
+	if !isMilitiaTitle(h.TitleKey) {
 		return
 	}
 

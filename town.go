@@ -246,6 +246,10 @@ func (m *Model) stepTown() {
 			m.Gold -= investAmt
 			globalDebugReport.GoldSpentBreakdown["Инвестиции в Магистрат"] += investAmt
 
+			// NEW: параллельно копим мета-вложения в столицу (прогрессия ополчения).
+			prevTier := militiaTierForInvestment(m.Legacy.TotalInvested)
+			m.Legacy.TotalInvested += investAmt
+
 			type Building struct {
 				Key   string
 				Level int
@@ -272,6 +276,13 @@ func (m *Model) stepTown() {
 			bldName := T(m.Lang, targetBld.Key)
 			m.addLog(titleStyle.Render(T(m.Lang, "town.log.magistrate_tax", investAmt, bldName, targetBld.Level+1)))
 			m.logTownAction("🏛️", T(m.Lang, "town.magistrate"), T(m.Lang, "town.log.magistrate_hist", investAmt, bldName, targetBld.Level+1))
+
+			// NEW: если тир ополчения поднялся — торжественный лог.
+			if newTier := militiaTierForInvestment(m.Legacy.TotalInvested); newTier.TitleKey != prevTier.TitleKey {
+				tierName := T(m.Lang, newTier.TitleKey)
+				m.addLog(titleStyle.Render(T(m.Lang, "town.log.militia_upgrade", tierName)))
+				m.logTownAction("🎖️", T(m.Lang, "town.magistrate"), T(m.Lang, "town.log.militia_upgrade_hist", tierName))
+			}
 		}
 		m.TownPhase = TownPhaseChurch
 
@@ -390,12 +401,14 @@ func (m *Model) stepTown() {
 					m.logTownAction("⚔️", guildName, T(m.Lang, "town.log.guild_vet_hist",
 						m.Party[i].DisplayName(m.Lang), m.Party[i].ShortClass(m.Lang), m.Party[i].Level, recruitCost))
 				} else {
-					m.Party[i] = createHero(newClass, 1, 0)
-					m.Party[i].TitleKey = "title.militia"
+					// NEW: масштабированное ополчение — тир зависит от m.Legacy.TotalInvested.
+					m.Party[i] = m.createMilitiaForGuild(newClass)
+					h := m.Party[i]
+					tierName := T(m.Lang, h.TitleKey)
 					m.addLog(subtleStyle.Render(T(m.Lang, "town.log.guild_militia",
-						guildName, m.Party[i].DisplayName(m.Lang), m.Party[i].RaceName(m.Lang), m.Party[i].ShortClass(m.Lang))))
+						guildName, h.DisplayName(m.Lang), tierName, h.RaceName(m.Lang), h.ShortClass(m.Lang))))
 					m.logTownAction("🤝", guildName, T(m.Lang, "town.log.guild_mil_hist",
-						m.Party[i].DisplayName(m.Lang), m.Party[i].ShortClass(m.Lang)))
+						h.DisplayName(m.Lang), tierName, h.ShortClass(m.Lang)))
 				}
 			}
 		}

@@ -447,6 +447,12 @@ var dictRU = map[string]string{
 
 	// --- Титулы ---
 	"title.militia":           "Ополченец",
+	// NEW: 5 тиров прогрессии ополчения.
+	"title.militia_regular":       "Городской стражник",
+	"title.militia_sergeant":      "Сержант стражи",
+	"title.militia_veteran":       "Ветеран гарнизона",
+	"title.militia_elite":         "Гвардеец столицы",
+	"title.militia_capital_guard": "Хранитель цитадели",
 	"title.slayer_of_beasts":  "Истребитель чудовищ",
 	"title.dragonslayer":      "Драконоборец",
 	"title.luck_cursed":       "Проклятый удачей",
@@ -570,8 +576,12 @@ var dictRU = map[string]string{
 	"town.log.guild_quest_hist": "Закрыт контракт: получена награда +%dG",
 	"town.log.guild_veteran":    "⚔️ [%s] Нанят ветеран %s (%s, %s, Ур.%d) за %dG!",
 	"town.log.guild_vet_hist":   "Принят контракт ветерана %s (%s, Ур.%d) за %dG",
-	"town.log.guild_militia":    "🤝 [%s] Ополченец %s (%s, %s) встал в строй бесплатно.",
-	"town.log.guild_mil_hist":   "Ополченец %s (%s) встал в строй без оплаты",
+	// UPDATED: добавлен аргумент %s под тир ополчения.
+	"town.log.guild_militia":    "🤝 [%s] Ополченец %s [%s] (%s, %s) встал в строй бесплатно.",
+	"town.log.guild_mil_hist":   "Ополченец %s [%s] (%s) встал в строй без оплаты",
+	// NEW: торжественное уведомление о повышении тира.
+	"town.log.militia_upgrade":      "🎖️ Городское ополчение усилилось: доступен тир «%s»!",
+	"town.log.militia_upgrade_hist": "Город выставил бойцов нового тира: %s",
 	"town.log.smithy_done":      "⚒️ [%s] Заточено оружия и лат: %d шт. (-%dG)!",
 	"town.log.smithy_hist":      "Заточено предметов арсенала: %d шт. (-%dG)",
 	"town.log.tannery_bag":      "🎒 [%s] Сшит %s (%d сл.) за %dG!",
@@ -704,6 +714,8 @@ var dictRU = map[string]string{
 	"stats.survivors_header":    "ВЫЖИВШИЕ БОЙЦЫ",
 	"stats.fallen_heroes":       "КНИГА ПАМЯТИ (ПАВШИЕ)",
 	"stats.no_fallen":           "Ни один боец не погиб в этом походе.",
+	// NEW: подпись строки о текущем тире ополчения.
+	"stats.militia_tier":        "Ополчение столицы",
 	"armory.title":              "═══ АРСЕНАЛ ОТРЯДА И АЛХИМИЧЕСКИЕ МУТАЦИИ",
 
 	// --- Полный расширенный Кодекс DCCAG ---
@@ -1359,6 +1371,12 @@ var dictEN = map[string]string{
 
 	// --- Titles ---
 	"title.militia":           "Militia",
+	// NEW: 5 tiers of militia progression.
+	"title.militia_regular":       "City Watchman",
+	"title.militia_sergeant":      "Watch Sergeant",
+	"title.militia_veteran":       "Garrison Veteran",
+	"title.militia_elite":         "Capital Guardsman",
+	"title.militia_capital_guard": "Citadel Keeper",
 	"title.slayer_of_beasts":  "Beast Slayer",
 	"title.dragonslayer":      "Dragonslayer",
 	"title.luck_cursed":       "Fate Cursed",
@@ -1482,8 +1500,12 @@ var dictEN = map[string]string{
 	"town.log.guild_quest_hist": "Contract fulfilled: received reward +%dG",
 	"town.log.guild_veteran":    "⚔️ [%s] Hired veteran %s (%s, %s, Lvl.%d) for %dG!",
 	"town.log.guild_vet_hist":   "Enlisted veteran %s (%s, Lvl.%d) for %dG",
-	"town.log.guild_militia":    "🤝 [%s] Militiaman %s (%s, %s) joined ranks for free.",
-	"town.log.guild_mil_hist":   "Militiaman %s (%s) joined without fee",
+	// UPDATED: added %s for militia tier.
+	"town.log.guild_militia":    "🤝 [%s] Militiaman %s [%s] (%s, %s) joined ranks for free.",
+	"town.log.guild_mil_hist":   "Militiaman %s [%s] (%s) joined without fee",
+	// NEW: notification of tier promotion.
+	"town.log.militia_upgrade":      "🎖️ City militia reinforced: tier «%s» unlocked!",
+	"town.log.militia_upgrade_hist": "City fielded militia of a new tier: %s",
 	"town.log.smithy_done":      "⚒️ [%s] Tempered weapons & armor: %d pcs. (-%dG)!",
 	"town.log.smithy_hist":      "Tempered armory gear: %d pcs. (-%dG)",
 	"town.log.tannery_bag":      "🎒 [%s] Crafted %s (%d slots) for %dG!",
@@ -1616,6 +1638,8 @@ var dictEN = map[string]string{
 	"stats.survivors_header":    "SURVIVING HEROES",
 	"stats.fallen_heroes":       "MEMORIAL BOOK (FALLEN)",
 	"stats.no_fallen":           "No casualties. All heroes stand tall!",
+	// NEW: label for the current militia tier line.
+	"stats.militia_tier":        "Capital militia",
 	"armory.title":              "═══ PARTY ARMORY AND ALCHEMICAL MUTATIONS",
 
 	// --- Full Expanded DCCAG Codex ---

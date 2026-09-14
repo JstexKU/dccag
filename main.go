@@ -418,6 +418,7 @@ func resetGameStatic(m Model) (Model, tea.Cmd) {
 	savedGold := int(float64(m.Gold) * LegacyTaxRate)
 	newLegacy := m.Legacy
 	newLegacy.TreasuryGold = savedGold
+	newLegacy.TotalInvested += savedGold // NEW: налог за прогон — тоже вклад в развитие столицы
 
 	fresh := initialModelWithLegacy(newLegacy)
 	fresh.Lang = m.Lang

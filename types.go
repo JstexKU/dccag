@@ -917,11 +917,12 @@ func newStats() RunStats {
 }
 
 type TownLegacy struct {
-	TreasuryGold int
-	SmithyLevel  int
-	TanneryLevel int
-	ChurchLevel  int
-	TavernLevel  int
+	TreasuryGold  int
+	SmithyLevel   int
+	TanneryLevel  int
+	ChurchLevel   int
+	TavernLevel   int
+	TotalInvested int // Кумулятивные вложения в столицу за все прогоны — мета-прогрессия ополчения
 }
 
 type TownBudget struct {

@@ -321,9 +321,21 @@ func (m Model) renderStatsScreen(title string, titleColor lipgloss.Color) string
 	sb.WriteString(fmt.Sprintf(" • %s «%s»: Ур.%d | %s «%s»: Ур.%d\n",
 		T(m.Lang, "town.smithy"), T(m.Lang, m.TownEst.SmithyKey), m.Legacy.SmithyLevel,
 		T(m.Lang, "town.tannery"), T(m.Lang, m.TownEst.TanneryKey), m.Legacy.TanneryLevel))
-	sb.WriteString(fmt.Sprintf(" • %s «%s»: Ур.%d | %s «%s»: Ур.%d\n\n",
+	sb.WriteString(fmt.Sprintf(" • %s «%s»: Ур.%d | %s «%s»: Ур.%d\n",
 		T(m.Lang, "town.church"), T(m.Lang, m.TownEst.ChurchKey), m.Legacy.ChurchLevel,
 		T(m.Lang, "town.tavern"), T(m.Lang, m.TownEst.TavernKey), m.Legacy.TanneryLevel))
+
+	// NEW: строка о текущем тире ополчения и прогрессе до следующего.
+	tier := militiaTierForInvestment(m.Legacy.TotalInvested)
+	militiaLine := fmt.Sprintf(" • %s: %s (%dG)",
+		T(m.Lang, "stats.militia_tier"),
+		titleStyle.Render(T(m.Lang, tier.TitleKey)),
+		m.Legacy.TotalInvested)
+	if nxt := nextMilitiaTier(m.Legacy.TotalInvested); nxt != nil {
+		militiaLine += fmt.Sprintf(" → %s (%dG)",
+			T(m.Lang, nxt.TitleKey), nxt.InvestFloor)
+	}
+	sb.WriteString(militiaLine + "\n\n")
 
 	sb.WriteString(lipgloss.NewStyle().Bold(true).Render(T(m.Lang, "stats.achievements_header") + ":\n"))
 	sb.WriteString(fmt.Sprintf(" • %s: %d | %s: %d | %s: %s\n",
