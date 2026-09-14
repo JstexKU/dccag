@@ -256,11 +256,9 @@ func (m *Model) revealFog() {
 }
 
 // ============================================================
-// RETREAT / HEALING URGENCY / REST — вспомогательные функции
+// RETREAT / HEALING URGENCY / REST
 // ============================================================
 
-// evaluateRetreat возвращает причину отступления в город (или RetreatNone).
-// Приоритет проверок: мешок → квест → мало живых → низкое HP → нет ресурсов.
 func (m *Model) evaluateRetreat() RetreatReason {
 	if len(m.Bag) >= m.currentBagCapacity() {
 		return RetreatBagFull
@@ -300,7 +298,6 @@ func (m *Model) evaluateRetreat() RetreatReason {
 	return RetreatNone
 }
 
-// evaluateHealingUrgency оценивает, насколько срочно отряду нужно к источнику.
 func (m *Model) evaluateHealingUrgency() HealingUrgency {
 	living := 0
 	criticalCount := 0
@@ -350,8 +347,6 @@ func (m *Model) evaluateHealingUrgency() HealingUrgency {
 	}
 }
 
-// distanceToNearest ищет кратчайшее расстояние (число шагов) до ближайшего
-// тайла, удовлетворяющего условию. Не строит путь, только считает дистанцию.
 func (m *Model) distanceToNearest(cond func(Point, Tile) bool) (int, bool) {
 	if cond(m.PartyPos, m.Grid[m.PartyPos.Y][m.PartyPos.X]) {
 		return 0, true
@@ -389,8 +384,6 @@ func (m *Model) distanceToNearest(cond func(Point, Tile) bool) (int, bool) {
 	return 0, false
 }
 
-// shouldSeekFountain решает, стоит ли идти к источнику при данной urgency.
-// Optional — только если близко (≤6 шагов), Urgent — ≤15, Critical — всегда.
 func (m *Model) shouldSeekFountain(urgency HealingUrgency) bool {
 	if urgency == HealingNone {
 		return false
@@ -412,8 +405,6 @@ func (m *Model) shouldSeekFountain(urgency HealingUrgency) bool {
 	return false
 }
 
-// isMonsterNearby проверяет, есть ли вражеский пак в радиусе 3 тайлов.
-// Используется для запрета привала рядом с врагами.
 func (m *Model) isMonsterNearby() bool {
 	for y := m.PartyPos.Y - 3; y <= m.PartyPos.Y+3; y++ {
 		for x := m.PartyPos.X - 3; x <= m.PartyPos.X+3; x++ {
@@ -426,6 +417,40 @@ func (m *Model) isMonsterNearby() bool {
 		}
 	}
 	return false
+}
+
+// findEmergencyStep — аварийный поиск кратчайшего пути к целевому тайлу (TileStairs или TileExit)
+func (m *Model) findEmergencyStep(targetTile Tile) (Point, bool) {
+	queue := []Point{m.PartyPos}
+	visited := make(map[Point]bool)
+	cameFrom := make(map[Point]Point)
+	visited[m.PartyPos] = true
+	dirs := []Point{{0, -1}, {0, 1}, {-1, 0}, {1, 0}}
+
+	for len(queue) > 0 {
+		curr := queue[0]
+		queue = queue[1:]
+
+		if curr != m.PartyPos && m.Grid[curr.Y][curr.X] == targetTile {
+			step := curr
+			for cameFrom[step] != m.PartyPos {
+				step = cameFrom[step]
+			}
+			return step, true
+		}
+
+		for _, d := range dirs {
+			np := Point{curr.X + d.X, curr.Y + d.Y}
+			if np.X >= 0 && np.X < m.MapWidth && np.Y >= 0 && np.Y < m.MapHeight {
+				if !visited[np] && m.Grid[np.Y][np.X] != TileWall {
+					visited[np] = true
+					cameFrom[np] = curr
+					queue = append(queue, np)
+				}
+			}
+		}
+	}
+	return m.PartyPos, false
 }
 
 // ============================================================
@@ -519,7 +544,6 @@ func (m *Model) findNextStep() Point {
 			return true
 		}
 
-		// Сундуки — только если мешок не полон
 		if t == TileChest || t == TileTrappedChest {
 			if bagFull {
 				return false
@@ -577,7 +601,7 @@ func (m *Model) getRandomLivingHero() *Hero {
 }
 
 // ============================================================
-// STRESS / POTIONS / TITLES (без изменений, кроме MP-зелий)
+// STRESS / POTIONS / TITLES
 // ============================================================
 
 func (m *Model) addStress(h *Hero, amt int) {
@@ -611,7 +635,6 @@ func (m *Model) addStress(h *Hero, amt int) {
 	}
 
 	if h.Stress >= 100 && h.Affliction == AfflictionNone {
-		// Олонграм труднее сломаться духом (бонус стойкости)
 		virtueChance := 20
 		if h.Race == RaceOlongr {
 			virtueChance = 40
@@ -686,7 +709,6 @@ func (m *Model) checkAndDrinkPotions(h *Hero) {
 		case PotionMP:
 			missingMP := h.MaxMP - h.MP
 			skillNeeded := h.SkillCost
-			// Патч 2: знаменатель — MaxMP, а не MaxHP.
 			if h.MP < skillNeeded || (h.MaxMP > 0 && float64(h.MP)/float64(h.MaxMP) <= 0.30) || missingMP >= p.Power {
 				shouldDrink = true
 			}
@@ -721,7 +743,6 @@ func (m *Model) checkAndDrinkPotions(h *Hero) {
 }
 
 func (m *Model) checkAndAwardTitle(h *Hero) {
-	// NEW: любой милицейский титул может быть заменён боевым достижением.
 	if !isMilitiaTitle(h.TitleKey) {
 		return
 	}
@@ -939,10 +960,6 @@ func (m *Model) handleTrappedChest() {
 func (m *Model) handleRelicTile() {
 	m.checkQuestProgress(QuestFindRelic, "", 1)
 
-	// Патч 8: каскадная логика апгрейда реликвий.
-	//  - Этажи 1–5:  ур.2.
-	//  - Этажи 6–10: ур.3 только если уже носим ур.2, иначе ур.2.
-	//  - Этажи 11+:  ур.3 гарантированно.
 	newLevel := 2
 	switch {
 	case m.Floor >= 11:
@@ -974,7 +991,6 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 	if isBoss {
 		if floor%10 == 0 {
 			dragonLvl := floor
-			// Патч 4: формула HP дракона 300+floor*20 (синхронизировано с ui.go).
 			dragonHP := (300 + (floor * 20)) * scaleMult
 			dragon := &Monster{
 				ID: 1, Type: MobDragon, NameKey: "mob.boss_dragon", Level: dragonLvl, Affix: AffixFire,
@@ -1175,6 +1191,8 @@ func (m *Model) step() {
 		m.InTown = true
 		m.TownPhase = TownPhaseSellLoot
 		m.TownDialog = T(m.Lang, "town.log.enter_gate")
+		m.PathHistory = []Point{}
+		m.LoopDetectCount = 0
 		return
 	}
 
@@ -1202,78 +1220,74 @@ func (m *Model) step() {
 	}
 
 	// 6. Поиск следующего шага
-	next := m.findNextStep()
+	var next Point
 
-	// 6a. Защита от зацикливания
-	loopHit := false
-	for _, p := range m.PathHistory {
-		if p == next {
-			m.LoopDetectCount++
-			loopHit = true
-			break
+	// Если уже зафиксирована коллизия (LoopDetectCount >= 3) — не пускаем обычный findNextStep,
+	// который хочет вернуться обратно в ловушку, а принудительно идём строго к выходу/лестнице!
+	if m.LoopDetectCount >= 3 {
+		targetTile := TileStairs
+		if m.evaluateRetreat() != RetreatNone {
+			targetTile = TileExit
 		}
-	}
-	if !loopHit {
-		m.LoopDetectCount = 0
-	}
-
-	if m.LoopDetectCount > 4 {
-		m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.collision_break")))
-
-		// Безопасный BFS-поиск ближайшей лестницы или выхода прямо в step()
-		foundStairs := false
-		var forcedStep Point
-
-		queue := []Point{m.PartyPos}
-		visited := make(map[Point]bool)
-		cameFrom := make(map[Point]Point)
-		visited[m.PartyPos] = true
-		dirs := []Point{{0, -1}, {0, 1}, {-1, 0}, {1, 0}}
-
-		for len(queue) > 0 && !foundStairs {
-			curr := queue[0]
-			queue = queue[1:]
-
-			t := m.Grid[curr.Y][curr.X]
-			if curr != m.PartyPos && (t == TileStairs || t == TileExit) {
-				step := curr
-				for cameFrom[step] != m.PartyPos {
-					step = cameFrom[step]
-				}
-				forcedStep = step
-				foundStairs = true
-				break
-			}
-
-			for _, d := range dirs {
-				next := Point{curr.X + d.X, curr.Y + d.Y}
-				if next.X >= 0 && next.X < m.MapWidth && next.Y >= 0 && next.Y < m.MapHeight {
-					if !visited[next] && m.Grid[next.Y][next.X] != TileWall {
-						visited[next] = true
-						cameFrom[next] = curr
-						queue = append(queue, next)
-					}
-				}
-			}
-		}
-
-		if foundStairs {
+		forcedStep, found := m.findEmergencyStep(targetTile)
+		if found {
 			next = forcedStep
 		} else {
-			// Если выхода/лестницы совсем не найдено — принудительно переходим на следующий этаж
+			// Лестница отрезана геометрией генератора — аварийно переходим глубже
 			m.Floor++
 			m.Stats.FloorsCleared++
+			m.checkQuestProgress(QuestReachFloor, "", m.Floor)
+			m.checkQuestProgress(QuestEscapeTrap, "", 1)
+			m.PathHistory = []Point{}
+			m.LoopDetectCount = 0
 			m.initDungeonForFloor(m.Floor)
 			return
 		}
+	} else {
+		next = m.findNextStep()
+	}
 
+	// 6a. Детекция маятника и зацикливания:
+	isOscillating := false
+	histLen := len(m.PathHistory)
+	if histLen >= 2 && m.PathHistory[histLen-2] == next {
+		isOscillating = true
+	}
+
+	visitCount := 0
+	for _, p := range m.PathHistory {
+		if p == next {
+			visitCount++
+		}
+	}
+
+	if isOscillating || visitCount >= 2 || next == m.PartyPos {
+		m.LoopDetectCount++
+	} else if m.LoopDetectCount > 0 && m.LoopDetectCount < 3 {
+		// Обычный сброс работает ТОЛЬКО до входа в аварийный режим (никаких качелей 3 <-> 4!)
+		m.LoopDetectCount--
+	}
+
+	// Логируем предупреждение ровно 1 раз при входе в аварийный прорыв
+	if m.LoopDetectCount == 3 {
+		m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.collision_break")))
+	}
+
+	// Железный предохранитель: если аварийный режим за 6 шагов не вывел к цели — принудительно спускаемся!
+	if m.LoopDetectCount >= 6 {
+		m.Floor++
+		m.Stats.FloorsCleared++
+		m.checkQuestProgress(QuestReachFloor, "", m.Floor)
+		m.checkQuestProgress(QuestEscapeTrap, "", 1)
 		m.PathHistory = []Point{}
 		m.LoopDetectCount = 0
-	} else {
-		m.PathHistory = append(m.PathHistory, next)
-		if len(m.PathHistory) > 10 {
-			m.PathHistory = m.PathHistory[1:]
-		}
+		m.initDungeonForFloor(m.Floor)
+		return
+	}
+
+	m.PathHistory = append(m.PathHistory, next)
+	if len(m.PathHistory) > 12 {
+		m.PathHistory = m.PathHistory[1:]
 	}
 
 	// 7. Пак на следующем тайле
@@ -1295,6 +1309,8 @@ func (m *Model) step() {
 			m.addLog(accentStyle.Render(T(m.Lang, "dungeon.log.floor_cleared", m.Floor)))
 		}
 
+		m.PathHistory = []Point{}
+		m.LoopDetectCount = 0
 		m.initDungeonForFloor(m.Floor)
 		return
 	}
@@ -1304,7 +1320,6 @@ func (m *Model) step() {
 	case TileChest:
 		if len(m.Bag) >= m.currentBagCapacity() {
 			m.addLog(subtleStyle.Render(T(m.Lang, "dungeon.log.bag_full_skip")))
-			// Тайл не открываем, идём дальше
 			m.PartyPos = next
 			m.revealFog()
 			return
@@ -1363,6 +1378,8 @@ func (m *Model) step() {
 			m.addLog(accentStyle.Render(T(m.Lang, "dungeon.log.stairs_descend", m.Floor)))
 		}
 
+		m.PathHistory = []Point{}
+		m.LoopDetectCount = 0
 		m.initDungeonForFloor(m.Floor)
 		return
 	}
@@ -1372,7 +1389,7 @@ func (m *Model) step() {
 }
 
 // ============================================================
-// ITEMS (без изменений)
+// ITEMS
 // ============================================================
 
 func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipItem {
