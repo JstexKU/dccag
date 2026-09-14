@@ -29,8 +29,10 @@ var (
 	codexTabIdle     = lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
 )
 
-const codexArrow = "→"
-const codexTabCount = 7
+const (
+	codexArrow    = "→"
+	codexTabCount = 7
+)
 
 func codexTabNames(lang Language) []string {
 	if lang == LangEN {
@@ -253,7 +255,8 @@ func (m Model) renderCodexTabCrafts() string {
 
 	sb.WriteString(codexSubStyle.Render(T(m.Lang, "codex.craft_header_weapons")) + "\n")
 	for _, w := range weapons {
-		sb.WriteString(fmt.Sprintf(" • %-12s: %s %s %s %s %s %s %s %s %s %s %s %s (%s)\n",
+		// 13 глаголов: clsName(1) + tier/name/arrow ×3(9) + tier/name(2) + statLabel(1)
+		sb.WriteString(fmt.Sprintf(" • %-12s: %s %s %s %s %s %s %s %s %s %s %s (%s)\n",
 			T(m.Lang, w.clsNameKey),
 			codexTierStyle.Render("Т1"), T(m.Lang, w.itemPrefix+".1"), codexArrow,
 			codexTierStyle.Render("Т2"), T(m.Lang, w.itemPrefix+".2"), codexArrow,
@@ -284,21 +287,27 @@ func (m Model) renderCodexTabCrafts() string {
 	sb.WriteString(codexSubStyle.Render(T(m.Lang, "codex.craft_header_armor")) + "\n")
 	for _, a := range armorClasses {
 		sb.WriteString(fmt.Sprintf(" • %-12s:\n", T(m.Lang, a.clsNameKey)))
-		sb.WriteString(fmt.Sprintf("     %s %s %s %s %s %s %s %s %s %s (%s)\n",
+
+		// chest: slot(1) + tier/name/arrow ×3(9) + tier/name(2) + statLabel(1) = 13
+		sb.WriteString(fmt.Sprintf("     %s %s %s %s %s %s %s %s %s %s %s %s (%s)\n",
 			codexSubStyle.Render(T(m.Lang, "slot.chest")),
 			codexTierStyle.Render("Т1"), T(m.Lang, a.itemPrefix+".chest.1"), codexArrow,
 			codexTierStyle.Render("Т2"), T(m.Lang, a.itemPrefix+".chest.2"), codexArrow,
 			codexTierStyle.Render("Т3"), T(m.Lang, a.itemPrefix+".chest.3"), codexArrow,
 			codexTierStyle.Render("Т4"), T(m.Lang, a.itemPrefix+".chest.4"),
 			a.statLabel))
-		sb.WriteString(fmt.Sprintf("     %s  %s %s %s %s %s %s %s %s %s (%s)\n",
+
+		// head
+		sb.WriteString(fmt.Sprintf("     %s  %s %s %s %s %s %s %s %s %s %s %s (%s)\n",
 			codexSubStyle.Render(T(m.Lang, "slot.head")),
 			codexTierStyle.Render("Т1"), T(m.Lang, a.itemPrefix+".head.1"), codexArrow,
 			codexTierStyle.Render("Т2"), T(m.Lang, a.itemPrefix+".head.2"), codexArrow,
 			codexTierStyle.Render("Т3"), T(m.Lang, a.itemPrefix+".head.3"), codexArrow,
 			codexTierStyle.Render("Т4"), T(m.Lang, a.itemPrefix+".head.4"),
 			a.statLabel))
-		sb.WriteString(fmt.Sprintf("     %s  %s %s %s %s %s %s %s %s %s (%s)\n",
+
+		// legs
+		sb.WriteString(fmt.Sprintf("     %s  %s %s %s %s %s %s %s %s %s %s %s (%s)\n",
 			codexSubStyle.Render(T(m.Lang, "slot.legs")),
 			codexTierStyle.Render("Т1"), T(m.Lang, a.itemPrefix+".legs.1"), codexArrow,
 			codexTierStyle.Render("Т2"), T(m.Lang, a.itemPrefix+".legs.2"), codexArrow,
