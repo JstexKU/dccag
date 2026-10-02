@@ -523,19 +523,19 @@ func (m Model) renderTownAction(action townAction, width, detail bool) string {
 		label = fmt.Sprintf("%s %s.%d", action.icon, name, action.level)
 	}
 
-	label = padRightTruncate(label, width)
+	label = padRightTruncate(label, max(1, width-2))
 	if active {
 		return lipgloss.NewStyle().
 			Width(width).
 			Foreground(lipgloss.Color("226")).
 			Background(lipgloss.Color("236")).
 			Bold(true).
-			Render("► " + padRightTruncate(label[2:], max(1, width-2)))
+			Render("► " + label)
 	}
 	return lipgloss.NewStyle().
 		Width(width).
 		Foreground(lipgloss.Color("244")).
-		Render("  " + padRightTruncate(label[2:], max(1, width-2)))
+		Render("  " + label)
 }
 
 func (m Model) renderTownHistory(width, maxLines int) []string {
