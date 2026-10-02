@@ -245,6 +245,7 @@ func (m *Model) attemptFlee() {
 					rescuedCount++
 				} else {
 					hero.CauseOfDeath = T(m.Lang, "combat.log.left_in_abyss")
+					hero.LostInAbyss = true // Тело безвозвратно потеряно в Бездне
 					m.recordFallenHero(hero)
 				}
 			}
@@ -287,8 +288,6 @@ func (m *Model) attemptFlee() {
 }
 
 // onMonsterKilled — единая точка обработки гибели монстра от руки героя h.
-// Раньше золото, статистика и прогресс контрактов начислялись только при
-// обычной атаке и заклинаниях мага; убийства другими навыками ничего не давали.
 func (m *Model) onMonsterKilled(h *Hero, mob *Monster) {
 	mob.HP = 0
 	mob.IsDead = true

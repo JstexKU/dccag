@@ -470,6 +470,7 @@ type Hero struct {
 	BaseDef      int
 	Speed        int
 	IsDead       bool
+	LostInAbyss  bool
 	IsGuarding   bool
 	IsBerserk    bool
 	IsStealthed  bool

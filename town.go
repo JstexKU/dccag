@@ -132,9 +132,6 @@ func GetClassMutationPreference(h *Hero, floor int, fallenHistory []FallenHeroRe
 
 	case ClassRogue:
 		// Приоритет 2:1 в пользу Fury (muts.FuryCount <= muts.ChimeraCount*2).
-		// Обоснование: рога компенсирует низкий базовый MaxHP уклонением,
-		// стелсом и лёгкой/средней бронёй, поэтому вкладывается в урон.
-		// Химера подключается, только когда ярости уже вдвое больше, чем химер.
 		if muts.FuryCount <= muts.ChimeraCount*2 {
 			return MutFury
 		}
@@ -305,7 +302,7 @@ func (m *Model) stepTown() {
 			m.Gold -= investAmt
 			globalDebugReport.GoldSpentBreakdown["Инвестиции в Магистрат"] += investAmt
 
-			// NEW: параллельно копим мета-вложения в столицу (прогрессия ополчения).
+			// Параллельно копим мета-вложения в столицу (прогрессия ополчения).
 			prevTier := militiaTierForInvestment(m.Legacy.TotalInvested)
 			m.Legacy.TotalInvested += investAmt
 
@@ -336,7 +333,7 @@ func (m *Model) stepTown() {
 			m.addLog(titleStyle.Render(T(m.Lang, "town.log.magistrate_tax", investAmt, bldName, targetBld.Level+1)))
 			m.logTownAction("🏛️", T(m.Lang, "town.magistrate"), T(m.Lang, "town.log.magistrate_hist", investAmt, bldName, targetBld.Level+1))
 
-			// NEW: если тир ополчения поднялся — торжественный лог.
+			// Если тир ополчения поднялся — торжественный лог.
 			if newTier := militiaTierForInvestment(m.Legacy.TotalInvested); newTier.TitleKey != prevTier.TitleKey {
 				tierName := T(m.Lang, newTier.TitleKey)
 				m.addLog(titleStyle.Render(T(m.Lang, "town.log.militia_upgrade", tierName)))
@@ -356,7 +353,8 @@ func (m *Model) stepTown() {
 		totalChurchSpent := 0
 
 		for _, h := range m.Party {
-			if h.IsDead && m.Gold >= reviveBaseCost {
+			// Воскрешаем ТОЛЬКО тех павших, чьи тела были вынесены (LostInAbyss == false)
+			if h.IsDead && !h.LostInAbyss && m.Gold >= reviveBaseCost {
 				m.Gold -= reviveBaseCost
 				totalChurchSpent += reviveBaseCost
 				h.IsDead = false
@@ -393,7 +391,7 @@ func (m *Model) stepTown() {
 			for _, h := range m.Party {
 				if !h.IsDead {
 					h.HP = h.MaxHP
-					h.MP = h.MaxHP
+					h.MP = h.MaxMP
 				}
 			}
 			m.addLog(healStyle.Render(T(m.Lang, "town.log.tavern_rest", tavernName, tavernCost)))
@@ -457,17 +455,17 @@ func (m *Model) stepTown() {
 					m.Party[i] = createHero(newClass, m.Floor, m.Legacy.SmithyLevel)
 					m.addLog(healStyle.Render(T(m.Lang, "town.log.guild_veteran",
 						guildName, m.Party[i].DisplayName(m.Lang), m.Party[i].RaceName(m.Lang), m.Party[i].ShortClass(m.Lang), m.Party[i].Level, recruitCost)))
-					m.logTownAction("⚔️️", guildName, T(m.Lang, "town.log.guild_vet_hist",
+					m.logTownAction("⚔️", guildName, T(m.Lang, "town.log.guild_vet_hist",
 						m.Party[i].DisplayName(m.Lang), m.Party[i].ShortClass(m.Lang), m.Party[i].Level, recruitCost))
 				} else {
-					// NEW: масштабированное ополчение — тир зависит от m.Legacy.TotalInvested.
+					// Масштабированное ополчение — тир зависит от m.Legacy.TotalInvested.
 					m.Party[i] = m.createMilitiaForGuild(newClass)
-					h := m.Party[i]
-					tierName := T(m.Lang, h.TitleKey)
+					newHero := m.Party[i]
+					tierName := T(m.Lang, newHero.TitleKey)
 					m.addLog(subtleStyle.Render(T(m.Lang, "town.log.guild_militia",
-						guildName, h.DisplayName(m.Lang), tierName, h.RaceName(m.Lang), h.ShortClass(m.Lang))))
+						guildName, newHero.DisplayName(m.Lang), tierName, newHero.RaceName(m.Lang), newHero.ShortClass(m.Lang))))
 					m.logTownAction("🤝", guildName, T(m.Lang, "town.log.guild_mil_hist",
-						h.DisplayName(m.Lang), tierName, h.ShortClass(m.Lang)))
+						newHero.DisplayName(m.Lang), tierName, newHero.ShortClass(m.Lang)))
 				}
 			}
 		}
