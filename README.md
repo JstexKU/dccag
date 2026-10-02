@@ -51,27 +51,30 @@ A grim tactical text-based dungeon crawler featuring autonomous squad mechanics 
 | `-reset-save` | Delete the save file and exit |
 | `-version` | Print the version and exit |
 
-The save file lives in your user config directory (`~/.config/dccag/save.json` on Linux, `%AppData%\dccag\save.json` on Windows, `~/Library/Application Support/dccag/save.json` on macOS).
+The save file lives in your user config directory (`~/.config/dccag/save.json` on Linux, `%AppData%\\dccag\\save.json` on Windows, `~/Library/Application Support/dccag/save.json` on macOS).
 
 ---
 
 ## 🚀 Getting Started
 
 ### Option 1: Pre-built binaries (no Go required)
-Download the binary for your system from **[Releases](https://github.com/JstexKU/dccag/releases)**:
+Download the binary for your system from **[Releases](https://github.com/JstexKU/dccag/releases)**.
 
-* **Linux**: `dccag-linux-amd64`, `dccag-linux-arm64`, `dccag-linux-386`
+The current release workflow publishes these targets:
+
+* **Linux**: `dccag-linux-amd64`, `dccag-linux-arm64`
 * **macOS**: `dccag-darwin-amd64`, `dccag-darwin-arm64`
 * **Windows**: `dccag-windows-amd64.exe`
 
-Verify the download against `sha256sums.txt` from the same release, then:
+Each release also contains **`sha256sums.txt`** for verifying the downloaded binaries:
 
 ```bash
+sha256sum -c sha256sums.txt
 chmod +x dccag-<os>-<arch>
 ./dccag-<os>-<arch>
 ```
 
-On Windows, double-click the `.exe` or run it from PowerShell.
+On Windows, verify the checksum with `Get-FileHash` in PowerShell, then run the `.exe`.
 
 ### Option 2: Run from source
 
@@ -112,3 +115,5 @@ Tests cover dictionary parity (RU/EN keys and format arguments), the autopilot t
 
 ### 📜 License
 Distributed under the MIT License. See [LICENSE](LICENSE).
+
+---

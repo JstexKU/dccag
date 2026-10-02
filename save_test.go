@@ -40,6 +40,31 @@ func TestSaveRoundTrip(t *testing.T) {
 	}
 }
 
+func TestSaveOverwrite(t *testing.T) {
+	useTempSave(t)
+
+	first := TownLegacy{TreasuryGold: 10, SmithyLevel: 1}
+	second := TownLegacy{TreasuryGold: 999, SmithyLevel: 7}
+
+	if err := writeSave(SaveData{Lang: LangRU, Legacy: first, Tactics: DefaultTactics()}); err != nil {
+		t.Fatalf("первое сохранение: %v", err)
+	}
+	if err := writeSave(SaveData{Lang: LangEN, Legacy: second, Tactics: DefaultTactics()}); err != nil {
+		t.Fatalf("повторное сохранение: %v", err)
+	}
+
+	got, ok := loadSave()
+	if !ok {
+		t.Fatal("повторно сохранённый файл не прочитался")
+	}
+	if got.Legacy != second {
+		t.Errorf("сохранение не было заменено: %+v != %+v", got.Legacy, second)
+	}
+	if got.Lang != LangEN {
+		t.Errorf("язык не был заменён: %q", got.Lang)
+	}
+}
+
 func TestLoadSaveMissingAndCorrupted(t *testing.T) {
 	path := useTempSave(t)
 

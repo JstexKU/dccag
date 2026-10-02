@@ -45,15 +45,16 @@ func detectLayout(termW, termH int) LayoutMode {
 
 func detectCardMode(innerW int) CardMode {
 	switch {
-	case innerW >= 30:
+	case innerW >= 28:
 		return CardWide
-	case innerW >= 22:
+	case innerW >= 20:
 		return CardMedium
 	default:
 		return CardCompact
 	}
 }
 
+// cardContentHeight возвращает точное число строк содержимого внутри карточки (без рамки)
 func cardContentHeight(mode CardMode) int {
 	switch mode {
 	case CardWide:
@@ -65,14 +66,15 @@ func cardContentHeight(mode CardMode) int {
 	}
 }
 
+// cardOuterHeight возвращает полную внешнюю высоту карточки с учетом рамки (top + bottom = +2 строки)
+func cardOuterHeight(mode CardMode) int {
+	return cardContentHeight(mode) + 2
+}
+
 func landscapeCardsPerRow(usableW int) int {
 	switch {
-	case usableW >= 190:
-		return 6
-	case usableW >= 155:
-		return 5
 	case usableW >= 125:
-		return 4
+		return 6
 	case usableW >= 90:
 		return 3
 	case usableW >= 55:
@@ -166,6 +168,20 @@ func truncateLines(s string, n int) string {
 		return s
 	}
 	return strings.Join(lines[:n], "\n")
+}
+
+// normalizeLines добивает или урезает текст строго до targetCount строк одинаковой ширины innerWidth
+func normalizeLines(content string, innerWidth, targetCount int) string {
+	rawLines := strings.Split(content, "\n")
+	res := make([]string, targetCount)
+	for i := 0; i < targetCount; i++ {
+		if i < len(rawLines) {
+			res[i] = padRightTruncate(rawLines[i], innerWidth)
+		} else {
+			res[i] = strings.Repeat(" ", innerWidth)
+		}
+	}
+	return strings.Join(res, "\n")
 }
 
 func renderBar(current, max int, totalBars int, filledColor, emptyColor lipgloss.Color) string {
@@ -270,7 +286,7 @@ func (m Model) renderMenuScreen() string {
 `)
 
 	sb.WriteString(banner + "\n")
-	sb.WriteString(lipgloss.NewStyle().Align(lipgloss.Center).Render(titleStyle.Render("       Dungeon Crawler Console Auto Game (dccag) v2.8.0")) + "\n\n")
+	sb.WriteString(lipgloss.NewStyle().Align(lipgloss.Center).Render(titleStyle.Render("       Dungeon Crawler Console Auto Game (dccag) v2.8.*")) + "\n\n")
 
 	var textBlock string
 	if m.Lang == LangEN {
@@ -325,7 +341,6 @@ func (m Model) renderStatsScreen(title string, titleColor lipgloss.Color) string
 		T(m.Lang, "town.church"), T(m.Lang, m.TownEst.ChurchKey), T(m.Lang, "ui.level_short"), m.Legacy.ChurchLevel,
 		T(m.Lang, "town.tavern"), T(m.Lang, m.TownEst.TavernKey), T(m.Lang, "ui.level_short"), m.Legacy.TavernLevel))
 
-	// NEW: строка о текущем тире ополчения и прогрессе до следующего.
 	tier := militiaTierForInvestment(m.Legacy.TotalInvested)
 	militiaLine := fmt.Sprintf(" • %s: %s (%dG)",
 		T(m.Lang, "stats.militia_tier"),
@@ -465,56 +480,189 @@ func (m Model) renderArmoryScreen() string {
 // Карта и город
 // ============================================================
 
+type townDisplayMode int
+
+const (
+	townDisplayWide townDisplayMode = iota
+	townDisplayMedium
+	townDisplayCompact
+)
+
+func townDisplayModeFor(width, height int) townDisplayMode {
+	switch {
+	case width >= 72 && height >= 12:
+		return townDisplayWide
+	case width >= 48 && height >= 9:
+		return townDisplayMedium
+	default:
+		return townDisplayCompact
+	}
+}
+
 func (m Model) renderTownHub(viewW, viewH int) string {
-	cActive := lipgloss.NewStyle().Foreground(lipgloss.Color("226")).Bold(true)
-	cIdle := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
-	cHeader := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
+	mode := townDisplayModeFor(viewW, viewH)
+	switch mode {
+	case townDisplayWide:
+		return m.renderTownHubWide(viewW, viewH)
+	case townDisplayMedium:
+		return m.renderTownHubMedium(viewW, viewH)
+	default:
+		return m.renderTownHubCompact(viewW, viewH)
+	}
+}
 
-	fmtBld := func(phase TownPhase, icon, bNameKey string) string {
-		isActive := m.TownPhase == phase
-		name := T(m.Lang, bNameKey)
-		label := fmt.Sprintf("%s «%s»", icon, name)
-		if isActive {
-			return cActive.Render(fmt.Sprintf("►[%s]◄", label))
+type townAction struct {
+	phase TownPhase
+	icon  string
+	name  string
+	level int
+}
+
+func (m Model) townActions() []townAction {
+	return []townAction{
+		{TownPhaseSellLoot, "⚖️", T(m.Lang, "town.market"), 0},
+		{TownPhaseMagistrate, "🏛️", T(m.Lang, "town.magistrate"), 0},
+		{TownPhaseChurch, "⛪", T(m.Lang, m.TownEst.ChurchKey), m.Legacy.ChurchLevel},
+		{TownPhaseTavern, "🍻", T(m.Lang, m.TownEst.TavernKey), m.Legacy.TavernLevel},
+		{TownPhaseGuild, "⚔", T(m.Lang, m.TownEst.GuildKey), 0},
+		{TownPhaseSmithy, "⚒️", T(m.Lang, m.TownEst.SmithyKey), m.Legacy.SmithyLevel},
+		{TownPhaseTannery, "🎒", T(m.Lang, m.TownEst.TanneryKey), m.Legacy.TanneryLevel},
+		{TownPhaseAlchemist, "🧪", T(m.Lang, m.TownEst.AlchemistKey), 0},
+	}
+}
+
+func (m Model) renderTownAction(action townAction, width int, detail bool) string {
+	active := m.TownPhase == action.phase
+	name := shortenItemName(action.name, max(3, width-7))
+
+	label := fmt.Sprintf("%s %s", action.icon, name)
+	if detail && action.level > 0 {
+		label = fmt.Sprintf("%s %s.%d", action.icon, name, action.level)
+	}
+
+	label = padRightTruncate(label, max(1, width-2))
+	if active {
+		return lipgloss.NewStyle().
+			Width(width).
+			Foreground(lipgloss.Color("226")).
+			Background(lipgloss.Color("236")).
+			Bold(true).
+			Render("► " + label)
+	}
+	return lipgloss.NewStyle().
+		Width(width).
+		Foreground(lipgloss.Color("244")).
+		Render("  " + label)
+}
+
+func (m Model) renderTownHistory(width, maxLines int) []string {
+	if maxLines <= 0 {
+		return nil
+	}
+	lines := []string{
+		subtleStyle.Render(padRightTruncate("── "+T(m.Lang, "town.management")+" ──", width)),
+	}
+	for _, act := range m.TownHistory {
+		if len(lines) >= maxLines {
+			break
 		}
-		return cIdle.Render(fmt.Sprintf(" [%s] ", label))
+		lines = append(lines, padRightTruncate("• "+shortenItemName(act, max(1, width-2)), width))
 	}
+	return lines
+}
 
-	bMarket := cIdle.Render(" [⚖️ " + T(m.Lang, "town.market") + "] ")
-	if m.TownPhase == TownPhaseSellLoot {
-		bMarket = cActive.Render("►[⚖️ " + T(m.Lang, "town.market") + "]◄")
-	}
-
-	bMagistrate := cIdle.Render(" [🏛️ " + T(m.Lang, "town.magistrate") + "] ")
-	if m.TownPhase == TownPhaseMagistrate {
-		bMagistrate = cActive.Render("►[🏛️ " + T(m.Lang, "town.magistrate") + "]◄")
-	}
-
-	bChurch := fmtBld(TownPhaseChurch, "⛪", m.TownEst.ChurchKey)
-	bTavern := fmtBld(TownPhaseTavern, "🍻", m.TownEst.TavernKey)
-	bGuild := fmtBld(TownPhaseGuild, "⚔️", m.TownEst.GuildKey)
-	bSmithy := fmtBld(TownPhaseSmithy, "⚒️", m.TownEst.SmithyKey)
-	bTannery := fmtBld(TownPhaseTannery, "🎒", m.TownEst.TanneryKey)
-	bAlchemist := fmtBld(TownPhaseAlchemist, "🧪", m.TownEst.AlchemistKey)
+func (m Model) renderTownHubWide(viewW, viewH int) string {
+	header := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
+	actionW := max(16, (viewW-8)/3)
 
 	var sb strings.Builder
-	sb.WriteString(cHeader.Render(shortenItemName(T(m.Lang, "town.hub_title"), viewW)) + "\n\n")
-	sb.WriteString(fmt.Sprintf("%s %s\n", bMarket, bMagistrate))
-	sb.WriteString(fmt.Sprintf("%s %s %s\n", bChurch, bTavern, bGuild))
-	sb.WriteString(fmt.Sprintf("%s %s %s\n", bSmithy, bTannery, bAlchemist))
+	sb.WriteString(header.Render(padRightTruncate(T(m.Lang, "town.hub_title"), viewW)) + "\n")
+	sb.WriteString(subtleStyle.Render(padRightTruncate(
+		fmt.Sprintf("BAG %d/%d   |   SMITHY %d   TANNERY %d   CHURCH %d   TAVERN %d",
+			len(m.Bag), m.currentBagCapacity(),
+			m.Legacy.SmithyLevel, m.Legacy.TanneryLevel,
+			m.Legacy.ChurchLevel, m.Legacy.TavernLevel), viewW)) + "\n\n")
 
-	if len(m.TownHistory) > 0 {
-		sb.WriteString(subtleStyle.Render(strings.Repeat("─", viewW)) + "\n")
-		for _, act := range m.TownHistory {
-			sb.WriteString(fmt.Sprintf("• %s\n", shortenItemName(act, viewW-4)))
+	actions := m.townActions()
+	for row := 0; row < 3; row++ {
+		var cells []string
+		for col := 0; col < 3; col++ {
+			i := row*3 + col
+			if i >= len(actions) {
+				break
+			}
+			cells = append(cells, m.renderTownAction(actions[i], actionW, true))
 		}
+		sb.WriteString(strings.Join(cells, "  ") + "\n")
 	}
 
-	lines := strings.Split(sb.String(), "\n")
-	out := make([]string, viewH)
-	for i := 0; i < viewH; i++ {
+	historyLines := m.renderTownHistory(viewW, max(0, viewH-7))
+	if len(historyLines) > 0 {
+		sb.WriteString("\n")
+		sb.WriteString(strings.Join(historyLines, "\n"))
+	}
+	return padTownLines(sb.String(), viewW, viewH)
+}
+
+func (m Model) renderTownHubMedium(viewW, viewH int) string {
+	header := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
+	actionW := max(18, (viewW-4)/2)
+
+	var sb strings.Builder
+	sb.WriteString(header.Render(padRightTruncate(T(m.Lang, "town.hub_title"), viewW)) + "\n\n")
+
+	actions := m.townActions()
+	for row := 0; row < 4; row++ {
+		left := row * 2
+		right := left + 1
+		sb.WriteString(m.renderTownAction(actions[left], actionW, true))
+		if right < len(actions) {
+			sb.WriteString("  " + m.renderTownAction(actions[right], actionW, true))
+		}
+		sb.WriteString("\n")
+	}
+
+	historyLines := m.renderTownHistory(viewW, max(0, viewH-6))
+	if len(historyLines) > 0 {
+		sb.WriteString("\n" + strings.Join(historyLines, "\n"))
+	}
+	return padTownLines(sb.String(), viewW, viewH)
+}
+
+func (m Model) renderTownHubCompact(viewW, viewH int) string {
+	header := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
+	var sb strings.Builder
+	sb.WriteString(header.Render(padRightTruncate(T(m.Lang, "town.hub_title"), viewW)) + "\n")
+
+	for _, action := range m.townActions() {
+		name := shortenItemName(action.name, max(3, viewW-5))
+		level := ""
+		if action.level > 0 {
+			level = fmt.Sprintf(" %d", action.level)
+		}
+		active := " "
+		style := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
+		if m.TownPhase == action.phase {
+			active = "►"
+			style = style.Foreground(lipgloss.Color("226")).Bold(true)
+		}
+		line := fmt.Sprintf("%s %s%s", active, action.icon, name+level)
+		sb.WriteString(style.Render(padRightTruncate(line, viewW)) + "\n")
+	}
+
+	historyLines := m.renderTownHistory(viewW, max(0, viewH-10))
+	if len(historyLines) > 0 {
+		sb.WriteString(strings.Join(historyLines, "\n"))
+	}
+	return padTownLines(sb.String(), viewW, viewH)
+}
+
+func padTownLines(content string, width, height int) string {
+	lines := strings.Split(content, "\n")
+	out := make([]string, height)
+	for i := range out {
 		if i < len(lines) {
-			out[i] = lines[i]
+			out[i] = padRightTruncate(lines[i], width)
 		} else {
 			out[i] = ""
 		}
@@ -615,8 +763,9 @@ func (m Model) renderMap(viewW, viewH int) string {
 // ============================================================
 
 func (m Model) renderHeroCard(h *Hero, cardWidth int) string {
-	innerWidth := max(16, cardWidth-4)
+	innerWidth := max(14, cardWidth-4)
 	mode := detectCardMode(innerWidth)
+	targetLines := cardContentHeight(mode)
 
 	isActiveTurn := false
 	if m.Combat != nil && len(m.Combat.TurnQueue) > 0 {
@@ -651,13 +800,20 @@ func (m Model) renderHeroCard(h *Hero, cardWidth int) string {
 		}
 	}
 
-	style := heroCardStyle.Width(innerWidth)
+	// Строгая нормализация количества строк контента под заданную высоту карточки
+	normalizedBody := normalizeLines(sb.String(), innerWidth, targetLines)
+
+	baseStyle := heroCardStyle
 	if h.IsDead {
-		style = heroCardDead.Width(innerWidth)
+		baseStyle = heroCardDead
 	} else if isActiveTurn {
-		style = heroCardActive.Width(innerWidth)
+		baseStyle = heroCardActive
 	}
-	return style.Render(sb.String())
+
+	return baseStyle.
+		Width(innerWidth).
+		Height(targetLines).
+		Render(normalizedBody)
 }
 
 func renderDeadHeroCard(h *Hero, innerWidth int, mode CardMode, lang Language) string {
@@ -669,16 +825,9 @@ func renderDeadHeroCard(h *Hero, innerWidth int, mode CardMode, lang Language) s
 	sb.WriteString(subtleStyle.Render(padRightTruncate(h.CauseOfDeath, innerWidth)) + "\n")
 	sb.WriteString(subtleStyle.Render(padRightTruncate(fmt.Sprintf("[%s]", T(lang, "ui.awaiting_revive")), innerWidth)))
 
-	targetLines := cardContentHeight(mode)
-	padCount := targetLines - 4
-	if padCount > 0 {
-		sb.WriteString("\n" + blankLines(padCount, innerWidth))
-	}
 	return sb.String()
 }
 
-// renderWideHeroCard — CardWide, 10 строк контента.
-// Резерв обвеса: "HP[" (3) + "]" (1) + "99999/99999" (11) = 15.
 func renderWideHeroCard(h *Hero, innerWidth int, m Model) string {
 	var sb strings.Builder
 
@@ -713,8 +862,6 @@ func renderWideHeroCard(h *Hero, innerWidth int, m Model) string {
 	return sb.String()
 }
 
-// renderMediumHeroCard — CardMedium, 8 строк контента.
-// Резерв: "HP[" (3) + "]" (1) + "99999" (5) = 9.
 func renderMediumHeroCard(h *Hero, innerWidth int, m Model) string {
 	var sb strings.Builder
 
@@ -755,8 +902,6 @@ func renderMediumHeroCard(h *Hero, innerWidth int, m Model) string {
 	return sb.String()
 }
 
-// renderCompactHeroCard — CardCompact, 6 строк контента.
-// Без бара — только числа. Статы с 2-значным резервом.
 func renderCompactHeroCard(h *Hero, innerWidth int, m Model) string {
 	var sb strings.Builder
 
@@ -837,9 +982,6 @@ func buffBadge(h *Hero) string {
 	}
 }
 
-// renderBeltAndStats — пояс зелий + бафф + боевые статы.
-// Статы идут СРАЗУ после баффа, без растягивания строки.
-// Резерв на 3-значные Atk/Def.
 func renderBeltAndStats(h *Hero, innerWidth int, m Model) string {
 	potSlot := beltSymbols(h, m.MaxPotionSlots())
 	styledBuff := buffBadge(h)
@@ -850,14 +992,10 @@ func renderBeltAndStats(h *Hero, innerWidth int, m Model) string {
 	statText := fmt.Sprintf("⚔%s 🛡%s", atkStr, defStr)
 	styledStats := lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Render(statText)
 
-	// Склеиваем: "[пояс] [бафф] ⚔12 🛡9" — один пробел между блоками.
 	line := leftBlock + " " + styledStats
-
-	// Паддим до innerWidth, но если строка длиннее — обрезаем.
 	return padRightTruncate(line, innerWidth)
 }
 
-// renderEquipLine — Wide: иконка-эмодзи + имя + пробел + стат, БЕЗ trailing.
 func renderEquipLine(icon string, it *EquipItem, innerWidth int, lang Language) string {
 	if it == nil {
 		return subtleStyle.Render(padRightTruncate(icon+" -", innerWidth)) + "\n"
@@ -871,12 +1009,10 @@ func renderEquipLine(icon string, it *EquipItem, innerWidth int, lang Language) 
 	}
 	name := shortenItemName(T(lang, it.BaseNameKey), maxNameLen)
 
-	// icon(2) + пробел(1) + имя + пробел(1) + стат, БЕЗ trailing.
 	line := goldStyle.Render(icon+" "+name) + " " + subtleStyle.Render(statVal)
 	return padRightTruncate(line, innerWidth) + "\n"
 }
 
-// formatEquipCell — Medium: ячейка с эмодзи-иконкой и именем.
 func formatEquipCell(icon string, it *EquipItem, cellW int, lang Language) string {
 	if it == nil {
 		return padRightTruncate(icon+" -", cellW)
@@ -895,8 +1031,9 @@ func formatEquipCell(icon string, it *EquipItem, cellW int, lang Language) strin
 // ============================================================
 
 func (m Model) renderPartyBanner(cardWidth int) string {
-	innerWidth := max(16, cardWidth-4)
+	innerWidth := max(14, cardWidth-4)
 	mode := detectCardMode(innerWidth)
+	targetLines := cardContentHeight(mode)
 
 	relicName := T(m.Lang, "ui.none")
 	relicDesc := T(m.Lang, "ui.no_relic")
@@ -915,36 +1052,35 @@ func (m Model) renderPartyBanner(cardWidth int) string {
 		sb.WriteString(subtleStyle.Render(padRightTruncate(relicDesc, innerWidth)) + "\n")
 		sb.WriteString(padRightTruncate(fmt.Sprintf("🎒 %s: %d/%d %s", T(m.Lang, "ui.bag"), len(m.Bag), m.currentBagCapacity(), T(m.Lang, "ui.slots_short")), innerWidth) + "\n")
 		sb.WriteString(healStyle.Render(padRightTruncate(fmt.Sprintf("🏛️ +%dG", legacyPart), innerWidth)) + "\n")
-		sb.WriteString(subtleStyle.Render(padRightTruncate(T(m.Lang, "town.tax_active"), innerWidth)) + "\n")
-		sb.WriteString(blankLines(4, innerWidth))
+		sb.WriteString(subtleStyle.Render(padRightTruncate(T(m.Lang, "town.tax_active"), innerWidth)))
 
 	case CardMedium:
 		sb.WriteString(goldStyle.Render(padRightTruncate("👑 ОТРЯД И РЕЛИКВИЯ", innerWidth)) + "\n")
 		sb.WriteString(padRightTruncate(fmt.Sprintf("%s: %s", T(m.Lang, "ui.relic_short"), shortenItemName(relicName, innerWidth-10)), innerWidth) + "\n")
 		sb.WriteString(subtleStyle.Render(padRightTruncate(shortenItemName(relicDesc, innerWidth), innerWidth)) + "\n")
 		sb.WriteString(padRightTruncate(fmt.Sprintf("🎒 %s: %d/%d %s", T(m.Lang, "ui.bag"), len(m.Bag), m.currentBagCapacity(), T(m.Lang, "ui.slots_short")), innerWidth) + "\n")
-		sb.WriteString(healStyle.Render(padRightTruncate(fmt.Sprintf("🏛️ +%dG", legacyPart), innerWidth)) + "\n")
-		sb.WriteString(blankLines(3, innerWidth))
+		sb.WriteString(healStyle.Render(padRightTruncate(fmt.Sprintf("🏛️ +%dG", legacyPart), innerWidth)))
 
-	default: // Compact
+	default:
 		sb.WriteString(goldStyle.Render(padRightTruncate("👑 ОТРЯД", innerWidth)) + "\n")
-
 		shortRelic := []rune(relicName)
 		if len(shortRelic) > 14 {
 			shortRelic = append(shortRelic[:13], '…')
 		}
 		sb.WriteString(padRightTruncate(string(shortRelic), innerWidth) + "\n")
 		sb.WriteString(padRightTruncate(fmt.Sprintf("🎒 %d/%d", len(m.Bag), m.currentBagCapacity()), innerWidth) + "\n")
-		sb.WriteString(healStyle.Render(padRightTruncate(fmt.Sprintf("🏛️ +%dG", legacyPart), innerWidth)) + "\n")
-		sb.WriteString(blankLines(3, innerWidth))
+		sb.WriteString(healStyle.Render(padRightTruncate(fmt.Sprintf("🏛️ +%dG", legacyPart), innerWidth)))
 	}
+
+	normalizedBody := normalizeLines(sb.String(), innerWidth, targetLines)
 
 	return lipgloss.NewStyle().
 		Width(innerWidth).
+		Height(targetLines).
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("62")).
 		Padding(0, 1).
-		Render(sb.String())
+		Render(normalizedBody)
 }
 
 // ============================================================
@@ -1061,16 +1197,17 @@ func (m Model) View() string {
 // ============================================================
 
 func (m Model) renderLandscape(termW, termH int) string {
-	usableW := termW - 2
+	usableW := max(38, termW-2)
 
 	cardsPerRow := landscapeCardsPerRow(usableW)
-	singleCardWidth := max(20, (usableW-(cardsPerRow-1)*1)/cardsPerRow)
+	// Единый расчет внешней ширины для ВСЕХ карточек
+	cardWidth := max(16, usableW/cardsPerRow)
 
 	var cards []string
 	for _, h := range m.Party {
-		cards = append(cards, m.renderHeroCard(h, singleCardWidth))
+		cards = append(cards, m.renderHeroCard(h, cardWidth))
 	}
-	cards = append(cards, m.renderPartyBanner(singleCardWidth))
+	cards = append(cards, m.renderPartyBanner(cardWidth))
 
 	var cardRows []string
 	for i := 0; i < len(cards); i += cardsPerRow {
@@ -1080,55 +1217,45 @@ func (m Model) renderLandscape(termW, termH int) string {
 	middleTier := lipgloss.JoinVertical(lipgloss.Left, cardRows...)
 	middleH := lipgloss.Height(middleTier)
 
+	controlsH := 1
 	logH := 5
 	if termH < 30 {
+		logH = 4
+	}
+	if termH < 25 {
 		logH = 3
 	}
-	if termH < 24 {
-		logH = 2
-	}
-	controlsH := 1
 
-	topMin := 8
-	totalTop := termH - logH - controlsH - 1
-
-	if middleH > totalTop-topMin {
-		middleH = totalTop - topMin
-		if middleH < 6 {
-			middleH = 6
-		}
+	availableH := termH - controlsH - logH - 1
+	topMinH := 7
+	if availableH < topMinH+middleH {
+		middleH = max(6, availableH-topMinH)
 		middleTier = truncateLines(middleTier, middleH)
 		middleH = lipgloss.Height(middleTier)
 	}
+	topH := max(topMinH, availableH-middleH)
 
-	topH := totalTop - middleH
-	if topH < 4 {
-		topH = 4
-	}
+	sideW := max(26, min(40, int(float64(usableW)*0.28)))
+	mapBoxW := max(20, usableW-sideW)
+	boxInnerW := max(1, mapBoxW-2)
+	boxInnerH := max(1, topH-2)
 
-	sideW := max(28, min(44, int(float64(usableW)*0.30)))
-	mapBoxW := usableW - sideW - 1
-
-	mapInnerW := max(10, mapBoxW-4)
-	mapInnerH := max(2, topH-2)
-
-	mapStr := m.renderMap(mapInnerW, mapInnerH)
+	mapStr := m.renderMap(boxInnerW, boxInnerH)
 	leftMapBox := lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("63")).
-		Width(mapInnerW).
-		Height(topH - 2).
+		Width(boxInnerW).
+		Height(boxInnerH).
 		Render(mapStr)
 
-	sidebarInnerW := max(16, sideW-4)
-
+	sidebarInnerW := max(16, sideW-2)
 	biome := getBiome(m.Floor)
 	floorTag := fmt.Sprintf("%s %d: %s", T(m.Lang, "ui.floor"), m.Floor, T(m.Lang, "biome."+string(biome.Name)))
 	if m.InTown {
 		floorTag = fmt.Sprintf("%s %d: [%s]", T(m.Lang, "ui.floor"), m.Floor, T(m.Lang, "town.camp"))
 	}
 
-	questTitleShort := shortenItemName(T(m.Lang, m.CurrentQuest.TitleKey), 16)
+	questTitleShort := shortenItemName(T(m.Lang, m.CurrentQuest.TitleKey), max(8, sidebarInnerW-10))
 	statusBadge := subtleStyle.Render(fmt.Sprintf("[%d/%d]", m.CurrentQuest.Current, m.CurrentQuest.TargetCount))
 	if m.CurrentQuest.Completed {
 		statusBadge = healStyle.Render(fmt.Sprintf("[%s]", T(m.Lang, "ui.turn_in")))
@@ -1139,20 +1266,18 @@ func (m Model) renderLandscape(termW, termH int) string {
 	sbLines = append(sbLines, fmt.Sprintf("💰 %s: %s", T(m.Lang, "ui.treasury"), goldStyle.Render(fmt.Sprintf("%dG", m.Gold))))
 	sbLines = append(sbLines, fmt.Sprintf("📜 %s %s", questTitleShort, statusBadge))
 	sbLines = append(sbLines, subtleStyle.Render(strings.Repeat("─", sidebarInnerW)))
-
-	availRows := max(1, topH-2-len(sbLines))
+	availRows := max(1, boxInnerH-len(sbLines))
 	sbLines = append(sbLines, m.renderRightContentLines(sidebarInnerW, availRows)...)
 
 	rightPane := lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("63")).
 		Width(sidebarInnerW).
-		Height(topH - 2).
+		Height(boxInnerH).
 		Render(strings.Join(sbLines, "\n"))
 
-	topTier := lipgloss.JoinHorizontal(lipgloss.Top, leftMapBox, " ", rightPane)
-
-	logBox := m.renderLogBox(usableW-4, logH-2)
+	topTier := lipgloss.JoinHorizontal(lipgloss.Top, leftMapBox, rightPane)
+	logBox := m.renderLogBox(usableW-2, logH)
 	controls := m.renderControls(termW - 2)
 
 	return lipgloss.JoinVertical(
@@ -1190,18 +1315,18 @@ func (m Model) renderPortraitWide(termW, termH int) string {
 	)
 	headerBox := titleStyle.Render(shortenItemName(headerLine, usableW))
 
-	mapStr := m.renderMap(usableW-4, mapH-2)
+	mapStr := m.renderMap(usableW-2, mapH-2)
 	mapBox := lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("63")).
-		Width(usableW - 4).
+		Width(usableW - 2).
 		Height(mapH - 2).
 		Render(mapStr)
 
 	enemyStrip := m.renderEnemyStrip(usableW)
 
 	cols := 2
-	cardW := (usableW - (cols - 1)) / cols
+	cardW := usableW / cols
 
 	var cards []string
 	for _, h := range m.Party {
@@ -1223,7 +1348,7 @@ func (m Model) renderPortraitWide(termW, termH int) string {
 	}
 	cardsBlock = truncateLines(cardsBlock, maxCardsH)
 
-	logBox := m.renderLogBox(usableW-4, logH-2)
+	logBox := m.renderLogBox(usableW-2, logH)
 	controls := m.renderControls(termW - 2)
 
 	return lipgloss.JoinVertical(
@@ -1259,11 +1384,11 @@ func (m Model) renderPortrait(termW, termH int) string {
 	headerLine := fmt.Sprintf("%s | 💰 %dG", shortenItemName(floorTag, usableW-14), m.Gold)
 	headerBox := titleStyle.Render(shortenItemName(headerLine, usableW))
 
-	mapStr := m.renderMap(usableW-4, mapH-2)
+	mapStr := m.renderMap(usableW-2, mapH-2)
 	mapBox := lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("63")).
-		Width(usableW - 4).
+		Width(usableW - 2).
 		Height(mapH - 2).
 		Render(mapStr)
 
@@ -1284,7 +1409,7 @@ func (m Model) renderPortrait(termW, termH int) string {
 	}
 	cardsBlock = truncateLines(cardsBlock, maxCardsH)
 
-	logBox := m.renderLogBox(usableW-4, logH-2)
+	logBox := m.renderLogBox(usableW-2, logH)
 	controls := m.renderControls(termW - 2)
 
 	return lipgloss.JoinVertical(
@@ -1302,22 +1427,24 @@ func (m Model) renderPortrait(termW, termH int) string {
 // Общие блоки
 // ============================================================
 
-func (m Model) renderLogBox(innerW, innerH int) string {
-	if innerH < 1 {
-		innerH = 1
+func (m Model) renderLogBox(innerW, boxH int) string {
+	if boxH < 3 {
+		boxH = 3
 	}
+	contentH := max(1, boxH-3)
+
 	var logContent strings.Builder
 	totalLogs := len(m.Logs)
 	endIdx := totalLogs - m.LogScroll
 	if endIdx > totalLogs {
 		endIdx = totalLogs
 	}
-	if endIdx < innerH {
-		endIdx = min(totalLogs, innerH)
+	if endIdx < contentH {
+		endIdx = min(totalLogs, contentH)
 	}
-	startIdx := max(0, endIdx-innerH)
+	startIdx := max(0, endIdx-contentH)
 
-	for i := 0; i < innerH; i++ {
+	for i := 0; i < contentH; i++ {
 		curIdx := startIdx + i
 		if curIdx < endIdx && curIdx < totalLogs {
 			logContent.WriteString(fmt.Sprintf("> %s\n", shortenItemName(m.Logs[curIdx], innerW)))
@@ -1332,15 +1459,16 @@ func (m Model) renderLogBox(innerW, innerH int) string {
 	}
 	logBoxTitle := fmt.Sprintf("📜 %s%s", T(m.Lang, "ui.chronicles"), scrollBadge)
 
+	body := fmt.Sprintf("%s\n%s",
+		subtleStyle.Render(shortenItemName(logBoxTitle, innerW)),
+		strings.TrimRight(logContent.String(), "\n"),
+	)
+
 	return lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("242")).
 		Width(innerW).
-		Height(innerH).
-		Render(fmt.Sprintf("%s\n%s",
-			subtleStyle.Render(shortenItemName(logBoxTitle, innerW)),
-			strings.TrimRight(logContent.String(), "\n"),
-		))
+		Render(body)
 }
 
 func (m Model) renderControls(width int) string {
