@@ -66,13 +66,11 @@ func cardContentHeight(mode CardMode) int {
 }
 
 func landscapeCardsPerRow(usableW int) int {
+	// Six equal cards are the primary landscape layout: five heroes + party.
+	// Below that width, keep equal cards and wrap by complete rows.
 	switch {
-	case usableW >= 190:
-		return 6
-	case usableW >= 155:
-		return 5
 	case usableW >= 125:
-		return 4
+		return 6
 	case usableW >= 90:
 		return 3
 	case usableW >= 55:
@@ -1061,16 +1059,19 @@ func (m Model) View() string {
 // ============================================================
 
 func (m Model) renderLandscape(termW, termH int) string {
-	usableW := termW - 2
+	usableW := max(38, termW-2)
 
+	// Stable composition: MAP + INFO, six equal cards, LOG, controls.
+	// The map receives all remaining vertical space.
 	cardsPerRow := landscapeCardsPerRow(usableW)
-	singleCardWidth := max(20, (usableW-(cardsPerRow-1)*1)/cardsPerRow)
+	cardGap := 1
+	cardWidth := max(18, (usableW-(cardsPerRow-1)*cardGap)/cardsPerRow)
 
 	var cards []string
 	for _, h := range m.Party {
-		cards = append(cards, m.renderHeroCard(h, singleCardWidth))
+		cards = append(cards, m.renderHeroCard(h, cardWidth))
 	}
-	cards = append(cards, m.renderPartyBanner(singleCardWidth))
+	cards = append(cards, m.renderPartyBanner(cardWidth))
 
 	var cardRows []string
 	for i := 0; i < len(cards); i += cardsPerRow {
@@ -1080,35 +1081,26 @@ func (m Model) renderLandscape(termW, termH int) string {
 	middleTier := lipgloss.JoinVertical(lipgloss.Left, cardRows...)
 	middleH := lipgloss.Height(middleTier)
 
+	controlsH := 1
 	logH := 5
 	if termH < 30 {
+		logH = 4
+	}
+	if termH < 25 {
 		logH = 3
 	}
-	if termH < 24 {
-		logH = 2
-	}
-	controlsH := 1
 
-	topMin := 8
-	totalTop := termH - logH - controlsH - 1
-
-	if middleH > totalTop-topMin {
-		middleH = totalTop - topMin
-		if middleH < 6 {
-			middleH = 6
-		}
+	availableH := termH - controlsH - logH - 1
+	topMinH := 7
+	if availableH < topMinH+middleH {
+		middleH = max(6, availableH-topMinH)
 		middleTier = truncateLines(middleTier, middleH)
 		middleH = lipgloss.Height(middleTier)
 	}
+	topH := max(topMinH, availableH-middleH)
 
-	topH := totalTop - middleH
-	if topH < 4 {
-		topH = 4
-	}
-
-	sideW := max(28, min(44, int(float64(usableW)*0.30)))
-	mapBoxW := usableW - sideW - 1
-
+	sideW := max(28, min(42, int(float64(usableW)*0.28)))
+	mapBoxW := max(20, usableW-sideW-1)
 	mapInnerW := max(10, mapBoxW-4)
 	mapInnerH := max(2, topH-2)
 
@@ -1117,18 +1109,17 @@ func (m Model) renderLandscape(termW, termH int) string {
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("63")).
 		Width(mapInnerW).
-		Height(topH - 2).
+		Height(mapInnerH).
 		Render(mapStr)
 
 	sidebarInnerW := max(16, sideW-4)
-
 	biome := getBiome(m.Floor)
 	floorTag := fmt.Sprintf("%s %d: %s", T(m.Lang, "ui.floor"), m.Floor, T(m.Lang, "biome."+string(biome.Name)))
 	if m.InTown {
 		floorTag = fmt.Sprintf("%s %d: [%s]", T(m.Lang, "ui.floor"), m.Floor, T(m.Lang, "town.camp"))
 	}
 
-	questTitleShort := shortenItemName(T(m.Lang, m.CurrentQuest.TitleKey), 16)
+	questTitleShort := shortenItemName(T(m.Lang, m.CurrentQuest.TitleKey), max(8, sidebarInnerW-10))
 	statusBadge := subtleStyle.Render(fmt.Sprintf("[%d/%d]", m.CurrentQuest.Current, m.CurrentQuest.TargetCount))
 	if m.CurrentQuest.Completed {
 		statusBadge = healStyle.Render(fmt.Sprintf("[%s]", T(m.Lang, "ui.turn_in")))
@@ -1139,20 +1130,18 @@ func (m Model) renderLandscape(termW, termH int) string {
 	sbLines = append(sbLines, fmt.Sprintf("💰 %s: %s", T(m.Lang, "ui.treasury"), goldStyle.Render(fmt.Sprintf("%dG", m.Gold))))
 	sbLines = append(sbLines, fmt.Sprintf("📜 %s %s", questTitleShort, statusBadge))
 	sbLines = append(sbLines, subtleStyle.Render(strings.Repeat("─", sidebarInnerW)))
-
-	availRows := max(1, topH-2-len(sbLines))
+	availRows := max(1, mapInnerH-len(sbLines))
 	sbLines = append(sbLines, m.renderRightContentLines(sidebarInnerW, availRows)...)
 
 	rightPane := lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("63")).
 		Width(sidebarInnerW).
-		Height(topH - 2).
+		Height(mapInnerH).
 		Render(strings.Join(sbLines, "\n"))
 
 	topTier := lipgloss.JoinHorizontal(lipgloss.Top, leftMapBox, " ", rightPane)
-
-	logBox := m.renderLogBox(usableW-4, logH-2)
+	logBox := m.renderLogBox(usableW-4, logH)
 	controls := m.renderControls(termW - 2)
 
 	return lipgloss.JoinVertical(
@@ -1163,7 +1152,6 @@ func (m Model) renderLandscape(termW, termH int) string {
 		controls,
 	)
 }
-
 // ============================================================
 // PortraitWide
 // ============================================================
@@ -1302,22 +1290,24 @@ func (m Model) renderPortrait(termW, termH int) string {
 // Общие блоки
 // ============================================================
 
-func (m Model) renderLogBox(innerW, innerH int) string {
-	if innerH < 1 {
-		innerH = 1
+func (m Model) renderLogBox(innerW, boxH int) string {
+	if boxH < 3 {
+		boxH = 3
 	}
+	contentH := max(1, boxH-2)
+
 	var logContent strings.Builder
 	totalLogs := len(m.Logs)
 	endIdx := totalLogs - m.LogScroll
 	if endIdx > totalLogs {
 		endIdx = totalLogs
 	}
-	if endIdx < innerH {
-		endIdx = min(totalLogs, innerH)
+	if endIdx < contentH {
+		endIdx = min(totalLogs, contentH)
 	}
-	startIdx := max(0, endIdx-innerH)
+	startIdx := max(0, endIdx-contentH)
 
-	for i := 0; i < innerH; i++ {
+	for i := 0; i < contentH; i++ {
 		curIdx := startIdx + i
 		if curIdx < endIdx && curIdx < totalLogs {
 			logContent.WriteString(fmt.Sprintf("> %s\n", shortenItemName(m.Logs[curIdx], innerW)))
@@ -1336,13 +1326,12 @@ func (m Model) renderLogBox(innerW, innerH int) string {
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("242")).
 		Width(innerW).
-		Height(innerH).
+		Height(boxH).
 		Render(fmt.Sprintf("%s\n%s",
 			subtleStyle.Render(shortenItemName(logBoxTitle, innerW)),
 			strings.TrimRight(logContent.String(), "\n"),
 		))
 }
-
 func (m Model) renderControls(width int) string {
 	controlsText := "[Space] Пауза | [F] Побег | [T] Тактика | [E] Арсенал | [I] Кодекс | [S] Слава | [+/-] Скор. | [L] Язык | [Q] Выход"
 	if m.Lang == LangEN {
