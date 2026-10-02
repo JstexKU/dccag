@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.8.1
+
+- Sync release metadata and CI/release automation after the 2.8.0 release.
+- Release builds now embed the tag version and publish `sha256sums.txt` for all supported binaries.
+
+
 ## [2.8.0] - 2026-10-02
 
 ### Added
