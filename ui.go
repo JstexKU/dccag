@@ -1234,18 +1234,18 @@ func (m Model) renderLandscape(termW, termH int) string {
 
 	sideW := max(28, min(42, int(float64(usableW)*0.28)))
 	mapBoxW := max(20, usableW-sideW-1)
-	mapInnerW := max(10, mapBoxW-4)
-	mapInnerH := max(2, topH-2)
+	boxInnerW := max(1, mapBoxW-2)
+	boxInnerH := max(1, topH-2)
 
-	mapStr := m.renderMap(mapInnerW, mapInnerH)
+	mapStr := m.renderMap(boxInnerW, boxInnerH)
 	leftMapBox := lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("63")).
-		Width(mapInnerW).
-		Height(mapInnerH).
+		Width(boxInnerW).
+		Height(boxInnerH).
 		Render(mapStr)
 
-	sidebarInnerW := max(16, sideW-4)
+	sidebarInnerW := max(16, sideW-2)
 	biome := getBiome(m.Floor)
 	floorTag := fmt.Sprintf("%s %d: %s", T(m.Lang, "ui.floor"), m.Floor, T(m.Lang, "biome."+string(biome.Name)))
 	if m.InTown {
@@ -1263,14 +1263,14 @@ func (m Model) renderLandscape(termW, termH int) string {
 	sbLines = append(sbLines, fmt.Sprintf("💰 %s: %s", T(m.Lang, "ui.treasury"), goldStyle.Render(fmt.Sprintf("%dG", m.Gold))))
 	sbLines = append(sbLines, fmt.Sprintf("📜 %s %s", questTitleShort, statusBadge))
 	sbLines = append(sbLines, subtleStyle.Render(strings.Repeat("─", sidebarInnerW)))
-	availRows := max(1, mapInnerH-len(sbLines))
+	availRows := max(1, boxInnerH-len(sbLines))
 	sbLines = append(sbLines, m.renderRightContentLines(sidebarInnerW, availRows)...)
 
 	rightPane := lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("63")).
 		Width(sidebarInnerW).
-		Height(mapInnerH).
+		Height(boxInnerH).
 		Render(strings.Join(sbLines, "\n"))
 
 	topTier := lipgloss.JoinHorizontal(lipgloss.Top, leftMapBox, " ", rightPane)
