@@ -23,7 +23,7 @@ jobs:
           go-version-file: go.mod
       - name: Check formatting
         shell: bash
-        run: test -z "$(gofmt -l .)"
+        run: gofmt -l .
       - name: Vet
         run: go vet ./...
       - name: Test
