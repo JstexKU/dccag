@@ -12,8 +12,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// version подставляется при релизной сборке: -ldflags "-X main.version=v2.8.0".
-var version = "2.8.0"
+// version подставляется при релизной сборке: -ldflags "-X main.version=v2.8.1".
+var version = "2.8.1"
 
 var (
 	showVersionFlag = flag.Bool("version", false, "Show version and exit")
