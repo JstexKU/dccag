@@ -90,7 +90,7 @@ func writeSave(sd SaveData) error {
 	if err := os.WriteFile(tmp, raw, 0o644); err != nil {
 		return err
 	}
-	return replaceSaveFile(tmp, path)
+	return os.Rename(tmp, path)
 }
 
 // persistState сохраняет состояние, если сохранения включены. Ошибки записи не должны ронять игру.
