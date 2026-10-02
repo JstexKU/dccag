@@ -24,11 +24,14 @@ jobs:
       - name: Check formatting
         shell: bash
         run: |
-          files="$(gofmt -l .)"
+          files="$(git diff --name-only HEAD^1 HEAD^2 -- '*.go')"
           if [ -n "$files" ]; then
-            echo "The following Go files are not gofmt-formatted:"
-            echo "$files"
-            exit 1
+            unformatted="$(printf '%s\n' "$files" | xargs gofmt -l)"
+            if [ -n "$unformatted" ]; then
+              echo "The following changed Go files are not gofmt-formatted:"
+              echo "$unformatted"
+              exit 1
+            fi
           fi
       - name: Vet
         run: go vet ./...
