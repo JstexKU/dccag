@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"math/rand"
 	"sort"
 )
 
@@ -25,7 +23,7 @@ func (m *Model) SelectTarget() *Hero {
 		return nil
 	}
 
-	r := rand.Intn(totalWeight)
+	r := rng.Intn(totalWeight)
 	curr := 0
 	for _, h := range candidates {
 		w := h.Role.AggroWeight
@@ -54,7 +52,7 @@ func (m *Model) ApplyDamage(target *Hero, rawDmg int) (actual *Hero, finalDmg in
 					mitigation = 0.60
 				}
 
-				if rand.Intn(100) < chance {
+				if rng.Intn(100) < chance {
 					mitigated := int(float64(rawDmg) * mitigation)
 					guard.HP -= mitigated
 					globalDebugReport.DamageGuarded += (rawDmg - mitigated)
@@ -73,7 +71,7 @@ func (m *Model) startCombat(pos Point, pack *MonsterPack) {
 	combat := &ActiveCombat{
 		Pos:          pos,
 		Pack:         pack,
-		HasBarrel:    rand.Intn(100) < 30,
+		HasBarrel:    rng.Intn(100) < 30,
 		FleeCooldown: 0,
 		Round:        1,
 	}
@@ -91,7 +89,7 @@ func (m *Model) startCombat(pos Point, pack *MonsterPack) {
 			h.IsStealthed = false
 			h.IsCharged = false
 			h.IsAura = false
-			initRoll := rand.Intn(20) + 1 + h.TotalSpeed() + m.Legacy.TanneryLevel - speedPenalty
+			initRoll := rng.Intn(20) + 1 + h.TotalSpeed() + m.Legacy.TanneryLevel - speedPenalty
 			combat.TurnQueue = append(combat.TurnQueue, TurnOrderEntry{
 				Type: CombatantHero, HeroRef: h, Initiative: initRoll,
 			})
@@ -100,7 +98,7 @@ func (m *Model) startCombat(pos Point, pack *MonsterPack) {
 
 	for _, mob := range pack.Members {
 		if !mob.IsDead {
-			initRoll := rand.Intn(20) + 1 + mob.Speed
+			initRoll := rng.Intn(20) + 1 + mob.Speed
 			combat.TurnQueue = append(combat.TurnQueue, TurnOrderEntry{
 				Type: CombatantMonster, MonsterRef: mob, Initiative: initRoll,
 			})
@@ -185,7 +183,8 @@ func (m *Model) shouldAttemptFlee() bool {
 		return false
 	}
 	hpPercent := float64(curHP) / float64(maxHP)
-	return hpPercent < 0.25 || (livingCount <= 2 && hpPercent < 0.40)
+	fleeAt := float64(m.Tactics.FleeHPPct) / 100
+	return hpPercent < fleeAt || (livingCount <= 2 && hpPercent < fleeAt+0.15)
 }
 
 func (m *Model) attemptFlee() {
@@ -208,7 +207,7 @@ func (m *Model) attemptFlee() {
 		chance = 20
 	}
 
-	roll := rand.Intn(100)
+	roll := rng.Intn(100)
 	if roll < chance {
 		globalDebugReport.FleeSuccesses++
 		m.addLog(healStyle.Render(T(m.Lang, "combat.log.flee_success")))
@@ -285,6 +284,31 @@ func (m *Model) attemptFlee() {
 		}
 		m.Combat.FleeCooldown = 3
 	}
+}
+
+// onMonsterKilled — единая точка обработки гибели монстра от руки героя h.
+// Раньше золото, статистика и прогресс контрактов начислялись только при
+// обычной атаке и заклинаниях мага; убийства другими навыками ничего не давали.
+func (m *Model) onMonsterKilled(h *Hero, mob *Monster) {
+	mob.HP = 0
+	mob.IsDead = true
+	h.Feats.Kills++
+	m.distributePartyExp(mob.Exp)
+
+	g := int(float64(mob.Exp) * m.goldMult())
+	m.Gold += g
+	m.Stats.TotalGoldEarned += g
+	m.Stats.MonsterKills[mob.Type]++
+	m.checkQuestProgress(QuestHuntMonster, mob.Type, 1)
+
+	if mob.Type == MobDragon {
+		h.Feats.BossKills++
+		bossItem := generateItemForClass(h.Class, m.Floor+2)
+		bossItem.UpgradeLevel = 4
+		m.addLog(accentStyle.Render(T(m.Lang, "combat.log.boss_relic", bossItem.DisplayName(m.Lang))))
+		m.equipOrBag(bossItem)
+	}
+	m.checkAndAwardTitle(h)
 }
 
 // ============================================================
@@ -364,7 +388,7 @@ func (m *Model) executeCombatTurn() {
 		m.checkAndDrinkPotions(h)
 		hName := h.DisplayName(m.Lang)
 
-		if h.Affliction == AfflictionParanoid && rand.Intn(100) < 35 {
+		if h.Affliction == AfflictionParanoid && rng.Intn(100) < 35 {
 			verb := TVerb(m.Lang, h.Gender, "забился", "забилась", "cowered")
 			m.addLog(stressStyle.Render(T(m.Lang, "combat.log.paranoid", hName, verb)))
 			return
@@ -388,7 +412,7 @@ func (m *Model) executeCombatTurn() {
 				h.PullAggro()
 				m.checkAndAwardTitle(h)
 				m.addLog(healStyle.Render(T(m.Lang, "combat.log.tank_stance", hName)))
-			} else if h.MP >= 6 && targetMob != nil && targetMob.Atk >= 12 && rand.Intn(100) < 45 {
+			} else if h.MP >= 6 && targetMob != nil && targetMob.Atk >= 12 && rng.Intn(100) < 45 {
 				h.MP -= 6
 				bashDmg := h.TotalDef() + 4
 				targetMob.HP -= bashDmg
@@ -396,10 +420,7 @@ func (m *Model) executeCombatTurn() {
 				h.AddBlock()
 				m.addLog(healStyle.Render(T(m.Lang, "combat.log.tank_bash", hName, bashDmg)))
 				if targetMob.HP <= 0 {
-					targetMob.HP = 0
-					targetMob.IsDead = true
-					h.Feats.Kills++
-					m.distributePartyExp(targetMob.Exp)
+					m.onMonsterKilled(h, targetMob)
 				}
 				return
 			}
@@ -425,7 +446,7 @@ func (m *Model) executeCombatTurn() {
 				m.addLog(healStyle.Render(T(m.Lang, "combat.log.paladin_heal", hName, verb, woundedAlly.DisplayName(m.Lang), healAmt)))
 				m.checkAndAwardTitle(h)
 				return
-			} else if h.MP >= 6 && targetMob != nil && rand.Intn(100) < 50 {
+			} else if h.MP >= 6 && targetMob != nil && rng.Intn(100) < 50 {
 				h.MP -= 6
 				smiteDmg := h.TotalAtk() + (h.TotalDef() / 3) + 3
 				targetMob.HP -= smiteDmg
@@ -433,10 +454,7 @@ func (m *Model) executeCombatTurn() {
 				h.AddBlock()
 				m.addLog(goldStyle.Render(T(m.Lang, "combat.log.paladin_smite", hName, smiteDmg)))
 				if targetMob.HP <= 0 {
-					targetMob.HP = 0
-					targetMob.IsDead = true
-					h.Feats.Kills++
-					m.distributePartyExp(targetMob.Exp)
+					m.onMonsterKilled(h, targetMob)
 				}
 				return
 			}
@@ -448,7 +466,7 @@ func (m *Model) executeCombatTurn() {
 				h.MP -= skillCost
 				h.IsBerserk = true
 				m.addLog(fireStyle.Render(T(m.Lang, "combat.log.warrior_rage", hName)))
-			} else if h.MP >= 7 && m.Combat.Pack.LivingCount() >= 2 && rand.Intn(100) < 55 {
+			} else if h.MP >= 7 && m.Combat.Pack.LivingCount() >= 2 && rng.Intn(100) < 55 {
 				h.MP -= 7
 				cleaveDmg := h.TotalAtk() + 2
 				hitCount := 0
@@ -457,10 +475,7 @@ func (m *Model) executeCombatTurn() {
 						mob.HP -= cleaveDmg
 						h.Feats.DamageDealt += cleaveDmg
 						if mob.HP <= 0 {
-							mob.HP = 0
-							mob.IsDead = true
-							h.Feats.Kills++
-							m.distributePartyExp(mob.Exp)
+							m.onMonsterKilled(h, mob)
 						}
 						hitCount++
 					}
@@ -482,10 +497,7 @@ func (m *Model) executeCombatTurn() {
 						mob.HP -= flurryDmg
 						h.Feats.DamageDealt += flurryDmg
 						if mob.HP <= 0 {
-							mob.HP = 0
-							mob.IsDead = true
-							h.Feats.Kills++
-							m.distributePartyExp(mob.Exp)
+							m.onMonsterKilled(h, mob)
 						}
 						hits++
 					}
@@ -500,10 +512,7 @@ func (m *Model) executeCombatTurn() {
 				h.AddCCDuration()
 				m.addLog(fountStyle.Render(T(m.Lang, "combat.log.monk_palm", hName, palmDmg)))
 				if targetMob.HP <= 0 {
-					targetMob.HP = 0
-					targetMob.IsDead = true
-					h.Feats.Kills++
-					m.distributePartyExp(targetMob.Exp)
+					m.onMonsterKilled(h, targetMob)
 				}
 				return
 			}
@@ -517,17 +526,14 @@ func (m *Model) executeCombatTurn() {
 				h.AddBackstab()
 				verb := TVerb(m.Lang, h.Gender, "растворился", "растворилась", "vanished")
 				m.addLog(accentStyle.Render(T(m.Lang, "combat.log.rogue_stealth", hName, verb)))
-			} else if h.MP >= 6 && targetMob != nil && targetMob.HP > 20 && rand.Intn(100) < 50 {
+			} else if h.MP >= 6 && targetMob != nil && targetMob.HP > 20 && rng.Intn(100) < 50 {
 				h.MP -= 6
 				poisonDmg := h.TotalAtk() + 6
 				targetMob.HP -= poisonDmg
 				h.Feats.DamageDealt += poisonDmg
 				m.addLog(stressStyle.Render(T(m.Lang, "combat.log.rogue_poison", hName, poisonDmg)))
 				if targetMob.HP <= 0 {
-					targetMob.HP = 0
-					targetMob.IsDead = true
-					h.Feats.Kills++
-					m.distributePartyExp(targetMob.Exp)
+					m.onMonsterKilled(h, targetMob)
 				}
 				return
 			}
@@ -535,7 +541,7 @@ func (m *Model) executeCombatTurn() {
 
 		// 6. СЛЕДОПЫТ
 		if h.Class == ClassRanger {
-			if targetMob != nil && h.MP >= skillCost && targetMob.Atk >= 12 && rand.Intn(100) < 60 {
+			if targetMob != nil && h.MP >= skillCost && targetMob.Atk >= 12 && rng.Intn(100) < 60 {
 				h.MP -= skillCost
 				trapDmg := 8 + (m.Floor * 2)
 				targetMob.HP -= trapDmg
@@ -543,10 +549,7 @@ func (m *Model) executeCombatTurn() {
 				h.AddCCDuration()
 				m.addLog(accentStyle.Render(T(m.Lang, "combat.log.ranger_trap", hName, T(m.Lang, targetMob.NameKey), trapDmg)))
 				if targetMob.HP <= 0 {
-					targetMob.HP = 0
-					targetMob.IsDead = true
-					h.Feats.Kills++
-					m.distributePartyExp(targetMob.Exp)
+					m.onMonsterKilled(h, targetMob)
 				}
 				return
 			} else if h.MP >= 6 && m.Combat.Pack.LivingCount() >= 2 {
@@ -557,10 +560,7 @@ func (m *Model) executeCombatTurn() {
 						mob.HP -= volleyDmg
 						h.Feats.DamageDealt += volleyDmg
 						if mob.HP <= 0 {
-							mob.HP = 0
-							mob.IsDead = true
-							h.Feats.Kills++
-							m.distributePartyExp(mob.Exp)
+							m.onMonsterKilled(h, mob)
 						}
 					}
 				}
@@ -581,7 +581,7 @@ func (m *Model) executeCombatTurn() {
 
 			if criticalAlly != nil && h.MP >= skillCost && h.Affliction != AfflictionSelfish {
 				h.MP -= skillCost
-				hAmt := rand.Intn(8) + 12 + (m.Floor * 2)
+				hAmt := rng.Intn(8) + 12 + (m.Floor * 2)
 				if m.Combat.Round > 15 {
 					hAmt /= 2
 				}
@@ -596,7 +596,7 @@ func (m *Model) executeCombatTurn() {
 				h.MP -= skillCost
 				h.IsAura = true
 				m.addLog(fountStyle.Render(T(m.Lang, "combat.log.cleric_aura", hName)))
-			} else if h.MP >= 7 && targetMob != nil && rand.Intn(100) < 40 {
+			} else if h.MP >= 7 && targetMob != nil && rng.Intn(100) < 40 {
 				h.MP -= 7
 				smiteDmg := h.TotalAtk() + 4
 				targetMob.HP -= smiteDmg
@@ -606,10 +606,7 @@ func (m *Model) executeCombatTurn() {
 				verb := TVerb(m.Lang, h.Gender, "обрушил", "обрушила", "unleashed")
 				m.addLog(fountStyle.Render(T(m.Lang, "combat.log.cleric_smite", hName, verb, smiteDmg)))
 				if targetMob.HP <= 0 {
-					targetMob.HP = 0
-					targetMob.IsDead = true
-					h.Feats.Kills++
-					m.distributePartyExp(targetMob.Exp)
+					m.onMonsterKilled(h, targetMob)
 				}
 				return
 			}
@@ -646,10 +643,7 @@ func (m *Model) executeCombatTurn() {
 						mob.HP -= dissonanceDmg
 						mob.Atk = max(1, mob.Atk-2)
 						if mob.HP <= 0 {
-							mob.HP = 0
-							mob.IsDead = true
-							h.Feats.Kills++
-							m.distributePartyExp(mob.Exp)
+							m.onMonsterKilled(h, mob)
 						}
 					}
 				}
@@ -672,15 +666,7 @@ func (m *Model) executeCombatTurn() {
 						mob.HP -= barrelDmg
 						h.Feats.DamageDealt += barrelDmg
 						if mob.HP <= 0 {
-							mob.HP = 0
-							mob.IsDead = true
-							h.Feats.Kills++
-							m.distributePartyExp(mob.Exp)
-							g := int(float64(mob.Exp) * m.Relic.GoldMult)
-							m.Gold += g
-							m.Stats.TotalGoldEarned += g
-							m.Stats.MonsterKills[mob.Type]++
-							m.checkQuestProgress(QuestHuntMonster, mob.Type, 1)
+							m.onMonsterKilled(h, mob)
 						}
 					}
 				}
@@ -692,21 +678,13 @@ func (m *Model) executeCombatTurn() {
 				h.AddManaBurst()
 				h.AddCCDuration()
 				verb := TVerb(m.Lang, h.Gender, "накрыл", "накрыла", "blanketed")
-				m.addLog(fireStyle.Render(T(m.Lang, "combat.log.mage_storm", hName, verb)))
+				m.addLog(fireStyle.Render(T(m.Lang, "combat.log.mage_storm", hName, verb, aoeDmg)))
 				for _, mob := range m.Combat.Pack.Members {
 					if !mob.IsDead {
 						mob.HP -= aoeDmg
 						h.Feats.DamageDealt += aoeDmg
 						if mob.HP <= 0 {
-							mob.HP = 0
-							mob.IsDead = true
-							h.Feats.Kills++
-							m.distributePartyExp(mob.Exp)
-							g := int(float64(mob.Exp) * m.Relic.GoldMult)
-							m.Gold += g
-							m.Stats.TotalGoldEarned += g
-							m.Stats.MonsterKills[mob.Type]++
-							m.checkQuestProgress(QuestHuntMonster, mob.Type, 1)
+							m.onMonsterKilled(h, mob)
 						}
 					}
 				}
@@ -721,10 +699,7 @@ func (m *Model) executeCombatTurn() {
 						mob.HP -= chainDmg
 						h.Feats.DamageDealt += chainDmg
 						if mob.HP <= 0 {
-							mob.HP = 0
-							mob.IsDead = true
-							h.Feats.Kills++
-							m.distributePartyExp(mob.Exp)
+							m.onMonsterKilled(h, mob)
 						}
 						hits++
 					}
@@ -772,10 +747,7 @@ func (m *Model) executeCombatTurn() {
 				h.Feats.DamageDealt += drainDmg
 				m.addLog(fireStyle.Render(T(m.Lang, "combat.log.warlock_drain", hName, drainDmg, healSelf)))
 				if targetMob.HP <= 0 {
-					targetMob.HP = 0
-					targetMob.IsDead = true
-					h.Feats.Kills++
-					m.distributePartyExp(targetMob.Exp)
+					m.onMonsterKilled(h, targetMob)
 				}
 				return
 			}
@@ -787,12 +759,12 @@ func (m *Model) executeCombatTurn() {
 
 		mobDisplayName := T(m.Lang, targetMob.NameKey)
 
-		if (targetMob.Type == MobSkeleton || targetMob.Type == MobGolem || targetMob.Type == MobGargoyle) && rand.Intn(100) < 25 {
+		if (targetMob.Type == MobSkeleton || targetMob.Type == MobGolem || targetMob.Type == MobGargoyle) && rng.Intn(100) < 25 {
 			m.addLog(subtleStyle.Render(T(m.Lang, "combat.log.mob_block", mobDisplayName)))
 			return
 		}
 
-		d20 := rand.Intn(20) + 1
+		d20 := rng.Intn(20) + 1
 		hitRoll := d20 + (h.TotalAtk() / 3)
 		targetAC := 10 + targetMob.Defense
 		critThreshold := 19
@@ -909,7 +881,7 @@ func (m *Model) executeCombatTurn() {
 
 		effectiveDef := max(0, targetMob.Defense-armorPierce)
 		varRand := max(4, h.TotalAtk()/2)
-		dmg := h.TotalAtk() + rand.Intn(varRand) - (effectiveDef / 2) + bonusDmg
+		dmg := h.TotalAtk() + rng.Intn(varRand) - (effectiveDef / 2) + bonusDmg
 		dmg = max(4+(m.Floor/2), dmg)
 
 		if isCrit {
@@ -938,27 +910,10 @@ func (m *Model) executeCombatTurn() {
 
 		m.checkAndAwardTitle(h)
 		hitVerb := TVerb(m.Lang, h.Gender, "нанес", "нанесла", "dealt")
-		m.addLog(fmt.Sprintf("⚔️ %s %s %d урона [%s] (%d HP).", hName, hitVerb, dmg, mobDisplayName, targetMob.HP))
+		m.addLog(T(m.Lang, "combat.log.hit", hName, hitVerb, dmg, mobDisplayName, targetMob.HP))
 
 		if targetMob.HP <= 0 {
-			targetMob.HP = 0
-			targetMob.IsDead = true
-			h.Feats.Kills++
-			m.distributePartyExp(targetMob.Exp)
-			g := int(float64(targetMob.Exp) * m.Relic.GoldMult)
-			m.Gold += g
-			m.Stats.TotalGoldEarned += g
-			m.Stats.MonsterKills[targetMob.Type]++
-			m.checkQuestProgress(QuestHuntMonster, targetMob.Type, 1)
-
-			if targetMob.Type == MobDragon {
-				h.Feats.BossKills++
-				bossItem := generateItemForClass(h.Class, m.Floor+2)
-				bossItem.UpgradeLevel = 4
-				m.addLog(accentStyle.Render(T(m.Lang, "combat.log.boss_relic", bossItem.DisplayName(m.Lang))))
-				m.equipOrBag(bossItem)
-			}
-			m.checkAndAwardTitle(h)
+			m.onMonsterKilled(h, targetMob)
 		}
 		return
 	}
@@ -985,7 +940,7 @@ func (m *Model) executeCombatTurn() {
 			m.addLog(subtleStyle.Render(T(m.Lang, "combat.log.mob_melee", mobDisplayName, victimName)))
 		}
 
-		mobRoll := rand.Intn(20) + 1
+		mobRoll := rng.Intn(20) + 1
 		mobHit := mobRoll + (mob.Atk / 3)
 		heroAC := 10 + victim.TotalDef()
 

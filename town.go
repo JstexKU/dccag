@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"sort"
 )
 
@@ -10,12 +9,12 @@ import (
 
 func generateTownEstablishments() TownEstablishments {
 	return TownEstablishments{
-		SmithyKey:    fmt.Sprintf("town.smithy.%d", rand.Intn(5)+1),
-		TanneryKey:   fmt.Sprintf("town.tannery.%d", rand.Intn(5)+1),
-		TavernKey:    fmt.Sprintf("town.tavern.%d", rand.Intn(5)+1),
-		GuildKey:     fmt.Sprintf("town.guild.%d", rand.Intn(5)+1),
-		AlchemistKey: fmt.Sprintf("town.alchemist.%d", rand.Intn(5)+1),
-		ChurchKey:    fmt.Sprintf("town.church.%d", rand.Intn(5)+1),
+		SmithyKey:    fmt.Sprintf("town.smithy.%d", rng.Intn(5)+1),
+		TanneryKey:   fmt.Sprintf("town.tannery.%d", rng.Intn(5)+1),
+		TavernKey:    fmt.Sprintf("town.tavern.%d", rng.Intn(5)+1),
+		GuildKey:     fmt.Sprintf("town.guild.%d", rng.Intn(5)+1),
+		AlchemistKey: fmt.Sprintf("town.alchemist.%d", rng.Intn(5)+1),
+		ChurchKey:    fmt.Sprintf("town.church.%d", rng.Intn(5)+1),
 	}
 }
 
@@ -212,11 +211,71 @@ func (m *Model) logTownAction(icon, building, desc string) {
 	}
 }
 
+func (m *Model) buyMissingOrBetterGear() {
+	slots := []EquipSlot{SlotWeapon, SlotChest, SlotHead, SlotLegs}
+
+	for _, h := range m.Party {
+		if h.IsDead {
+			continue
+		}
+
+		for _, slot := range slots {
+			currItem := h.GetItemInSlot(slot)
+
+			// 1. Слот пуст — покупка необходимого снаряжения в приоритете
+			if currItem == nil {
+				cost := 35 + (m.Floor * 15)
+				if m.Gold >= cost {
+					m.Gold -= cost
+					globalDebugReport.GoldSpentBreakdown["Покупка снаряжения"] += cost
+
+					newItem := generateItemForClassSlot(h.Class, slot, m.Floor)
+					h.SetItemInSlot(slot, &newItem)
+
+					hName := h.DisplayName(m.Lang)
+					slotName := T(m.Lang, "slot."+string(slot))
+					itemName := newItem.DisplayName(m.Lang)
+
+					m.addLog(goldStyle.Render(T(m.Lang, "town.log.bought_missing", hName, slotName, itemName, cost)))
+					m.logTownAction("🛒", T(m.Lang, "town.market"), T(m.Lang, "town.log.bought_missing_hist", hName, itemName, cost))
+				}
+				continue
+			}
+
+			// 2. Слот заполнен, но вещь слабая — плановый апгрейд при достатке казны
+			upgradeThreshold := 120 + (m.Floor * 25)
+			if m.Gold > upgradeThreshold {
+				shopOffer := generateItemForClassSlot(h.Class, slot, m.Floor+1)
+				if shopOffer.TotalStat() > currItem.TotalStat()+3 && m.Gold >= shopOffer.Value {
+					m.Gold -= shopOffer.Value
+					globalDebugReport.GoldSpentBreakdown["Покупка снаряжения"] += shopOffer.Value
+
+					if len(m.Bag) < m.currentBagCapacity() {
+						m.Bag = append(m.Bag, *currItem)
+					} else {
+						m.Gold += currItem.Value
+					}
+
+					h.SetItemInSlot(slot, &shopOffer)
+					hName := h.DisplayName(m.Lang)
+					itemName := shopOffer.DisplayName(m.Lang)
+
+					m.addLog(goldStyle.Render(T(m.Lang, "town.log.bought_upgrade", hName, itemName, shopOffer.Value)))
+					m.logTownAction("🛒", T(m.Lang, "town.market"), T(m.Lang, "town.log.bought_upgrade_hist", hName, itemName, shopOffer.Value))
+				}
+			}
+		}
+	}
+}
+
 // --- Пайплайн пребывания в городе ---
 
 func (m *Model) stepTown() {
 	switch m.TownPhase {
 	case TownPhaseSellLoot:
+		// Сначала покупаем недостающие или лучшие вещи
+		m.buyMissingOrBetterGear()
+
 		soldGold := 0
 		for _, it := range m.Bag {
 			soldGold += it.Value * 2
@@ -334,7 +393,7 @@ func (m *Model) stepTown() {
 			for _, h := range m.Party {
 				if !h.IsDead {
 					h.HP = h.MaxHP
-					h.MP = h.MaxMP
+					h.MP = h.MaxHP
 				}
 			}
 			m.addLog(healStyle.Render(T(m.Lang, "town.log.tavern_rest", tavernName, tavernCost)))
@@ -390,7 +449,7 @@ func (m *Model) stepTown() {
 					availableClasses = AllClasses
 				}
 
-				newClass := availableClasses[rand.Intn(len(availableClasses))]
+				newClass := availableClasses[rng.Intn(len(availableClasses))]
 
 				if m.Gold >= recruitCost {
 					m.Gold -= recruitCost
@@ -398,7 +457,7 @@ func (m *Model) stepTown() {
 					m.Party[i] = createHero(newClass, m.Floor, m.Legacy.SmithyLevel)
 					m.addLog(healStyle.Render(T(m.Lang, "town.log.guild_veteran",
 						guildName, m.Party[i].DisplayName(m.Lang), m.Party[i].RaceName(m.Lang), m.Party[i].ShortClass(m.Lang), m.Party[i].Level, recruitCost)))
-					m.logTownAction("⚔️", guildName, T(m.Lang, "town.log.guild_vet_hist",
+					m.logTownAction("⚔️️", guildName, T(m.Lang, "town.log.guild_vet_hist",
 						m.Party[i].DisplayName(m.Lang), m.Party[i].ShortClass(m.Lang), m.Party[i].Level, recruitCost))
 				} else {
 					// NEW: масштабированное ополчение — тир зависит от m.Legacy.TotalInvested.

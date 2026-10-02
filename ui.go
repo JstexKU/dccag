@@ -270,7 +270,7 @@ func (m Model) renderMenuScreen() string {
 `)
 
 	sb.WriteString(banner + "\n")
-	sb.WriteString(lipgloss.NewStyle().Align(lipgloss.Center).Render(titleStyle.Render("       Dungeon Crawler Console Auto Game (dccag) v2.7.0")) + "\n\n")
+	sb.WriteString(lipgloss.NewStyle().Align(lipgloss.Center).Render(titleStyle.Render("       Dungeon Crawler Console Auto Game (dccag) v2.8.0")) + "\n\n")
 
 	var textBlock string
 	if m.Lang == LangEN {
@@ -318,12 +318,12 @@ func (m Model) renderStatsScreen(title string, titleColor lipgloss.Color) string
 
 	sb.WriteString(lipgloss.NewStyle().Bold(true).Render(T(m.Lang, "stats.legacy_header") + ":\n"))
 	sb.WriteString(fmt.Sprintf(" • %s: %s\n", T(m.Lang, "stats.legacy_treasury"), goldStyle.Render(fmt.Sprintf("%dG", int(float64(m.Gold)*LegacyTaxRate)))))
-	sb.WriteString(fmt.Sprintf(" • %s «%s»: Ур.%d | %s «%s»: Ур.%d\n",
-		T(m.Lang, "town.smithy"), T(m.Lang, m.TownEst.SmithyKey), m.Legacy.SmithyLevel,
-		T(m.Lang, "town.tannery"), T(m.Lang, m.TownEst.TanneryKey), m.Legacy.TanneryLevel))
-	sb.WriteString(fmt.Sprintf(" • %s «%s»: Ур.%d | %s «%s»: Ур.%d\n",
-		T(m.Lang, "town.church"), T(m.Lang, m.TownEst.ChurchKey), m.Legacy.ChurchLevel,
-		T(m.Lang, "town.tavern"), T(m.Lang, m.TownEst.TavernKey), m.Legacy.TanneryLevel))
+	sb.WriteString(fmt.Sprintf(" • %s «%s»: %s.%d | %s «%s»: %s.%d\n",
+		T(m.Lang, "town.smithy"), T(m.Lang, m.TownEst.SmithyKey), T(m.Lang, "ui.level_short"), m.Legacy.SmithyLevel,
+		T(m.Lang, "town.tannery"), T(m.Lang, m.TownEst.TanneryKey), T(m.Lang, "ui.level_short"), m.Legacy.TanneryLevel))
+	sb.WriteString(fmt.Sprintf(" • %s «%s»: %s.%d | %s «%s»: %s.%d\n",
+		T(m.Lang, "town.church"), T(m.Lang, m.TownEst.ChurchKey), T(m.Lang, "ui.level_short"), m.Legacy.ChurchLevel,
+		T(m.Lang, "town.tavern"), T(m.Lang, m.TownEst.TavernKey), T(m.Lang, "ui.level_short"), m.Legacy.TavernLevel))
 
 	// NEW: строка о текущем тире ополчения и прогрессе до следующего.
 	tier := militiaTierForInvestment(m.Legacy.TotalInvested)
@@ -595,6 +595,8 @@ func (m Model) renderMap(viewW, viewH int) string {
 				sb.WriteString(trappedChestStyle.Render("T"))
 			case TileBarrel:
 				sb.WriteString(barrelStyle.Render("o"))
+			case TileEvent:
+				sb.WriteString(eventTileStyle.Render("?"))
 			case TileStairs:
 				sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("45")).Bold(true).Render(">"))
 			case TileExit:
@@ -976,10 +978,10 @@ func (m Model) renderRightContentLines(innerRightW, maxLines int) []string {
 		}
 	} else if m.InTown {
 		lines = append(lines, townArtStyle.Render(shortenItemName(T(m.Lang, "town.management")+":", innerRightW)))
-		lines = append(lines, shortenItemName(fmt.Sprintf("⚒️ %s: Ур.%d", T(m.Lang, m.TownEst.SmithyKey), m.Legacy.SmithyLevel), innerRightW))
-		lines = append(lines, shortenItemName(fmt.Sprintf("🎒 %s: Ур.%d", T(m.Lang, m.TownEst.TanneryKey), m.Legacy.TanneryLevel), innerRightW))
-		lines = append(lines, shortenItemName(fmt.Sprintf("🏛️ %s: Ур.%d", T(m.Lang, m.TownEst.ChurchKey), m.Legacy.ChurchLevel), innerRightW))
-		lines = append(lines, shortenItemName(fmt.Sprintf("🍻 %s: Ур.%d", T(m.Lang, m.TownEst.TavernKey), m.Legacy.TanneryLevel), innerRightW))
+		lines = append(lines, shortenItemName(fmt.Sprintf("⚒️ %s: %s.%d", T(m.Lang, m.TownEst.SmithyKey), T(m.Lang, "ui.level_short"), m.Legacy.SmithyLevel), innerRightW))
+		lines = append(lines, shortenItemName(fmt.Sprintf("🎒 %s: %s.%d", T(m.Lang, m.TownEst.TanneryKey), T(m.Lang, "ui.level_short"), m.Legacy.TanneryLevel), innerRightW))
+		lines = append(lines, shortenItemName(fmt.Sprintf("🏛️ %s: %s.%d", T(m.Lang, m.TownEst.ChurchKey), T(m.Lang, "ui.level_short"), m.Legacy.ChurchLevel), innerRightW))
+		lines = append(lines, shortenItemName(fmt.Sprintf("🍻 %s: %s.%d", T(m.Lang, m.TownEst.TavernKey), T(m.Lang, "ui.level_short"), m.Legacy.TavernLevel), innerRightW))
 		lines = append(lines, shortenItemName(fmt.Sprintf("%s: %d/%d", T(m.Lang, "ui.bag"), len(m.Bag), m.currentBagCapacity()), innerRightW))
 	} else {
 		lines = append(lines, accentStyle.Render(shortenItemName(T(m.Lang, "ui.scouting")+":", innerRightW)))
@@ -1035,6 +1037,9 @@ func (m Model) View() string {
 	}
 	if m.State == StateArmory {
 		return m.renderArmoryScreen()
+	}
+	if m.State == StateTactics {
+		return m.renderTacticsScreen()
 	}
 
 	termW := max(38, m.TermWidth)
@@ -1339,9 +1344,9 @@ func (m Model) renderLogBox(innerW, innerH int) string {
 }
 
 func (m Model) renderControls(width int) string {
-	controlsText := "[Space] Пауза | [F] Побег | [E] Арсенал | [I] Кодекс | [S] Слава | [+/-] Скор. | [L] Язык | [Q] Выход"
+	controlsText := "[Space] Пауза | [F] Побег | [T] Тактика | [E] Арсенал | [I] Кодекс | [S] Слава | [+/-] Скор. | [L] Язык | [Q] Выход"
 	if m.Lang == LangEN {
-		controlsText = "[Space] Pause | [F] Flee | [E] Armory | [I] Codex | [S] Glory | [+/-] Speed | [L] Lang | [Q] Quit"
+		controlsText = "[Space] Pause | [F] Flee | [T] Tactics | [E] Armory | [I] Codex | [S] Glory | [+/-] Speed | [L] Lang | [Q] Quit"
 	}
 	return subtleStyle.Render(shortenItemName(controlsText, width))
 }

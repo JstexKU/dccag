@@ -2,12 +2,11 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 )
 
 func generateRelic(level int) PartyRelic {
 	relicKeys := []string{"greed_compass", "martyr_crown", "holy_grail"}
-	chosen := relicKeys[rand.Intn(len(relicKeys))]
+	chosen := relicKeys[rng.Intn(len(relicKeys))]
 
 	nameKey := fmt.Sprintf("relic.%s.name.%d", chosen, level)
 	descKey := fmt.Sprintf("relic.%s.desc", chosen)
@@ -35,7 +34,7 @@ func generateRelic(level int) PartyRelic {
 }
 
 func generateAutoQuest(curFloor int) AutoQuest {
-	qType := QuestType(rand.Intn(6))
+	qType := QuestType(rng.Intn(6))
 	switch qType {
 	case QuestHuntMonster:
 		var pool []MonsterType
@@ -52,15 +51,15 @@ func generateAutoQuest(curFloor int) AutoQuest {
 		default:
 			pool = []MonsterType{MobVoidDemon, MobDeathKnight}
 		}
-		target := pool[rand.Intn(len(pool))]
-		count := rand.Intn(3) + 3
+		target := pool[rng.Intn(len(pool))]
+		count := rng.Intn(3) + 3
 		return AutoQuest{
 			Type: QuestHuntMonster, TargetMob: target, TargetCount: count,
 			TitleKey: "quest.hunt.title", DescKey: "quest.hunt.desc",
 			RewardGold: count * (20 + curFloor*5),
 		}
 	case QuestOpenChests:
-		count := rand.Intn(2) + 2
+		count := rng.Intn(2) + 2
 		return AutoQuest{
 			Type: QuestOpenChests, TargetCount: count,
 			TitleKey: "quest.chest.title", DescKey: "quest.chest.desc",
@@ -142,13 +141,13 @@ func (m *Model) generateDungeon() {
 	}
 
 	for i := 0; i < attempts; i++ {
-		w := rand.Intn(7) + 7
-		h := rand.Intn(4) + 4
+		w := rng.Intn(7) + 7
+		h := rng.Intn(4) + 4
 		if m.MapWidth-w-2 <= 1 || m.MapHeight-h-2 <= 1 {
 			continue
 		}
-		x := rand.Intn(m.MapWidth-w-2) + 1
-		y := rand.Intn(m.MapHeight-h-2) + 1
+		x := rng.Intn(m.MapWidth-w-2) + 1
+		y := rng.Intn(m.MapHeight-h-2) + 1
 		rooms = append(rooms, Rect{x, y, w, h})
 		for ry := y; ry < y+h; ry++ {
 			for rx := x; rx < x+w; rx++ {
@@ -219,7 +218,7 @@ func (m *Model) generateDungeon() {
 			m.Packs[pos] = spawnMonsterPack(true, m.Floor)
 		} else {
 			m.Packs[pos] = spawnMonsterPack(false, m.Floor)
-			eventRoll := rand.Intn(13)
+			eventRoll := rng.Intn(13)
 			cornerPos := Point{r.X + 1, r.Y + 1}
 			switch {
 			case (!relicSpawned && m.CurrentQuest.Type == QuestFindRelic) || (eventRoll == 12 && !relicSpawned):
@@ -233,6 +232,8 @@ func (m *Model) generateDungeon() {
 				m.Grid[cornerPos.Y][cornerPos.X] = TileTrappedChest
 			case eventRoll == 3:
 				m.Grid[cornerPos.Y][cornerPos.X] = TileBarrel
+			case eventRoll == 4 || eventRoll == 5:
+				m.Grid[cornerPos.Y][cornerPos.X] = TileEvent
 			case eventRoll >= 7:
 				m.Grid[cornerPos.Y][cornerPos.X] = TileChest
 			}
@@ -282,10 +283,10 @@ func (m *Model) evaluateRetreat() RetreatReason {
 		totalStress += h.Stress
 	}
 
-	if living <= 2 {
+	if living <= m.Tactics.RetreatMinAlive {
 		return RetreatTooFewAlive
 	}
-	if maxHP > 0 && float64(curHP)/float64(maxHP) < 0.35 {
+	if maxHP > 0 && float64(curHP)/float64(maxHP) < float64(m.Tactics.RetreatHPPct)/100 {
 		return RetreatLowHP
 	}
 	if living > 0 {
@@ -419,6 +420,19 @@ func (m *Model) isMonsterNearby() bool {
 	return false
 }
 
+// hasUndergearedHeroes проверяет, остался ли кто-то из живых бойцов без оружия или доспехов
+func (m *Model) hasUndergearedHeroes() bool {
+	for _, h := range m.Party {
+		if h.IsDead {
+			continue
+		}
+		if h.Weapon == nil || h.Head == nil || h.Chest == nil || h.Legs == nil {
+			return true
+		}
+	}
+	return false
+}
+
 // findEmergencyStep — аварийный поиск кратчайшего пути к целевому тайлу (TileStairs или TileExit)
 func (m *Model) findEmergencyStep(targetTile Tile) (Point, bool) {
 	queue := []Point{m.PartyPos}
@@ -464,6 +478,7 @@ func (m *Model) findNextStep() Point {
 	seekingFountain := m.shouldSeekFountain(urgency)
 	forceDeeper := (m.CurrentQuest.Type == QuestEscapeTrap) && !m.CurrentQuest.Completed
 	bagFull := len(m.Bag) >= m.currentBagCapacity()
+	needsGear := m.hasUndergearedHeroes()
 
 	findPath := func(avoidMonsters bool, targetCondition func(Point, Tile) bool) (Point, bool) {
 		queue := []Point{m.PartyPos}
@@ -488,6 +503,9 @@ func (m *Model) findNextStep() Point {
 				next := Point{curr.X + d.X, curr.Y + d.Y}
 				if next.X >= 0 && next.X < m.MapWidth && next.Y >= 0 && next.Y < m.MapHeight {
 					if !visited[next] && m.Grid[next.Y][next.X] != TileWall {
+						if m.Tactics.SkipTraps && m.Grid[next.Y][next.X] == TileTrappedChest && m.CurrentQuest.Type != QuestOpenChests {
+							continue
+						}
 						if avoidMonsters {
 							if _, hasMob := m.Packs[next]; hasMob {
 								continue
@@ -529,12 +547,26 @@ func (m *Model) findNextStep() Point {
 		}
 	}
 
+	// 2a. Если кто-то без экипировки — целенаправленно обходим монстров и ищем сундуки/тайники
+	if needsGear && !bagFull {
+		step, found := findPath(true, func(p Point, t Tile) bool {
+			return t == TileChest || t == TileTrappedChest || t == TileRelic || t == TileEvent
+		})
+		if found {
+			return step
+		}
+	}
+
 	// 3. Обычные цели
 	isExplorationQuest := m.CurrentQuest.Type == QuestReachFloor && !m.CurrentQuest.Completed
 
 	isTarget := func(p Point, t Tile) bool {
 		_, hasPack := m.Packs[p]
 		if hasPack {
+			// Если кто-то голый, не лезем на монстров по своей воле
+			if needsGear {
+				return false
+			}
 			return true
 		}
 		if seekingFountain && t == TileAltar {
@@ -567,7 +599,21 @@ func (m *Model) findNextStep() Point {
 				return false
 			}
 		}
-		return t == TileChest || t == TileStairs || t == TileAltar || t == TileFountain || t == TileTrappedChest || t == TileBarrel || t == TileRelic
+		if t == TileTrappedChest && m.Tactics.SkipTraps && m.CurrentQuest.Type != QuestOpenChests {
+			return false
+		}
+		if t == TileAltar && m.Tactics.SkipAltars && (m.CurrentQuest.Type != QuestUseAltar || m.CurrentQuest.Completed) {
+			return false
+		}
+		return t == TileChest || t == TileStairs || t == TileAltar || t == TileFountain || t == TileTrappedChest || t == TileBarrel || t == TileRelic || t == TileEvent
+	}
+
+	// Если есть раздетые, сначала пробуем безопасный путь ко всем целям в обход монстров
+	if needsGear {
+		step, found := findPath(true, isTarget)
+		if found {
+			return step
+		}
 	}
 
 	step, found := findPath(false, isTarget)
@@ -597,7 +643,7 @@ func (m *Model) getRandomLivingHero() *Hero {
 	if len(living) == 0 {
 		return nil
 	}
-	return living[rand.Intn(len(living))]
+	return living[rng.Intn(len(living))]
 }
 
 // ============================================================
@@ -640,7 +686,7 @@ func (m *Model) addStress(h *Hero, amt int) {
 			virtueChance = 40
 		}
 
-		if rand.Intn(100) < virtueChance {
+		if rng.Intn(100) < virtueChance {
 			h.Affliction = AfflictionVirtuous
 			h.Stress = 0
 			h.HP = h.MaxHP
@@ -654,7 +700,7 @@ func (m *Model) addStress(h *Hero, amt int) {
 			}
 		} else {
 			affs := []AfflictionType{AfflictionParanoid, AfflictionSelfish, AfflictionManiac}
-			h.Affliction = affs[rand.Intn(len(affs))]
+			h.Affliction = affs[rng.Intn(len(affs))]
 			verb := TVerb(m.Lang, h.Gender, "сломлен", "сломлена", "broken")
 			affName := T(m.Lang, "affliction."+string(h.Affliction))
 			m.addLog(stressStyle.Render(T(m.Lang, "dungeon.log.affliction", h.FullName(m.Lang), verb, affName)))
@@ -703,7 +749,7 @@ func (m *Model) checkAndDrinkPotions(h *Hero) {
 		switch p.Type {
 		case PotionHP:
 			missingHP := h.MaxHP - h.HP
-			if float64(h.HP)/float64(h.MaxHP) <= 0.40 || missingHP >= p.Power {
+			if float64(h.HP)/float64(h.MaxHP) <= float64(m.Tactics.PotionHPPct)/100 || missingHP >= p.Power {
 				shouldDrink = true
 			}
 		case PotionMP:
@@ -912,7 +958,7 @@ func (m *Model) handleFountain() {
 func (m *Model) handleTrappedChest() {
 	m.Stats.ChestsOpened++
 	m.checkQuestProgress(QuestOpenChests, "", 1)
-	d20 := rand.Intn(20) + 1
+	d20 := rng.Intn(20) + 1
 
 	rogueBonus := 0
 	for _, h := range m.Party {
@@ -926,7 +972,7 @@ func (m *Model) handleTrappedChest() {
 
 	if rollSuccess {
 		m.Stats.TrapsDisarmed++
-		gold := int(float64(rand.Intn(25)+15) * m.Relic.GoldMult)
+		gold := int(float64(rng.Intn(25)+15) * m.Relic.GoldMult)
 		m.Gold += gold
 		m.Stats.TotalGoldEarned += gold
 
@@ -944,7 +990,7 @@ func (m *Model) handleTrappedChest() {
 		m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.trapped_chest_boom", d20)))
 		for _, h := range m.Party {
 			if !h.IsDead {
-				trapDmg := rand.Intn(12) + 10
+				trapDmg := rng.Intn(12) + 10
 				h.HP -= trapDmg
 				m.addStress(h, 25)
 				if h.HP <= 0 {
@@ -1051,18 +1097,18 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 	if maxExtra > 4 {
 		maxExtra = 4
 	}
-	packSize := rand.Intn(3) + 3 + maxExtra
+	packSize := rng.Intn(3) + 3 + maxExtra
 	affixes := []MonsterAffix{AffixNone, AffixFire, AffixPoison, AffixFrost, AffixStone, AffixVampiric}
 
 	for i := 1; i <= packSize; i++ {
 		mobLvl := floor
-		if rand.Intn(100) < 35 {
+		if rng.Intn(100) < 35 {
 			mobLvl++
 		}
 
 		aff := AffixNone
-		if floor >= 2 && rand.Intn(100) < (25+(floor*5)) {
-			aff = affixes[rand.Intn(len(affixes))]
+		if floor >= 2 && rng.Intn(100) < (25+(floor*5)) {
+			aff = affixes[rng.Intn(len(affixes))]
 		}
 
 		var mType MonsterType
@@ -1073,7 +1119,7 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 		biomeCycle := (floor - 1) % 5
 
 		if biomeCycle == 0 {
-			roll := rand.Intn(3)
+			roll := rng.Intn(3)
 			if roll == 0 {
 				mType, glyph, color, baseAtk, baseDef, baseHP = MobRat, 'r', "137", 6, 0, 15
 			} else if roll == 1 {
@@ -1082,7 +1128,7 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 				mType, glyph, color, baseAtk, baseDef, baseHP = MobSkeleton, 's', "252", 10, 3, 25
 			}
 		} else if biomeCycle == 1 {
-			roll := rand.Intn(3)
+			roll := rng.Intn(3)
 			if roll == 0 {
 				mType, glyph, color, baseAtk, baseDef, baseHP = MobSlime, 'c', "43", 11, 1, 30
 			} else if roll == 1 {
@@ -1091,7 +1137,7 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 				mType, glyph, color, baseAtk, baseDef, baseHP = MobLizard, 'l', "29", 14, 3, 34
 			}
 		} else if biomeCycle == 2 {
-			roll := rand.Intn(3)
+			roll := rng.Intn(3)
 			if roll == 0 {
 				mType, glyph, color, baseAtk, baseDef, baseHP = MobImp, 'i', "208", 15, 2, 40
 			} else if roll == 1 {
@@ -1100,7 +1146,7 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 				mType, glyph, color, baseAtk, baseDef, baseHP = MobSalamander, 'm', "196", 18, 3, 46
 			}
 		} else if biomeCycle == 3 {
-			roll := rand.Intn(3)
+			roll := rng.Intn(3)
 			if roll == 0 {
 				mType, glyph, color, baseAtk, baseDef, baseHP = MobGargoyle, 'G', "102", 19, 6, 58
 			} else if roll == 1 {
@@ -1109,7 +1155,7 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 				mType, glyph, color, baseAtk, baseDef, baseHP = MobPhantom, 'p', "159", 22, 2, 50
 			}
 		} else {
-			roll := rand.Intn(2)
+			roll := rng.Intn(2)
 			if roll == 0 {
 				mType, glyph, color, baseAtk, baseDef, baseHP = MobVoidDemon, 'V', "161", 24, 5, 75
 			} else {
@@ -1206,9 +1252,9 @@ func (m *Model) step() {
 		m.evaluateRetreat() == RetreatNone &&
 		!m.isMonsterNearby() {
 
-		m.RestTurnsLeft = rand.Intn(6) + 5 // 5..10 шагов
+		m.RestTurnsLeft = rng.Intn(6) + 5 // 5..10 шагов
 		biome := getBiome(m.Floor)
-		variant := rand.Intn(4) + 1
+		variant := rng.Intn(4) + 1
 		key := fmt.Sprintf("dungeon.log.rest.%s.%d", biome.Name, variant)
 		m.addLog(healStyle.Render(T(m.Lang, key)))
 		return
@@ -1326,7 +1372,7 @@ func (m *Model) step() {
 		}
 		m.Stats.ChestsOpened++
 		m.checkQuestProgress(QuestOpenChests, "", 1)
-		gold := int(float64(rand.Intn(16)+10+(m.Floor*2)) * m.Relic.GoldMult)
+		gold := int(float64(rng.Intn(16)+10+(m.Floor*2)) * m.Relic.GoldMult)
 		m.Gold += gold
 		m.Stats.TotalGoldEarned += gold
 
@@ -1366,6 +1412,10 @@ func (m *Model) step() {
 	case TileBarrel:
 		m.Grid[next.Y][next.X] = TileFloor
 
+	case TileEvent:
+		m.Grid[next.Y][next.X] = TileFloor
+		m.handleEventTile(next)
+
 	case TileStairs:
 		m.Floor++
 		m.Stats.FloorsCleared++
@@ -1404,49 +1454,49 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 	switch class {
 	case ClassTank, ClassWarrior, ClassPaladin:
 		cat = ArmorHeavy
-		mat = MetalMaterials[rand.Intn(matIdx+1)]
+		mat = MetalMaterials[rng.Intn(matIdx+1)]
 	case ClassMage, ClassWarlock:
 		cat = ArmorLight
 		if slot == SlotWeapon {
-			mat = MageWeaponMaterials[rand.Intn(matIdx+1)]
+			mat = MageWeaponMaterials[rng.Intn(matIdx+1)]
 		} else {
-			mat = ClothMaterials[rand.Intn(matIdx+1)]
+			mat = ClothMaterials[rng.Intn(matIdx+1)]
 		}
 	case ClassMonk:
 		cat = ArmorLight
-		mat = ClothMaterials[rand.Intn(matIdx+1)]
+		mat = ClothMaterials[rng.Intn(matIdx+1)]
 	case ClassRogue, ClassRanger:
 		cat = ArmorMedium
-		mat = LeatherMaterials[rand.Intn(matIdx+1)]
+		mat = LeatherMaterials[rng.Intn(matIdx+1)]
 	case ClassCleric, ClassBard:
 		cat = ArmorMedium
 		if slot == SlotWeapon {
-			mat = MetalMaterials[rand.Intn(matIdx+1)]
+			mat = MetalMaterials[rng.Intn(matIdx+1)]
 		} else {
-			mat = LeatherMaterials[rand.Intn(matIdx+1)]
+			mat = LeatherMaterials[rng.Intn(matIdx+1)]
 		}
 	default:
 		cat = ArmorMedium
-		mat = LeatherMaterials[rand.Intn(matIdx+1)]
+		mat = LeatherMaterials[rng.Intn(matIdx+1)]
 	}
 
 	upg := 0
-	if rand.Intn(100) > 75 {
-		upg = rand.Intn(floor/3 + 1)
+	if rng.Intn(100) > 75 {
+		upg = rng.Intn(floor/3 + 1)
 		if upg > 3 {
 			upg = 3
 		}
 	}
 
 	var pfx *PrefixDef
-	if rand.Intn(100) > 60 {
-		p := Prefixes[rand.Intn(len(Prefixes))]
+	if rng.Intn(100) > 60 {
+		p := Prefixes[rng.Intn(len(Prefixes))]
 		pfx = &p
 	}
 
 	var sfx *SuffixDef
-	if rand.Intn(100) > 70 {
-		s := Suffixes[rand.Intn(len(Suffixes))]
+	if rng.Intn(100) > 70 {
+		s := Suffixes[rng.Intn(len(Suffixes))]
 		if pfx != nil && pfx.Element == ElemFrost && s.Effect == SuffFury {
 			s = Suffixes[2]
 		}
@@ -1457,7 +1507,7 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 	if tier > 3 {
 		tier = 3
 	}
-	if rand.Intn(100) < 25 && tier < 3 {
+	if rng.Intn(100) < 25 && tier < 3 {
 		tier++
 	}
 
@@ -1660,6 +1710,6 @@ func generateItemForClassSlot(class HeroClass, slot EquipSlot, floor int) EquipI
 
 func generateItemForClass(class HeroClass, floor int) EquipItem {
 	slots := []EquipSlot{SlotWeapon, SlotHead, SlotChest, SlotLegs}
-	chosenSlot := slots[rand.Intn(len(slots))]
+	chosenSlot := slots[rng.Intn(len(slots))]
 	return generateItemForClassSlot(class, chosenSlot, floor)
 }

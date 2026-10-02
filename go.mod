@@ -1,6 +1,6 @@
 module dungeon-auto
 
-go 1.27.0
+go 1.24.0
 
 require (
 	github.com/charmbracelet/bubbletea v1.3.10

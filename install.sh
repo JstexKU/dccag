@@ -22,7 +22,7 @@ if ! command -v go &>/dev/null; then
       exit 1
     fi
   else
-    echo "Сборка прервана: требуется Go 1.18+."
+    echo "Сборка прервана: требуется Go 1.24+."
     exit 1
   fi
 fi

@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"math/rand"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
@@ -363,7 +362,7 @@ var HeroNames = []HeroNameDef{
 }
 
 func getRandomHeroName() HeroNameDef {
-	return HeroNames[rand.Intn(len(HeroNames))]
+	return HeroNames[rng.Intn(len(HeroNames))]
 }
 
 // --- Классы героев (10 шт.) ---
@@ -832,6 +831,7 @@ const (
 	TileTrappedChest Tile = 'T'
 	TileBarrel       Tile = 'o'
 	TileRelic        Tile = '*'
+	TileEvent        Tile = '?'
 )
 
 type Point struct {
@@ -904,6 +904,7 @@ type RunStats struct {
 	QuestsCompleted int
 	UpgradesForged  int
 	BarrelsBlown    int
+	EventsSeen      int
 	MonsterKills    map[MonsterType]int
 	TotalSteps      int
 	FallenHeroes    []FallenHeroRecord
@@ -953,6 +954,7 @@ const (
 	StateStatsManual
 	StateArmory
 	StateInfoBook
+	StateTactics
 )
 
 type TownPhase int
@@ -1040,10 +1042,14 @@ type Model struct {
 	Stats            RunStats
 	RunCounted       bool // защита от двойного учёта рана в accumulateDebugReport
 	RestTurnsLeft    int  // сколько шагов отряд ещё сидит на привале (0 — не на привале)
+	TickGen          int  // поколение цепочки тиков: устаревшие тики игнорируются
+	Tactics          Tactics
+	TacticsSel       int
 }
 
 type (
-	TickMsg        time.Time
+	// TickMsg несёт номер поколения цепочки тиков (см. Model.restartTicks).
+	TickMsg        struct{ Gen int }
 	RestartTickMsg time.Time
 	MenuTickMsg    time.Time
 )
@@ -1066,6 +1072,7 @@ var (
 	barrelStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("172")).Bold(true)
 	potionStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("43")).Bold(true)
 	relicTileStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("220")).Bold(true)
+	eventTileStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("141")).Bold(true)
 
 	stressStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("135")).Bold(true)
 	titleStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("220")).Bold(true)

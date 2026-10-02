@@ -4,13 +4,28 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"math/rand"
 	"os"
 	"runtime"
 	"strconv"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+)
+
+// version подставляется при релизной сборке: -ldflags "-X main.version=v2.8.0".
+var version = "2.8.0"
+
+var (
+	showVersionFlag = flag.Bool("version", false, "Show version and exit")
+	noSaveFlag      = flag.Bool("no-save", false, "Do not read or write the save file")
+	resetSaveFlag   = flag.Bool("reset-save", false, "Delete the save file and exit")
+	seedFlag        = flag.Int64("seed", 0, "Random seed for reproducible runs (0 = random)")
+)
+
+// Накопители для честного среднего значения атаки по классам за все забеги.
+var (
+	atkSum   = map[string]float64{}
+	atkCount = map[string]int{}
 )
 
 func (m *Model) accumulateDebugReport() {
@@ -35,7 +50,10 @@ func (m *Model) accumulateDebugReport() {
 
 	for _, h := range m.Party {
 		if !h.IsDead {
-			globalDebugReport.AverageAtk[string(h.Class)] = float64(h.TotalAtk())
+			c := string(h.Class)
+			atkSum[c] += float64(h.TotalAtk())
+			atkCount[c]++
+			globalDebugReport.AverageAtk[c] = atkSum[c] / float64(atkCount[c])
 		}
 	}
 }
@@ -51,10 +69,18 @@ func saveDebugReportToFile() {
 	}
 }
 
-func tickCmd(speedMs int) tea.Cmd {
-	return tea.Tick(time.Duration(speedMs)*time.Millisecond, func(t time.Time) tea.Msg {
-		return TickMsg(t)
+func tickCmd(speedMs, gen int) tea.Cmd {
+	return tea.Tick(time.Duration(speedMs)*time.Millisecond, func(time.Time) tea.Msg {
+		return TickMsg{Gen: gen}
 	})
+}
+
+// restartTicks запускает новую цепочку тиков и обесценивает все ранее запланированные.
+// Без этого быстрое закрытие окна или снятие паузы порождало вторую параллельную
+// цепочку, и игра ускорялась вдвое.
+func (m *Model) restartTicks(delayMs int) tea.Cmd {
+	m.TickGen++
+	return tickCmd(delayMs, m.TickGen)
 }
 
 func restartTickCmd() tea.Cmd {
@@ -71,7 +97,7 @@ func menuTickCmd() tea.Cmd {
 
 func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
 	targetLevel := max(1, floor/2)
-	race := AllRaces[rand.Intn(len(AllRaces))]
+	race := AllRaces[rng.Intn(len(AllRaces))]
 
 	maxHP := 42
 	baseDef := 2
@@ -206,7 +232,7 @@ func initialModelWithLegacy(legacy TownLegacy) Model {
 	// Перемешиваем все 10 классов и отбираем ровно 5 уникальных
 	shuffledClasses := make([]HeroClass, len(AllClasses))
 	copy(shuffledClasses, AllClasses)
-	rand.Shuffle(len(shuffledClasses), func(i, j int) {
+	rng.Shuffle(len(shuffledClasses), func(i, j int) {
 		shuffledClasses[i], shuffledClasses[j] = shuffledClasses[j], shuffledClasses[i]
 	})
 
@@ -249,12 +275,18 @@ func initialModelWithLegacy(legacy TownLegacy) Model {
 		TermHeight:       36,
 		RunCounted:       false,
 		RestTurnsLeft:    0,
+		Tactics:          DefaultTactics(),
 	}
-	m.TownDialog = T(m.Lang, "town.log.enter_gate")
-	m.Logs = append(m.Logs, T(m.Lang, "dungeon.log.start"))
+	m.relocalizeStart()
 	m.Stats.TotalGoldEarned = 50 + legacy.TreasuryGold
 	m.initDungeonForFloor(1)
 	return m
+}
+
+// relocalizeStart обновляет стартовые тексты под текущий язык (нужно после смены Lang).
+func (m *Model) relocalizeStart() {
+	m.TownDialog = T(m.Lang, "town.log.enter_gate")
+	m.Logs = []string{T(m.Lang, "dungeon.log.start")}
 }
 
 func initialModel() Model {
@@ -415,17 +447,20 @@ func resetGameStatic(m Model) (Model, tea.Cmd) {
 	m.accumulateDebugReport()
 	saveDebugReportToFile()
 
-	savedGold := int(float64(m.Gold) * LegacyTaxRate)
-	newLegacy := m.Legacy
-	newLegacy.TreasuryGold = savedGold
-	newLegacy.TotalInvested += savedGold // NEW: налог за прогон — тоже вклад в развитие столицы
+	// Налог с добычи уходит в казну столицы и сохраняется на диск.
+	newLegacy := legacyAfterRun(m)
+	persistState(m.Lang, newLegacy, m.Tactics)
 
 	fresh := initialModelWithLegacy(newLegacy)
 	fresh.Lang = m.Lang
+	fresh.Tactics = m.Tactics
+	fresh.TickGen = m.TickGen + 1
 	fresh.TermWidth = m.TermWidth
 	fresh.TermHeight = m.TermHeight
+	fresh.relocalizeStart()
 
-	return fresh, tea.Batch(tickCmd(fresh.SpeedMs), menuTickCmd())
+	// Новая экспедиция начинается с меню-заставки; цепочку игровых тиков запустит выход из меню.
+	return fresh, menuTickCmd()
 }
 
 func (m Model) resetGame() (Model, tea.Cmd) {
@@ -449,13 +484,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.MenuCountdown--
 			if m.MenuCountdown <= 0 {
 				m.State = StatePlaying
-				return m, tickCmd(m.SpeedMs)
+				cmd := m.restartTicks(m.SpeedMs)
+				return m, cmd
 			}
 			return m, menuTickCmd()
 		}
 
 	case tea.KeyMsg:
-		switch msg.String() {
+		key := msg.String()
+
+		// Экран тактики перехватывает свои клавиши раньше общей обработки.
+		if m.State == StateTactics {
+			if cmd, handled := m.handleTacticsKey(key); handled {
+				return m, cmd
+			}
+		}
+
+		switch key {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "l":
@@ -466,13 +511,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "1", "2", "3", "4", "5", "6", "7":
 			if m.State == StateInfoBook {
-				tabIdx, _ := strconv.Atoi(msg.String())
+				tabIdx, _ := strconv.Atoi(key)
 				m.CodexTab = (tabIdx - 1) % codexTabCount
 				m.StatsScroll = 0
 			} else {
-				if msg.String() == "1" {
+				if key == "1" {
 					m.SpeedMs = 280
-				} else if msg.String() == "2" {
+				} else if key == "2" {
 					m.SpeedMs = 120
 				}
 			}
@@ -487,13 +532,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.StatsScroll = 0
 			}
 		case "f":
-			if m.State == StatePlaying && m.Combat != nil {
+			if m.State == StatePlaying && m.Combat != nil && m.Combat.FleeCooldown == 0 {
 				m.attemptFlee()
 			}
 		case "enter", " ":
 			if m.State == StateMenu {
 				m.State = StatePlaying
-				return m, tickCmd(m.SpeedMs)
+				cmd := m.restartTicks(m.SpeedMs)
+				return m, cmd
 			}
 			if m.State == StatePlaying {
 				m.AutoMode = !m.AutoMode
@@ -502,11 +548,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					if m.InTown {
 						delay = m.TownDelayMs
 					}
-					return m, tickCmd(delay)
+					cmd := m.restartTicks(delay)
+					return m, cmd
 				}
 			}
 		case "r":
-			if m.State != StatePlaying && m.State != StateMenu {
+			// Рестарт доступен только с экранов, где он указан в подсказке: поражение и «Слава».
+			if m.State == StateDefeat || m.State == StateStatsManual {
 				return m.resetGame()
 			}
 		case "s":
@@ -515,7 +563,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.StatsScroll = 0
 			} else if m.State == StateStatsManual {
 				m.State = StatePlaying
-				return m, tickCmd(m.SpeedMs)
+				cmd := m.restartTicks(m.SpeedMs)
+				return m, cmd
 			}
 		case "i":
 			if m.State == StatePlaying {
@@ -523,7 +572,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.StatsScroll = 0
 			} else if m.State == StateInfoBook {
 				m.State = StatePlaying
-				return m, tickCmd(m.SpeedMs)
+				cmd := m.restartTicks(m.SpeedMs)
+				return m, cmd
 			}
 		case "e":
 			if m.State == StatePlaying {
@@ -531,12 +581,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.StatsScroll = 0
 			} else if m.State == StateArmory {
 				m.State = StatePlaying
-				return m, tickCmd(m.SpeedMs)
+				cmd := m.restartTicks(m.SpeedMs)
+				return m, cmd
+			}
+		case "t":
+			if m.State == StatePlaying {
+				m.State = StateTactics
 			}
 		case "esc":
 			if m.State == StateArmory || m.State == StateStatsManual || m.State == StateInfoBook {
 				m.State = StatePlaying
-				return m, tickCmd(m.SpeedMs)
+				cmd := m.restartTicks(m.SpeedMs)
+				return m, cmd
 			}
 		case "up", "k":
 			if m.State == StatePlaying {
@@ -560,7 +616,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "pgup":
 			if m.State == StatePlaying {
-				m.LogScroll = min(len(m.Logs)-3, m.LogScroll+5)
+				m.LogScroll = max(0, min(len(m.Logs)-3, m.LogScroll+5))
 			} else if m.State == StateStatsManual || m.State == StateDefeat || m.State == StateInfoBook || m.State == StateArmory {
 				m.StatsScroll = max(0, m.StatsScroll-6)
 			}
@@ -594,6 +650,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case TickMsg:
+		// Тики устаревших цепочек (см. restartTicks) молча отбрасываются.
+		if msg.Gen != m.TickGen {
+			return m, nil
+		}
 		if m.State == StatePlaying && m.AutoMode {
 			m.step()
 			if m.State == StateDefeat {
@@ -603,7 +663,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.InTown {
 				delay = m.TownDelayMs
 			}
-			return m, tickCmd(delay)
+			return m, tickCmd(delay, m.TickGen)
 		}
 	}
 	return m, nil
@@ -615,20 +675,46 @@ func main() {
 
 	flag.Parse()
 
+	if *showVersionFlag {
+		fmt.Println("dccag", version)
+		return
+	}
+	if *noSaveFlag {
+		saveEnabled = false
+	}
+	if *resetSaveFlag {
+		if path, err := savePath(); err == nil {
+			_ = os.Remove(path)
+			fmt.Println("Save file removed:", path)
+		}
+		return
+	}
+	if *seedFlag != 0 {
+		seedRNG(*seedFlag)
+	}
+
 	m := initialModel()
-	p := tea.NewProgram(&m, tea.WithAltScreen())
+	if sd, ok := loadSave(); ok {
+		m = initialModelWithLegacy(sd.Legacy)
+		m.Lang = sd.Lang
+		m.Tactics = sd.Tactics
+		m.relocalizeStart()
+	}
+
+	p := tea.NewProgram(m, tea.WithAltScreen())
 	finalModel, err := p.Run()
+
+	// Выход из игры завершает экспедицию: наследие и настройки сохраняются.
+	if fm, ok := finalModel.(Model); ok {
+		persistState(fm.Lang, legacyAfterRun(fm), fm.Tactics)
+		if *debugReportFlag {
+			fm.accumulateDebugReport()
+			saveDebugReportToFile()
+		}
+	}
+
 	if err != nil {
 		fmt.Printf("Startup error: %v\n", err)
 		os.Exit(1)
-	}
-
-	if *debugReportFlag {
-		if fm, ok := finalModel.(*Model); ok {
-			fm.accumulateDebugReport()
-		} else if fmVal, ok := finalModel.(Model); ok {
-			fmVal.accumulateDebugReport()
-		}
-		saveDebugReportToFile()
 	}
 }
