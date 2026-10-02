@@ -1,16 +1,51 @@
-name: Build Release Binaries
+name: CI and Release
 
 on:
+  pull_request:
   push:
     tags:
-      - 'v*' # Запускается автоматически при создании тега (например, v1.0.0)
+      - 'v*'
+
+permissions:
+  contents: read
 
 jobs:
-  build:
-    name: Build for ${{ matrix.os }} / ${{ matrix.arch }}
-    runs-on: ${{ matrix.runner }}
+  ci:
+    name: Go checks
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Go from go.mod
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Check formatting
+        shell: bash
+        run: |
+          files="$(git diff --name-only HEAD^1 HEAD^2 -- '*.go')"
+          if [ -n "$files" ]; then
+            unformatted="$(printf '%s\n' "$files" | xargs gofmt -l)"
+            if [ -n "$unformatted" ]; then
+              echo "The following changed Go files are not gofmt-formatted:"
+              echo "$unformatted"
+              exit 1
+            fi
+          fi
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        run: go test ./...
 
+  build:
+    name: Build ${{ matrix.os }} / ${{ matrix.arch }}
+    if: github.event_name == 'push'
+    runs-on: ${{ matrix.runner }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: linux
@@ -37,23 +72,48 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - name: Set up Go from go.mod
+        uses: actions/setup-go@v7
         with:
-          go-version: '1.22'
-
+          go-version-file: go.mod
       - name: Build binary
+        shell: bash
         env:
           CGO_ENABLED: 0
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
         run: |
-          go build -ldflags="-s -w" -o dccag-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }} .
+          VERSION="${GITHUB_REF_NAME#v}"
+          go build -ldflags="-s -w -X main.version=${VERSION}" -o dccag-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }} .
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dccag-${{ matrix.os }}-${{ matrix.arch }}
+          path: dccag-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
+          if-no-files-found: error
 
-      - name: Upload binaries to release
+  release:
+    name: Publish release
+    if: github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download release binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: dccag-*
+          path: dist
+          merge-multiple: true
+      - name: Generate checksums
+        working-directory: dist
+        run: sha256sum dccag-* > sha256sums.txt
+      - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          files: dccag-*
+          files: |
+            dist/dccag-*
+            dist/sha256sums.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
