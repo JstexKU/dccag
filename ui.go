@@ -66,13 +66,11 @@ func cardContentHeight(mode CardMode) int {
 }
 
 func landscapeCardsPerRow(usableW int) int {
+	// Six equal cards are the primary landscape layout: five heroes + party.
+	// Below that width, keep equal cards and wrap by complete rows.
 	switch {
-	case usableW >= 190:
-		return 6
-	case usableW >= 155:
-		return 5
 	case usableW >= 125:
-		return 4
+		return 6
 	case usableW >= 90:
 		return 3
 	case usableW >= 55:
@@ -465,56 +463,189 @@ func (m Model) renderArmoryScreen() string {
 // Карта и город
 // ============================================================
 
+type townDisplayMode int
+
+const (
+	townDisplayWide townDisplayMode = iota
+	townDisplayMedium
+	townDisplayCompact
+)
+
+func townDisplayModeFor(width, height int) townDisplayMode {
+	switch {
+	case width >= 72 && height >= 12:
+		return townDisplayWide
+	case width >= 48 && height >= 9:
+		return townDisplayMedium
+	default:
+		return townDisplayCompact
+	}
+}
+
 func (m Model) renderTownHub(viewW, viewH int) string {
-	cActive := lipgloss.NewStyle().Foreground(lipgloss.Color("226")).Bold(true)
-	cIdle := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
-	cHeader := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
+	mode := townDisplayModeFor(viewW, viewH)
+	switch mode {
+	case townDisplayWide:
+		return m.renderTownHubWide(viewW, viewH)
+	case townDisplayMedium:
+		return m.renderTownHubMedium(viewW, viewH)
+	default:
+		return m.renderTownHubCompact(viewW, viewH)
+	}
+}
 
-	fmtBld := func(phase TownPhase, icon, bNameKey string) string {
-		isActive := m.TownPhase == phase
-		name := T(m.Lang, bNameKey)
-		label := fmt.Sprintf("%s «%s»", icon, name)
-		if isActive {
-			return cActive.Render(fmt.Sprintf("►[%s]◄", label))
+type townAction struct {
+	phase TownPhase
+	icon  string
+	name  string
+	level int
+}
+
+func (m Model) townActions() []townAction {
+	return []townAction{
+		{TownPhaseSellLoot, "⚖️", T(m.Lang, "town.market"), 0},
+		{TownPhaseMagistrate, "🏛️", T(m.Lang, "town.magistrate"), 0},
+		{TownPhaseChurch, "⛪", T(m.Lang, m.TownEst.ChurchKey), m.Legacy.ChurchLevel},
+		{TownPhaseTavern, "🍻", T(m.Lang, m.TownEst.TavernKey), m.Legacy.TavernLevel},
+		{TownPhaseGuild, "⚔️", T(m.Lang, m.TownEst.GuildKey), 0},
+		{TownPhaseSmithy, "⚒️", T(m.Lang, m.TownEst.SmithyKey), m.Legacy.SmithyLevel},
+		{TownPhaseTannery, "🎒", T(m.Lang, m.TownEst.TanneryKey), m.Legacy.TanneryLevel},
+		{TownPhaseAlchemist, "🧪", T(m.Lang, m.TownEst.AlchemistKey), 0},
+	}
+}
+
+func (m Model) renderTownAction(action townAction, width int, detail bool) string {
+	active := m.TownPhase == action.phase
+	name := shortenItemName(action.name, max(3, width-7))
+
+	label := fmt.Sprintf("%s %s", action.icon, name)
+	if detail && action.level > 0 {
+		label = fmt.Sprintf("%s %s.%d", action.icon, name, action.level)
+	}
+
+	label = padRightTruncate(label, max(1, width-2))
+	if active {
+		return lipgloss.NewStyle().
+			Width(width).
+			Foreground(lipgloss.Color("226")).
+			Background(lipgloss.Color("236")).
+			Bold(true).
+			Render("► " + label)
+	}
+	return lipgloss.NewStyle().
+		Width(width).
+		Foreground(lipgloss.Color("244")).
+		Render("  " + label)
+}
+
+func (m Model) renderTownHistory(width, maxLines int) []string {
+	if maxLines <= 0 {
+		return nil
+	}
+	lines := []string{
+		subtleStyle.Render(padRightTruncate("── "+T(m.Lang, "town.management")+" ──", width)),
+	}
+	for _, act := range m.TownHistory {
+		if len(lines) >= maxLines {
+			break
 		}
-		return cIdle.Render(fmt.Sprintf(" [%s] ", label))
+		lines = append(lines, padRightTruncate("• "+shortenItemName(act, max(1, width-2)), width))
 	}
+	return lines
+}
 
-	bMarket := cIdle.Render(" [⚖️ " + T(m.Lang, "town.market") + "] ")
-	if m.TownPhase == TownPhaseSellLoot {
-		bMarket = cActive.Render("►[⚖️ " + T(m.Lang, "town.market") + "]◄")
-	}
-
-	bMagistrate := cIdle.Render(" [🏛️ " + T(m.Lang, "town.magistrate") + "] ")
-	if m.TownPhase == TownPhaseMagistrate {
-		bMagistrate = cActive.Render("►[🏛️ " + T(m.Lang, "town.magistrate") + "]◄")
-	}
-
-	bChurch := fmtBld(TownPhaseChurch, "⛪", m.TownEst.ChurchKey)
-	bTavern := fmtBld(TownPhaseTavern, "🍻", m.TownEst.TavernKey)
-	bGuild := fmtBld(TownPhaseGuild, "⚔️", m.TownEst.GuildKey)
-	bSmithy := fmtBld(TownPhaseSmithy, "⚒️", m.TownEst.SmithyKey)
-	bTannery := fmtBld(TownPhaseTannery, "🎒", m.TownEst.TanneryKey)
-	bAlchemist := fmtBld(TownPhaseAlchemist, "🧪", m.TownEst.AlchemistKey)
+func (m Model) renderTownHubWide(viewW, viewH int) string {
+	header := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
+	actionW := max(16, (viewW-8)/3)
 
 	var sb strings.Builder
-	sb.WriteString(cHeader.Render(shortenItemName(T(m.Lang, "town.hub_title"), viewW)) + "\n\n")
-	sb.WriteString(fmt.Sprintf("%s %s\n", bMarket, bMagistrate))
-	sb.WriteString(fmt.Sprintf("%s %s %s\n", bChurch, bTavern, bGuild))
-	sb.WriteString(fmt.Sprintf("%s %s %s\n", bSmithy, bTannery, bAlchemist))
+	sb.WriteString(header.Render(padRightTruncate(T(m.Lang, "town.hub_title"), viewW)) + "\n")
+	sb.WriteString(subtleStyle.Render(padRightTruncate(
+		fmt.Sprintf("BAG %d/%d   |   SMITHY %d   TANNERY %d   CHURCH %d   TAVERN %d",
+			len(m.Bag), m.currentBagCapacity(),
+			m.Legacy.SmithyLevel, m.Legacy.TanneryLevel,
+			m.Legacy.ChurchLevel, m.Legacy.TavernLevel), viewW)) + "\n\n")
 
-	if len(m.TownHistory) > 0 {
-		sb.WriteString(subtleStyle.Render(strings.Repeat("─", viewW)) + "\n")
-		for _, act := range m.TownHistory {
-			sb.WriteString(fmt.Sprintf("• %s\n", shortenItemName(act, viewW-4)))
+	actions := m.townActions()
+	for row := 0; row < 3; row++ {
+		var cells []string
+		for col := 0; col < 3; col++ {
+			i := row*3 + col
+			if i >= len(actions) {
+				break
+			}
+			cells = append(cells, m.renderTownAction(actions[i], actionW, true))
 		}
+		sb.WriteString(strings.Join(cells, "  ") + "\n")
 	}
 
-	lines := strings.Split(sb.String(), "\n")
-	out := make([]string, viewH)
-	for i := 0; i < viewH; i++ {
+	historyLines := m.renderTownHistory(viewW, max(0, viewH-7))
+	if len(historyLines) > 0 {
+		sb.WriteString("\n")
+		sb.WriteString(strings.Join(historyLines, "\n"))
+	}
+	return padTownLines(sb.String(), viewW, viewH)
+}
+
+func (m Model) renderTownHubMedium(viewW, viewH int) string {
+	header := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
+	actionW := max(18, (viewW-4)/2)
+
+	var sb strings.Builder
+	sb.WriteString(header.Render(padRightTruncate(T(m.Lang, "town.hub_title"), viewW)) + "\n\n")
+
+	actions := m.townActions()
+	for row := 0; row < 4; row++ {
+		left := row * 2
+		right := left + 1
+		sb.WriteString(m.renderTownAction(actions[left], actionW, true))
+		if right < len(actions) {
+			sb.WriteString("  " + m.renderTownAction(actions[right], actionW, true))
+		}
+		sb.WriteString("\n")
+	}
+
+	historyLines := m.renderTownHistory(viewW, max(0, viewH-6))
+	if len(historyLines) > 0 {
+		sb.WriteString("\n" + strings.Join(historyLines, "\n"))
+	}
+	return padTownLines(sb.String(), viewW, viewH)
+}
+
+func (m Model) renderTownHubCompact(viewW, viewH int) string {
+	header := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
+	var sb strings.Builder
+	sb.WriteString(header.Render(padRightTruncate(T(m.Lang, "town.hub_title"), viewW)) + "\n")
+
+	for _, action := range m.townActions() {
+		name := shortenItemName(action.name, max(3, viewW-5))
+		level := ""
+		if action.level > 0 {
+			level = fmt.Sprintf(" %d", action.level)
+		}
+		active := " "
+		style := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
+		if m.TownPhase == action.phase {
+			active = "►"
+			style = style.Foreground(lipgloss.Color("226")).Bold(true)
+		}
+		line := fmt.Sprintf("%s %s%s", active, action.icon, name+level)
+		sb.WriteString(style.Render(padRightTruncate(line, viewW)) + "\n")
+	}
+
+	historyLines := m.renderTownHistory(viewW, max(0, viewH-10))
+	if len(historyLines) > 0 {
+		sb.WriteString(strings.Join(historyLines, "\n"))
+	}
+	return padTownLines(sb.String(), viewW, viewH)
+}
+
+func padTownLines(content string, width, height int) string {
+	lines := strings.Split(content, "\n")
+	out := make([]string, height)
+	for i := range out {
 		if i < len(lines) {
-			out[i] = lines[i]
+			out[i] = padRightTruncate(lines[i], width)
 		} else {
 			out[i] = ""
 		}
@@ -1061,16 +1192,19 @@ func (m Model) View() string {
 // ============================================================
 
 func (m Model) renderLandscape(termW, termH int) string {
-	usableW := termW - 2
+	usableW := max(38, termW-2)
 
+	// Stable composition: MAP + INFO, six equal cards, LOG, controls.
+	// The map receives all remaining vertical space.
 	cardsPerRow := landscapeCardsPerRow(usableW)
-	singleCardWidth := max(20, (usableW-(cardsPerRow-1)*1)/cardsPerRow)
+	cardGap := 1
+	cardWidth := max(18, (usableW-(cardsPerRow-1)*cardGap)/cardsPerRow)
 
 	var cards []string
 	for _, h := range m.Party {
-		cards = append(cards, m.renderHeroCard(h, singleCardWidth))
+		cards = append(cards, m.renderHeroCard(h, cardWidth))
 	}
-	cards = append(cards, m.renderPartyBanner(singleCardWidth))
+	cards = append(cards, m.renderPartyBanner(cardWidth))
 
 	var cardRows []string
 	for i := 0; i < len(cards); i += cardsPerRow {
@@ -1080,35 +1214,26 @@ func (m Model) renderLandscape(termW, termH int) string {
 	middleTier := lipgloss.JoinVertical(lipgloss.Left, cardRows...)
 	middleH := lipgloss.Height(middleTier)
 
+	controlsH := 1
 	logH := 5
 	if termH < 30 {
+		logH = 4
+	}
+	if termH < 25 {
 		logH = 3
 	}
-	if termH < 24 {
-		logH = 2
-	}
-	controlsH := 1
 
-	topMin := 8
-	totalTop := termH - logH - controlsH - 1
-
-	if middleH > totalTop-topMin {
-		middleH = totalTop - topMin
-		if middleH < 6 {
-			middleH = 6
-		}
+	availableH := termH - controlsH - logH - 1
+	topMinH := 7
+	if availableH < topMinH+middleH {
+		middleH = max(6, availableH-topMinH)
 		middleTier = truncateLines(middleTier, middleH)
 		middleH = lipgloss.Height(middleTier)
 	}
+	topH := max(topMinH, availableH-middleH)
 
-	topH := totalTop - middleH
-	if topH < 4 {
-		topH = 4
-	}
-
-	sideW := max(28, min(44, int(float64(usableW)*0.30)))
-	mapBoxW := usableW - sideW - 1
-
+	sideW := max(28, min(42, int(float64(usableW)*0.28)))
+	mapBoxW := max(20, usableW-sideW-1)
 	mapInnerW := max(10, mapBoxW-4)
 	mapInnerH := max(2, topH-2)
 
@@ -1117,18 +1242,17 @@ func (m Model) renderLandscape(termW, termH int) string {
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("63")).
 		Width(mapInnerW).
-		Height(topH - 2).
+		Height(mapInnerH).
 		Render(mapStr)
 
 	sidebarInnerW := max(16, sideW-4)
-
 	biome := getBiome(m.Floor)
 	floorTag := fmt.Sprintf("%s %d: %s", T(m.Lang, "ui.floor"), m.Floor, T(m.Lang, "biome."+string(biome.Name)))
 	if m.InTown {
 		floorTag = fmt.Sprintf("%s %d: [%s]", T(m.Lang, "ui.floor"), m.Floor, T(m.Lang, "town.camp"))
 	}
 
-	questTitleShort := shortenItemName(T(m.Lang, m.CurrentQuest.TitleKey), 16)
+	questTitleShort := shortenItemName(T(m.Lang, m.CurrentQuest.TitleKey), max(8, sidebarInnerW-10))
 	statusBadge := subtleStyle.Render(fmt.Sprintf("[%d/%d]", m.CurrentQuest.Current, m.CurrentQuest.TargetCount))
 	if m.CurrentQuest.Completed {
 		statusBadge = healStyle.Render(fmt.Sprintf("[%s]", T(m.Lang, "ui.turn_in")))
@@ -1139,20 +1263,18 @@ func (m Model) renderLandscape(termW, termH int) string {
 	sbLines = append(sbLines, fmt.Sprintf("💰 %s: %s", T(m.Lang, "ui.treasury"), goldStyle.Render(fmt.Sprintf("%dG", m.Gold))))
 	sbLines = append(sbLines, fmt.Sprintf("📜 %s %s", questTitleShort, statusBadge))
 	sbLines = append(sbLines, subtleStyle.Render(strings.Repeat("─", sidebarInnerW)))
-
-	availRows := max(1, topH-2-len(sbLines))
+	availRows := max(1, mapInnerH-len(sbLines))
 	sbLines = append(sbLines, m.renderRightContentLines(sidebarInnerW, availRows)...)
 
 	rightPane := lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("63")).
 		Width(sidebarInnerW).
-		Height(topH - 2).
+		Height(mapInnerH).
 		Render(strings.Join(sbLines, "\n"))
 
 	topTier := lipgloss.JoinHorizontal(lipgloss.Top, leftMapBox, " ", rightPane)
-
-	logBox := m.renderLogBox(usableW-4, logH-2)
+	logBox := m.renderLogBox(usableW-4, logH)
 	controls := m.renderControls(termW - 2)
 
 	return lipgloss.JoinVertical(
@@ -1302,22 +1424,24 @@ func (m Model) renderPortrait(termW, termH int) string {
 // Общие блоки
 // ============================================================
 
-func (m Model) renderLogBox(innerW, innerH int) string {
-	if innerH < 1 {
-		innerH = 1
+func (m Model) renderLogBox(innerW, boxH int) string {
+	if boxH < 3 {
+		boxH = 3
 	}
+	contentH := max(1, boxH-2)
+
 	var logContent strings.Builder
 	totalLogs := len(m.Logs)
 	endIdx := totalLogs - m.LogScroll
 	if endIdx > totalLogs {
 		endIdx = totalLogs
 	}
-	if endIdx < innerH {
-		endIdx = min(totalLogs, innerH)
+	if endIdx < contentH {
+		endIdx = min(totalLogs, contentH)
 	}
-	startIdx := max(0, endIdx-innerH)
+	startIdx := max(0, endIdx-contentH)
 
-	for i := 0; i < innerH; i++ {
+	for i := 0; i < contentH; i++ {
 		curIdx := startIdx + i
 		if curIdx < endIdx && curIdx < totalLogs {
 			logContent.WriteString(fmt.Sprintf("> %s\n", shortenItemName(m.Logs[curIdx], innerW)))
@@ -1336,13 +1460,12 @@ func (m Model) renderLogBox(innerW, innerH int) string {
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("242")).
 		Width(innerW).
-		Height(innerH).
+		Height(boxH).
 		Render(fmt.Sprintf("%s\n%s",
 			subtleStyle.Render(shortenItemName(logBoxTitle, innerW)),
 			strings.TrimRight(logContent.String(), "\n"),
 		))
 }
-
 func (m Model) renderControls(width int) string {
 	controlsText := "[Space] Пауза | [F] Побег | [T] Тактика | [E] Арсенал | [I] Кодекс | [S] Слава | [+/-] Скор. | [L] Язык | [Q] Выход"
 	if m.Lang == LangEN {
