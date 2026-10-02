@@ -514,7 +514,7 @@ func (m Model) townActions() []townAction {
 	}
 }
 
-func (m Model) renderTownAction(action townAction, width, detail bool) string {
+func (m Model) renderTownAction(action townAction, width int, detail bool) string {
 	active := m.TownPhase == action.phase
 	name := shortenItemName(action.name, max(3, width-7))
 
