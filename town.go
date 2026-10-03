@@ -364,6 +364,12 @@ func (m *Model) stepTown() {
 				h.CauseOfDeath = ""
 				revivedCount++
 				m.Stats.Resurrections++
+				for idx := len(m.Stats.FallenHeroes) - 1; idx >= 0; idx-- {
+					if m.Stats.FallenHeroes[idx].FullName == h.FullName(m.Lang) && !m.Stats.FallenHeroes[idx].Revived {
+						m.Stats.FallenHeroes[idx].Revived = true
+						break
+					}
+				}
 			} else if !h.IsDead && (h.Stress > 20 || h.Affliction != AfflictionNone) {
 				cleanseCost := reviveBaseCost / 3
 				if m.Gold >= cleanseCost {
@@ -765,3 +771,4 @@ func (m *Model) stepTown() {
 		m.addLog(accentStyle.Render(T(m.Lang, "town.log.depart")))
 	}
 }
+

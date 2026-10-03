@@ -13,7 +13,7 @@ import (
 )
 
 // version подставляется при релизной сборке: -ldflags "-X main.version=v2.8.6".
-var version = "2.8.6"
+var version = "2.8.9"
 
 var (
 	showVersionFlag = flag.Bool("version", false, "Show version and exit")

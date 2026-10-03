@@ -369,16 +369,16 @@ func getRandomHeroName() HeroNameDef {
 type HeroClass string
 
 const (
-	ClassTank     HeroClass = "tank"
-	ClassWarrior  HeroClass = "warrior"
-	ClassRogue    HeroClass = "rogue"
-	ClassMage     HeroClass = "mage"
-	ClassCleric   HeroClass = "cleric"
-	ClassPaladin  HeroClass = "paladin"
-	ClassRanger   HeroClass = "ranger"
-	ClassMonk     HeroClass = "monk"
-	ClassBard     HeroClass = "bard"
-	ClassWarlock  HeroClass = "warlock"
+	ClassTank    HeroClass = "tank"
+	ClassWarrior HeroClass = "warrior"
+	ClassRogue   HeroClass = "rogue"
+	ClassMage    HeroClass = "mage"
+	ClassCleric  HeroClass = "cleric"
+	ClassPaladin HeroClass = "paladin"
+	ClassRanger  HeroClass = "ranger"
+	ClassMonk    HeroClass = "monk"
+	ClassBard    HeroClass = "bard"
+	ClassWarlock HeroClass = "warlock"
 )
 
 var AllClasses = []HeroClass{
@@ -898,6 +898,7 @@ type FallenHeroRecord struct {
 	Class    HeroClass
 	Cause    string
 	Floor    int
+	Revived  bool
 }
 
 type RunStats struct {
