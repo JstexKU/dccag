@@ -1032,9 +1032,15 @@ func formatEquipCell(icon string, it *EquipItem, cellW int, lang Language) strin
 // ============================================================
 
 func (m Model) renderPartyBanner(cardWidth int) string {
-	innerWidth := max(14, cardWidth-4)
-	mode := detectCardMode(innerWidth)
+	// Keep the party card's outer frame identical to hero cards.
+	// Padding is part of Lip Gloss' content width calculation, so the
+	// normalized body must be narrower to prevent wrapped lines from
+	// increasing the rendered height.
+	outerInnerWidth := max(14, cardWidth-4)
+	contentWidth := max(10, outerInnerWidth-4)
+	mode := detectCardMode(outerInnerWidth)
 	targetLines := cardContentHeight(mode)
+	innerWidth := contentWidth
 
 	relicName := T(m.Lang, "ui.none")
 	relicDesc := T(m.Lang, "ui.no_relic")
@@ -1076,7 +1082,7 @@ func (m Model) renderPartyBanner(cardWidth int) string {
 	normalizedBody := normalizeLines(sb.String(), innerWidth, targetLines)
 
 	return lipgloss.NewStyle().
-		Width(innerWidth).
+		Width(outerInnerWidth).
 		Height(targetLines).
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("62")).
