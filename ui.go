@@ -286,7 +286,7 @@ func (m Model) renderMenuScreen() string {
 `)
 
 	sb.WriteString(banner + "\n")
-	sb.WriteString(lipgloss.NewStyle().Align(lipgloss.Center).Render(titleStyle.Render("       Dungeon Crawler Console Auto Game (dccag) v2.8.*")) + "\n\n")
+	sb.WriteString(lipgloss.NewStyle().Align(lipgloss.Center).Render(titleStyle.Render("       Dungeon Crawler Console Auto Game (dccag) v2.8.6")) + "\n\n")
 
 	var textBlock string
 	if m.Lang == LangEN {
@@ -581,7 +581,8 @@ func (m Model) renderTownHubWide(viewW, viewH int) string {
 		fmt.Sprintf("BAG %d/%d   |   SMITHY %d   TANNERY %d   CHURCH %d   TAVERN %d",
 			len(m.Bag), m.currentBagCapacity(),
 			m.Legacy.SmithyLevel, m.Legacy.TanneryLevel,
-			m.Legacy.ChurchLevel, m.Legacy.TavernLevel), viewW)) + "\n\n")
+			m.Legacy.ChurchLevel, m.Legacy.TavernLevel), viewW,
+	)) + "\n\n")
 
 	actions := m.townActions()
 	for row := 0; row < 3; row++ {
@@ -1109,7 +1110,11 @@ func (m Model) renderRightContentLines(innerRightW, maxLines int) []string {
 			availName := max(4, innerRightW-rightBlockWidth-3)
 			mobName := shortenItemName(T(m.Lang, mob.NameKey), availName)
 			mobNamePadded := padRight(mobName, availName)
-			lines = append(lines, fmt.Sprintf("• %s %s", mobNamePadded, rightBlock))
+			marker := "•"
+			if m.ManualMode && mob == m.pickTarget() {
+				marker = "▶"
+			}
+			lines = append(lines, fmt.Sprintf("%s %s %s", marker, mobNamePadded, rightBlock))
 			displayed++
 		}
 	} else if m.InTown {
@@ -1138,7 +1143,8 @@ func (m Model) renderEnemyStrip(width int) string {
 		return subtleStyle.Render(shortenItemName(
 			fmt.Sprintf("%s: %d | %s: %d",
 				T(m.Lang, "stats.total_steps"), m.Stats.TotalSteps,
-				T(m.Lang, "stats.chests_opened"), m.Stats.ChestsOpened), width))
+				T(m.Lang, "stats.chests_opened"), m.Stats.ChestsOpened), width,
+		))
 	}
 
 	var parts []string
@@ -1148,6 +1154,9 @@ func (m Model) renderEnemyStrip(width int) string {
 			continue
 		}
 		hpStr := fmt.Sprintf("%s %d/%d", T(m.Lang, mob.NameKey), mob.HP, mob.MaxHP)
+		if m.ManualMode && mob == m.pickTarget() {
+			hpStr = "▶" + hpStr
+		}
 		parts = append(parts, hpStr)
 	}
 	joined := strings.Join(parts, "  ")
@@ -1308,7 +1317,8 @@ func (m Model) renderPortraitWide(termW, termH int) string {
 	if m.InTown {
 		floorTag = fmt.Sprintf("🏰 %s %d: [%s]", T(m.Lang, "ui.floor"), m.Floor, T(m.Lang, "town.camp"))
 	}
-	headerLine := fmt.Sprintf("%s | 💰 %dG | 📜 %s",
+	headerLine := fmt.Sprintf(
+		"%s | 💰 %dG | 📜 %s",
 		shortenItemName(floorTag, usableW-30),
 		m.Gold,
 		shortenItemName(T(m.Lang, m.CurrentQuest.TitleKey), 14),
@@ -1459,7 +1469,8 @@ func (m Model) renderLogBox(innerW, boxH int) string {
 	}
 	logBoxTitle := fmt.Sprintf("📜 %s%s", T(m.Lang, "ui.chronicles"), scrollBadge)
 
-	body := fmt.Sprintf("%s\n%s",
+	body := fmt.Sprintf(
+		"%s\n%s",
 		subtleStyle.Render(shortenItemName(logBoxTitle, innerW)),
 		strings.TrimRight(logContent.String(), "\n"),
 	)
@@ -1472,9 +1483,15 @@ func (m Model) renderLogBox(innerW, boxH int) string {
 }
 
 func (m Model) renderControls(width int) string {
-	controlsText := "[Space] Пауза | [F] Побег | [T] Тактика | [E] Арсенал | [I] Кодекс | [S] Слава | [+/-] Скор. | [L] Язык | [Q] Выход"
+	if text, urgent := m.manualControlsText(); text != "" {
+		if urgent {
+			return accentStyle.Render(shortenItemName(text, width))
+		}
+		return subtleStyle.Render(shortenItemName(text, width))
+	}
+	controlsText := "[Space] Пауза | [F] Побег | [M] Ручной | [T] Тактика | [E] Арсенал | [I] Кодекс | [S] Слава | [+/-] Скор. | [L] Язык | [Q] Выход"
 	if m.Lang == LangEN {
-		controlsText = "[Space] Pause | [F] Flee | [T] Tactics | [E] Armory | [I] Codex | [S] Glory | [+/-] Speed | [L] Lang | [Q] Quit"
+		controlsText = "[Space] Pause | [F] Flee | [M] Manual | [T] Tactics | [E] Armory | [I] Codex | [S] Glory | [+/-] Speed | [L] Lang | [Q] Quit"
 	}
 	return subtleStyle.Render(shortenItemName(controlsText, width))
 }

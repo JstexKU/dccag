@@ -738,6 +738,10 @@ func (m *Model) checkAndDrinkPotions(h *Hero) {
 	if h.IsDead || len(h.Potions) == 0 || m.InTown {
 		return
 	}
+	// В ручном бою зелья пьёт игрок (команда P), а не автопилот.
+	if m.ManualMode && m.Combat != nil {
+		return
+	}
 
 	remainingPotions := []*Potion{}
 	for _, p := range h.Potions {
@@ -1336,7 +1340,13 @@ func (m *Model) step() {
 		m.PathHistory = m.PathHistory[1:]
 	}
 
-	// 7. Пак на следующем тайле
+	m.moveTo(next)
+}
+
+// moveTo переносит отряд на соседнюю клетку и обрабатывает всё, что на ней находится:
+// стаю монстров, сундуки, алтари, события, лестницу. Общая часть автопилота и ручного режима.
+func (m *Model) moveTo(next Point) {
+	// Пак на следующем тайле
 	if pack, exists := m.Packs[next]; exists {
 		m.startCombat(next, pack)
 		return

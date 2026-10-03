@@ -957,4 +957,20 @@ var dictEN = map[string]string{
 	"event.vault_smash":          "🔨 %s smashes the vault door: +%dG, but takes %d damage.",
 	"event.vault_locked":         "🚪 The locked vault will not budge: the party has neither a lockpick nor a bruiser.",
 	"event.ambush":               "⚔️ Ambush! Monsters leap from the shadows!",
+
+	// --- Manual control (M) ---
+	"ctl.no_skill":    "🎯 %s: no suitable skill (low mana or no target) — plain strike.",
+	"ctl.guard":       "🛡️ %s takes a defensive stance and catches their breath (+3 MP).",
+	"ctl.potion_none": "🧪 %s: no potion with that number.",
+	"ctl.potion_give": "🧪 %s hands [%s] to an ally: %s.",
+	"ctl.mode_manual": "🎮 Manual control: you lead the party ([M] returns the autopilot).",
+	"ctl.mode_auto":   "🤖 The autopilot leads the party again.",
+	"ctl.camp_danger": "⛺ Cannot camp: monsters are nearby.",
+	"ctl.camp_wait":   "⛺ The party has not recovered from the last camp yet: steps until the next one — %d.",
+	"ctl.camp_done":   "⛺ Camp: +%d HP and MP, stress lowered by the same amount.",
+	"ctl.not_on_exit": "🚪 You can leave the dungeon only on the exit tile (<).",
+	"ctl.bar.explore": "[←↑↓→] Move | [C] Camp | [X] Exit | [M] Auto | [T] Tactics | [E] Armory | [I] Codex | [S] Glory | [L] Lang | [Q] Quit",
+	"ctl.bar.combat":  "⚔ Turn: %s | [A] Strike | [Space] Skill | [D] Guard | [P] Potion | [F] Flee | [←/→] Target | [M] Auto",
+	"ctl.bar.potion":  "🧪 %s: %s | [←/→] Give to: %s | [Esc] Cancel",
+	"ctl.bar.wait":    "⏳ Enemies are acting… | [F] Flee | [←/→] Target | [M] Auto | [Q] Quit",
 }

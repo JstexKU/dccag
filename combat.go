@@ -341,18 +341,19 @@ func (m *Model) executeCombatTurn() {
 		return
 	}
 
-	// 3. Экстренный retreat из боя (критические причины)
-	retreatReason := m.evaluateRetreat()
-	if m.shouldForceRetreatFromCombat(retreatReason) {
-		m.forceRetreatToTown(retreatReason)
-		return
-	}
-
-	// 4. Обычная попытка побега
-	if m.shouldAttemptFlee() {
-		m.attemptFlee()
-		if m.Combat == nil {
+	// 3–4. Экстренное отступление и побег — решения автопилота; в ручном режиме их принимает игрок (F).
+	if !m.ManualMode {
+		retreatReason := m.evaluateRetreat()
+		if m.shouldForceRetreatFromCombat(retreatReason) {
+			m.forceRetreatToTown(retreatReason)
 			return
+		}
+
+		if m.shouldAttemptFlee() {
+			m.attemptFlee()
+			if m.Combat == nil {
+				return
+			}
 		}
 	}
 
@@ -378,6 +379,16 @@ func (m *Model) executeCombatTurn() {
 			return
 		}
 
+		// Команда игрока (ручной режим) забирается один раз и сбрасывается.
+		var cmd ManualCmd
+		if m.ManualMode {
+			cmd = m.Combat.Cmd
+			m.Combat.Cmd = ManualCmd{}
+			m.Combat.PotionMenu = false
+		}
+		forceSkill := cmd.Kind == CmdSkill
+		useSkills := cmd.Kind != CmdStrike
+
 		// Расовая пассивка: регенерация маны эльфа
 		raceMod := GetRaceModifiers(h.Race)
 		if raceMod.ManaRegen > 0 && h.MP < h.MaxMP {
@@ -393,17 +404,27 @@ func (m *Model) executeCombatTurn() {
 			return
 		}
 
+		switch cmd.Kind {
+		case CmdGuard:
+			m.manualGuard(h)
+			return
+		case CmdPotion:
+			m.manualPotion(h, cmd)
+			return
+		}
+		mpBefore := h.MP
+
 		skillCost := h.SkillCost
 		if biome.Name == BiomeCrystal {
 			skillCost += 3
 		}
 
-		targetMob := m.Combat.Pack.GetLowestHPFocus()
+		targetMob := m.pickTarget()
 
 		// ==================== БОЛЬШИЕ И СРЕДНИЕ УМЕНИЯ (10 КЛАССОВ) ====================
 
 		// 1. ТАНК
-		if h.Class == ClassTank {
+		if useSkills && h.Class == ClassTank {
 			if h.MP >= skillCost && !h.IsGuarding {
 				h.MP -= skillCost
 				h.IsGuarding = true
@@ -411,7 +432,7 @@ func (m *Model) executeCombatTurn() {
 				h.PullAggro()
 				m.checkAndAwardTitle(h)
 				m.addLog(healStyle.Render(T(m.Lang, "combat.log.tank_stance", hName)))
-			} else if h.MP >= 6 && targetMob != nil && targetMob.Atk >= 12 && rng.Intn(100) < 45 {
+			} else if h.MP >= 6 && targetMob != nil && targetMob.Atk >= 12 && (forceSkill || rng.Intn(100) < 45) {
 				h.MP -= 6
 				bashDmg := h.TotalDef() + 4
 				targetMob.HP -= bashDmg
@@ -426,7 +447,7 @@ func (m *Model) executeCombatTurn() {
 		}
 
 		// 2. ПАЛАДИН
-		if h.Class == ClassPaladin {
+		if useSkills && h.Class == ClassPaladin {
 			var woundedAlly *Hero
 			for _, ally := range m.Party {
 				if !ally.IsDead && float64(ally.HP)/float64(ally.MaxHP) <= 0.45 {
@@ -445,7 +466,7 @@ func (m *Model) executeCombatTurn() {
 				m.addLog(healStyle.Render(T(m.Lang, "combat.log.paladin_heal", hName, verb, woundedAlly.DisplayName(m.Lang), healAmt)))
 				m.checkAndAwardTitle(h)
 				return
-			} else if h.MP >= 6 && targetMob != nil && rng.Intn(100) < 50 {
+			} else if h.MP >= 6 && targetMob != nil && (forceSkill || rng.Intn(100) < 50) {
 				h.MP -= 6
 				smiteDmg := h.TotalAtk() + (h.TotalDef() / 3) + 3
 				targetMob.HP -= smiteDmg
@@ -460,12 +481,12 @@ func (m *Model) executeCombatTurn() {
 		}
 
 		// 3. ВОИН
-		if h.Class == ClassWarrior {
+		if useSkills && h.Class == ClassWarrior {
 			if h.MP >= skillCost && !h.IsBerserk {
 				h.MP -= skillCost
 				h.IsBerserk = true
 				m.addLog(fireStyle.Render(T(m.Lang, "combat.log.warrior_rage", hName)))
-			} else if h.MP >= 7 && m.Combat.Pack.LivingCount() >= 2 && rng.Intn(100) < 55 {
+			} else if h.MP >= 7 && m.Combat.Pack.LivingCount() >= 2 && (forceSkill || rng.Intn(100) < 55) {
 				h.MP -= 7
 				cleaveDmg := h.TotalAtk() + 2
 				hitCount := 0
@@ -485,7 +506,7 @@ func (m *Model) executeCombatTurn() {
 		}
 
 		// 4. МОНАХ
-		if h.Class == ClassMonk {
+		if useSkills && h.Class == ClassMonk {
 			if m.Combat.Pack.LivingCount() > 0 && h.MP >= skillCost {
 				h.MP -= skillCost
 				h.IsCharged = true
@@ -518,14 +539,14 @@ func (m *Model) executeCombatTurn() {
 		}
 
 		// 5. РАЗБОЙНИК
-		if h.Class == ClassRogue {
+		if useSkills && h.Class == ClassRogue {
 			if h.MP >= skillCost && !h.IsStealthed {
 				h.MP -= skillCost
 				h.IsStealthed = true
 				h.AddBackstab()
 				verb := TVerb(m.Lang, h.Gender, "растворился", "растворилась", "vanished")
 				m.addLog(accentStyle.Render(T(m.Lang, "combat.log.rogue_stealth", hName, verb)))
-			} else if h.MP >= 6 && targetMob != nil && targetMob.HP > 20 && rng.Intn(100) < 50 {
+			} else if h.MP >= 6 && targetMob != nil && targetMob.HP > 20 && (forceSkill || rng.Intn(100) < 50) {
 				h.MP -= 6
 				poisonDmg := h.TotalAtk() + 6
 				targetMob.HP -= poisonDmg
@@ -539,8 +560,8 @@ func (m *Model) executeCombatTurn() {
 		}
 
 		// 6. СЛЕДОПЫТ
-		if h.Class == ClassRanger {
-			if targetMob != nil && h.MP >= skillCost && targetMob.Atk >= 12 && rng.Intn(100) < 60 {
+		if useSkills && h.Class == ClassRanger {
+			if targetMob != nil && h.MP >= skillCost && targetMob.Atk >= 12 && (forceSkill || rng.Intn(100) < 60) {
 				h.MP -= skillCost
 				trapDmg := 8 + (m.Floor * 2)
 				targetMob.HP -= trapDmg
@@ -569,7 +590,7 @@ func (m *Model) executeCombatTurn() {
 		}
 
 		// 7. КЛИРИК
-		if h.Class == ClassCleric {
+		if useSkills && h.Class == ClassCleric {
 			var criticalAlly *Hero
 			for _, ally := range m.Party {
 				if !ally.IsDead && float64(ally.HP)/float64(ally.MaxHP) <= 0.45 {
@@ -595,7 +616,7 @@ func (m *Model) executeCombatTurn() {
 				h.MP -= skillCost
 				h.IsAura = true
 				m.addLog(fountStyle.Render(T(m.Lang, "combat.log.cleric_aura", hName)))
-			} else if h.MP >= 7 && targetMob != nil && rng.Intn(100) < 40 {
+			} else if h.MP >= 7 && targetMob != nil && (forceSkill || rng.Intn(100) < 40) {
 				h.MP -= 7
 				smiteDmg := h.TotalAtk() + 4
 				targetMob.HP -= smiteDmg
@@ -612,7 +633,7 @@ func (m *Model) executeCombatTurn() {
 		}
 
 		// 8. БАРД
-		if h.Class == ClassBard {
+		if useSkills && h.Class == ClassBard {
 			hasHighStress := false
 			for _, ally := range m.Party {
 				if !ally.IsDead && ally.Stress >= 50 {
@@ -652,7 +673,7 @@ func (m *Model) executeCombatTurn() {
 		}
 
 		// 9. МАГ
-		if h.Class == ClassMage {
+		if useSkills && h.Class == ClassMage {
 			if m.Combat.HasBarrel && h.MP >= skillCost {
 				h.MP -= skillCost
 				m.Combat.HasBarrel = false
@@ -706,14 +727,14 @@ func (m *Model) executeCombatTurn() {
 				m.addLog(accentStyle.Render(T(m.Lang, "combat.log.mage_lightning", hName, chainDmg)))
 				return
 			} else {
-				if eliteMob := m.Combat.Pack.GetHighestHPFocus(); eliteMob != nil {
+				if eliteMob := m.Combat.Pack.GetHighestHPFocus(); eliteMob != nil && !m.ManualMode {
 					targetMob = eliteMob
 				}
 			}
 		}
 
 		// 10. ЧЕРНОКНИЖНИК
-		if h.Class == ClassWarlock {
+		if useSkills && h.Class == ClassWarlock {
 			if h.HP > 15 && h.MP >= skillCost {
 				needMana := false
 				for _, ally := range m.Party {
@@ -756,6 +777,10 @@ func (m *Model) executeCombatTurn() {
 			return
 		}
 
+		if cmd.Kind == CmdSkill && h.MP == mpBefore {
+			m.addLog(subtleStyle.Render(T(m.Lang, "ctl.no_skill", hName)))
+		}
+
 		mobDisplayName := T(m.Lang, targetMob.NameKey)
 
 		if (targetMob.Type == MobSkeleton || targetMob.Type == MobGolem || targetMob.Type == MobGargoyle) && rng.Intn(100) < 25 {
@@ -785,7 +810,11 @@ func (m *Model) executeCombatTurn() {
 		armorPierce := 0
 
 		// ==================== МАЛЫЕ НАВЫКИ (3-5 MP) ====================
-		switch h.Class {
+		minorClass := h.Class
+		if !useSkills {
+			minorClass = "" // простой удар не тратит ману на малые навыки
+		}
+		switch minorClass {
 		case ClassMage:
 			if h.MP >= 5 {
 				h.MP -= 5

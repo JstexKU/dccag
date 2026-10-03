@@ -1,6 +1,6 @@
-cat << 'EOF' > .gitignore
 # Скомпилированные бинарники в корне
-dccag*
+/dccag
+/dccag-*
 *.exe
 *.out
 
@@ -13,4 +13,3 @@ dccag_report.json
 # Системный мусор
 .DS_Store
 *.swp
-EOF

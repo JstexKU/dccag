@@ -816,6 +816,12 @@ type ActiveCombat struct {
 	Round        int
 	HasBarrel    bool
 	FleeCooldown int
+
+	// Ручное управление (см. manual.go)
+	Focus      *Monster  // цель, выбранная игроком
+	Cmd        ManualCmd // команда игрока для героя, чей ход сейчас
+	PotionMenu bool      // открыт выбор зелья
+	PotionTo   *Hero     // кому достанется зелье
 }
 
 // --- Карта, Квесты и Город ---
@@ -1046,6 +1052,8 @@ type Model struct {
 	TickGen          int  // поколение цепочки тиков: устаревшие тики игнорируются
 	Tactics          Tactics
 	TacticsSel       int
+	ManualMode       bool // ручное управление: игрок ходит по карте и командует в бою
+	ManualLastCamp   int  // Stats.TotalSteps на момент последнего ручного привала
 }
 
 type (

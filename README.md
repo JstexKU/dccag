@@ -13,12 +13,15 @@ A grim tactical text-based dungeon crawler featuring autonomous squad mechanics 
 **DCCAG** is an autonomous console roguelike. Each expedition you get a party of 5 heroes picked at random from **10 classes** (Tank, Warrior, Rogue, Mage, Cleric, Paladin, Ranger, Monk, Bard, Warlock) and 4 races (Human, Elf, Beastman, Olongr). The party explores infinite procedural floors, fights monster packs, manages stress and psychological afflictions, trades in the Capital and crafts gear, all inside a terminal UI. You don't steer the party: you set its **tactics** and watch.
 
 ### ✨ Key Features
-* **Autopilot Tactics** (`T`): decide when the party retreats, flees, drinks potions, and whether it touches trapped chests, blood altars and risky bargains.
-* **Room Events** (`?` on the map): campfires, wandering merchants, whispering idols, locked vaults (rogues pick them, bruisers smash them) and ambushes.
-* **Persistent Legacy**: the Capital's investments, your language and tactics are saved between launches.
+* **Manual Control** (`M`): Take direct command of the expedition. Move through the labyrinth with arrow keys, make camp (`C`), exit voluntarily (`X`), command heroes during combat (`A` strike, `Space` skill, `D` guard, `P` potions), and select enemy focus targets (←/→)[cite: 23, 34, 35]. Toggle seamlessly between autopilot and manual control at any time.
+* **Autopilot Tactics** (`T`): Fine-tune squad thresholds for emergency retreat, combat flee, potion drinking, and decision rules for trapped chests, blood altars, and room events[cite: 30, 35].
+* **Room Events** (`?` on the map): Campfires, wandering alchemical merchants, whispering idols, ambushes, and locked vaults (picked by rogues or smashed open by bruisers)[cite: 16, 35].
+* **Town Economy & Trading**: Automated visit pipeline (Market, Magistrate, Church, Tavern, Guild, Smithy, Tannery, Alchemist)[cite: 32, 35]. Heroes proactively purchase missing gear and buy equipment upgrades from merchants[cite: 32].
+* **Capital Militia Meta-Progression**: Cumulative municipal investments unlock 5 permanent tiers of free reinforcements (from local watchmen up to Citadel Keepers)[cite: 22, 25].
+* **Permanent Legacy & Memorial Book**: Town treasury, infrastructure upgrades, tactics, and language settings persist across sessions in `save.json`[cite: 27, 35]. Fallen heroes are recorded in the Memorial Book, and unrecovered casualties left behind in the Abyss are permanently lost[cite: 14, 32, 33, 35].
 * **Dynamic Bilingual Engine**: switch between Russian (**RU**) and English (**EN**) on the fly with `L`.
-* **Darkest Dungeon-Inspired Mechanics**: stress, afflictions (Paranoia, Selfishness, Maniac), heart attacks, rare virtues.
-* **The Capital & Economy**: Magistrate, Blacksmith, Tannery, Alchemist, Tavern, Church and the Guild militia.
+* **Darkest Dungeon-Inspired Mechanics**: Sanity meter (0–200), afflictions (Paranoia, Selfishness, Maniac), virtues, and lethal heart attacks[cite: 15, 33, 35].
+* **Uniform Normalized UI**: Grid system locking 6 uniform hero and party banner cards with consistent dimensions and borders across Landscape, Portrait, and PortraitWide layouts[cite: 34].
 * **Reproducible Runs**: `-seed N` replays the same dungeon, handy for bug reports and balancing.
 
 ---
@@ -29,8 +32,13 @@ A grim tactical text-based dungeon crawler featuring autonomous squad mechanics 
 | :--- | :--- |
 | **`Space`** / **`Enter`** | Pause / resume autopilot (or start the game from the menu) |
 | **`N`** | One step while paused |
+| **`M`** | Toggle manual control / autopilot |
 | **`T`** | Autopilot tactics (`↑/↓` select, `←/→` change, `T`/`Esc` back) |
 | **`F`** | Try to flee from combat |
+| **`←↑↓→`** | *Manual:* move the party one tile |
+| **`C`** / **`X`** | *Manual:* make camp (limited by a cooldown) / leave through the exit tile `<` |
+| **`A`** / **`Space`** / **`D`** / **`P`** | *Manual combat:* plain strike / class skill / guard / potion (`1`-`9` pick, `←/→` choose who gets it) |
+| **`←`** / **`→`** | *Manual combat:* choose the target (marked with `▶`) |
 | **`E`** | Party Armory & mutations |
 | **`I`** | Codex (`Tab` / `Shift+Tab` or `1`-`7` to switch tabs) |
 | **`S`** | Expedition statistics & Memorial Book |
@@ -45,6 +53,7 @@ A grim tactical text-based dungeon crawler featuring autonomous squad mechanics 
 
 | Flag | Purpose |
 | :--- | :--- |
+| `-manual` | Start in manual control mode |
 | `-seed N` | Deterministic run with the given seed (`0` = random) |
 | `-report` | Collect telemetry and write `dccag_report.json` |
 | `-no-save` | Neither read nor write the save file |
@@ -104,6 +113,7 @@ Tests cover dictionary parity (RU/EN keys and format arguments), the autopilot t
 * `main.go`: Bubble Tea loop, state machine, tick chain, CLI flags.
 * `types.go`: data structures for heroes, items, monsters, stats and Lipgloss styles.
 * `tactics.go`: autopilot settings and their screen.
+* `manual.go`: manual control (movement, hero commands, camp, key handling).
 * `events.go`: room events (`?` tiles).
 * `save.go`: persistence of legacy, language and tactics.
 * `rng.go`: single random source (`-seed`).
