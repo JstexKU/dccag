@@ -3,7 +3,7 @@ name: Build Release Binaries
 on:
   push:
     tags:
-      - 'v*' # Запускается автоматически при создании тега (например, v1.0.0)
+      - 'v*'
 
 jobs:
   build:
@@ -11,6 +11,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
 
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: linux
@@ -41,19 +42,49 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.24'
 
       - name: Build binary
         env:
           CGO_ENABLED: 0
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
+        shell: bash
         run: |
-          go build -ldflags="-s -w" -o dccag-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }} .
+          go build -ldflags="-s -w" -o "dccag-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}" .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.os }}-${{ matrix.arch }}
+          path: dccag-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
+
+  release:
+    name: Publish Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          path: dist
+          merge-multiple: true
+
+      - name: Generate SHA256 checksums
+        run: |
+          cd dist
+          sha256sum dccag-* > sha256sums.txt
+          cat sha256sums.txt
 
       - name: Upload binaries to release
         uses: softprops/action-gh-release@v2
         with:
-          files: dccag-*
+          files: |
+            dist/dccag-*
+            dist/sha256sums.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
