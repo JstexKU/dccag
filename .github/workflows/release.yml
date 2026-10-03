@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     name: Build for ${{ matrix.os }} / ${{ matrix.arch }}
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
@@ -16,23 +16,18 @@ jobs:
         include:
           - os: linux
             arch: amd64
-            runner: ubuntu-latest
             ext: ""
           - os: linux
             arch: arm64
-            runner: ubuntu-latest
             ext: ""
           - os: windows
             arch: amd64
-            runner: windows-latest
             ext: ".exe"
           - os: darwin
             arch: amd64
-            runner: macos-latest
             ext: ""
           - os: darwin
             arch: arm64
-            runner: macos-latest
             ext: ""
 
     steps:
@@ -49,7 +44,6 @@ jobs:
           CGO_ENABLED: 0
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
-        shell: bash
         run: |
           go build -ldflags="-s -w" -o "dccag-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}" .
 
