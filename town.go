@@ -771,4 +771,3 @@ func (m *Model) stepTown() {
 		m.addLog(accentStyle.Render(T(m.Lang, "town.log.depart")))
 	}
 }
-

@@ -109,16 +109,29 @@ var dictEN = map[string]string{
 	"affliction.maniac":   "Maniac",
 	"affliction.virtuous": "Virtuous",
 
-	// --- Biomes & Hazards ---
+	// --- Biomes & Hazards (11 Biomes) ---
 	"biome.catacombs":  "Rotting Catacombs",
 	"biome.grotto":     "Flooded Grottos",
 	"biome.inferno":    "Ashen Deeps",
 	"biome.crystal":    "Crystal Labyrinth",
+	"biome.deadwood":   "Sunken Deadwood",
+	"biome.fungal":     "Fungal Depths",
+	"biome.archives":   "Forgotten Archives",
+	"biome.mines":      "Obsidian Mines",
+	"biome.sanctuary":  "Corrupted Sanctuary",
+	"biome.astral":     "Astral Rift",
 	"biome.abyss":      "Throne of the Void",
+
 	"hazard.catacombs": "Damp & Decay",
 	"hazard.grotto":    "Flooded slabs (-2 Speed)",
 	"hazard.inferno":   "Scorching heat (+Fire)",
 	"hazard.crystal":   "Aether distortion (+3 MP cost)",
+	"hazard.deadwood":  "Choking rot & thorns",
+	"hazard.fungal":    "Poison spores (+25% poison dmg)",
+	"hazard.archives":  "Mana drain (+2 MP cost)",
+	"hazard.mines":     "Cave-ins and dark (+3 Def enemies)",
+	"hazard.sanctuary": "Desecrated soil (+15% stress)",
+	"hazard.astral":    "Initiative distortion",
 	"hazard.abyss":     "Void Breath (+10% stress)",
 
 	// --- Bags ---
@@ -367,7 +380,7 @@ var dictEN = map[string]string{
 	"item.warlock.legs.3":   "Blight Ribbons",
 	"item.warlock.legs.4":   "Doom Greaves",
 
-	// --- Monsters ---
+	// --- Monsters (Base + 18 New) ---
 	"mob.rat":          "Plague Rat",
 	"mob.goblin":       "Goblin",
 	"mob.skeleton":     "Skeleton",
@@ -384,6 +397,44 @@ var dictEN = map[string]string{
 	"mob.death_knight": "Death Knight",
 	"mob.dragon":       "Ash Dragon",
 
+	// 5. Sunken Deadwood
+	"mob.sprout_skeleton": "Overgrown Skeleton",
+	"mob.dryad":           "Corrupted Dryad",
+	"mob.blight_ent":      "Blight Ent",
+
+	// 6. Fungal Depths
+	"mob.sporling":    "Sporling",
+	"mob.tentacle":    "Swamp Tentacle",
+	"mob.toxic_basil": "Toxic Basilisk",
+
+	// 7. Forgotten Archives
+	"mob.tome_book":      "Living Tome",
+	"mob.scroll_mimic":   "Scroll Mimic",
+	"mob.archive_keeper": "Archive Keeper",
+
+	// 8. Obsidian Mines
+	"mob.obsidian_beetle": "Obsidian Beetle",
+	"mob.deep_troll":      "Deep Troll",
+	"mob.miner_ghoul":     "Subterranean Ghoul",
+
+	// 9. Corrupted Sanctuary
+	"mob.fallen_crusader":   "Fallen Crusader",
+	"mob.blood_cultist":     "Blood Cultist",
+	"mob.shadow_inquisitor": "Shadow Inquisitor",
+
+	// 10. Astral Rift
+	"mob.astral_weaver":    "Astral Weaver",
+	"mob.chrono_phantom":   "Chrono Phantom",
+	"mob.essence_devourer": "Essence Devourer",
+
+	// Mini-bosses
+	"mob.mini_boneblight":  "Ancient Boneblight (ELITE)",
+	"mob.mini_executioner": "Plague Executioner (ELITE)",
+	"mob.mini_colossus":    "Aether Colossus (ELITE)",
+	"mob.mini_reaver":      "Cinder Reaver (ELITE)",
+	"mob.mini_stalker":     "Abyssal Stalker (ELITE)",
+
+	// Bosses
 	"mob.boss_dragon":    "Ash Dragon (BOSS)",
 	"mob.boss_orc":       "Orc Chieftain",
 	"mob.boss_golem":     "Diamond Colossus",
@@ -491,18 +542,20 @@ var dictEN = map[string]string{
 	"title.warlock_curser":        "Doom Bringer",
 
 	// --- Quests ---
-	"quest.hunt.title":   "Monster Hunt",
-	"quest.hunt.desc":    "Eliminate beasts lurking in the depths",
-	"quest.chest.title":  "Treasure Gathering",
-	"quest.chest.desc":   "Open treasure chests in the dungeon",
-	"quest.floor.title":  "Conquering the Deeps",
-	"quest.floor.desc":   "Descend deeper into lower floors",
-	"quest.relic.title":  "Relic Recovery",
-	"quest.relic.desc":   "Find an ancient reliquary in the deep",
-	"quest.escape.title": "Ambush Escape",
-	"quest.escape.desc":  "Explore sealed halls and locate the exit",
-	"quest.altar.title":  "Blood Pact",
-	"quest.altar.desc":   "Offer a blood sacrifice at the Altar",
+	"quest.hunt.title":     "Monster Hunt",
+	"quest.hunt.desc":      "Eliminate beasts lurking in the depths",
+	"quest.miniboss.title": "Elite Execution",
+	"quest.miniboss.desc":  "Defeat a powerful mini-boss roaming the floor",
+	"quest.chest.title":    "Treasure Gathering",
+	"quest.chest.desc":     "Open treasure chests in the dungeon",
+	"quest.floor.title":    "Conquering the Deeps",
+	"quest.floor.desc":     "Descend deeper into lower floors",
+	"quest.relic.title":    "Relic Recovery",
+	"quest.relic.desc":     "Find an ancient reliquary in the deep",
+	"quest.escape.title":   "Ambush Escape",
+	"quest.escape.desc":    "Explore sealed halls and locate the exit",
+	"quest.altar.title":    "Blood Pact",
+	"quest.altar.desc":     "Offer a blood sacrifice at the Altar",
 
 	// --- Town Establishments ---
 	"town.market":     "Market Square",
@@ -557,7 +610,7 @@ var dictEN = map[string]string{
 
 	// --- Town Logs ---
 	"town.log.enter_gate":           "The party enters through the town gates for rest...",
-	"town.log.market_sold":          "⚖️️ [Market] Trophies sold for +%dG.",
+	"town.log.market_sold":          "⚖ [Market] Trophies sold for +%dG.",
 	"town.log.market_history":       "Sold trophies for +%dG. Spirit fortified (-40 stress)",
 	"town.log.magistrate_tax":       "🏛️ [Magistrate] Allocated %dG to city treasury (%s Lvl.%d)!",
 	"town.log.magistrate_hist":      "Invested %dG (%s upgraded to Lvl.%d)",
@@ -596,19 +649,20 @@ var dictEN = map[string]string{
 	"town.log.bought_upgrade_hist": "%s purchased upgraded item [%s] (-%dG)",
 
 	// --- Combat Logs ---
-	"combat.barrel":             "POWDER",
-	"combat.enemy_pack":         "ENEMY PACK",
-	"combat.log.start":          "⚔️ COMBAT! Enemy pack (%d beasts)!",
-	"combat.log.pack_defeated":  "💀 Enemy pack defeated!",
-	"combat.log.flee_success":   "💨 [ESCAPE] Success! The party broke away under cover of darkness.",
-	"combat.log.evacuation":     "🕊️ [Evacuation] The party carried %d fallen heroes based on survivors quota!",
-	"combat.log.left_behind":    "⚠️ [Casualties] Not enough hands: %d fallen were swallowed by the Abyss!",
-	"combat.log.left_in_abyss":  "Left in the Abyss during retreat",
-	"combat.log.retreat_town":   "🏰 The party retreated behind the town walls!",
-	"combat.log.retreat_dialog": "The party retreated to the Capital.",
-	"combat.log.flee_fail":      "💥 [ESCAPE FAILED] Monsters blocked the retreat! The party regrouped under glancing strikes.",
-	"combat.log.death_flee":     "Cut down during a failed retreat",
-	"combat.log.paranoid":       "👁️ %s %s into a corner (Paranoia)!",
+	"combat.barrel":              "POWDER",
+	"combat.enemy_pack":          "ENEMY PACK",
+	"combat.log.start":           "⚔️ COMBAT! Enemy pack (%d beasts)!",
+	"combat.log.pack_defeated":   "💀 Enemy pack defeated!",
+	"combat.log.flee_success":    "💨 [ESCAPE] Success! The party broke away under cover of darkness.",
+	"combat.log.evacuation":      "🕊️ [Evacuation] The party carried %d fallen heroes based on survivors quota!",
+	"combat.log.left_behind":     "⚠️ [Casualties] Not enough hands: %d fallen were swallowed by the Abyss!",
+	"combat.log.left_in_abyss":   "Left in the Abyss during retreat",
+	"combat.log.retreat_town":    "🏰 The party retreated behind the town walls!",
+	"combat.log.retreat_dialog":  "The party retreated to the Capital.",
+	"combat.log.flee_fail":       "💥 [ESCAPE FAILED] Monsters blocked the retreat! The party regrouped under glancing strikes.",
+	"combat.log.death_flee":      "Cut down during a failed retreat",
+	"combat.log.paranoid":        "👁️ %s %s into a corner (Paranoia)!",
+	"combat.log.miniboss_trophy": "👑 Champion Trophy: [%s]!",
 
 	// Combat Skills (10 classes)
 	"combat.log.tank_stance": "🛡️ %s takes [Defensive Stance] (+5 Def, block)!",
@@ -617,7 +671,7 @@ var dictEN = map[string]string{
 
 	"combat.log.paladin_heal":  "✨ %s %s [Lay on Hands] upon %s (+%d HP, -10 stress)!",
 	"combat.log.paladin_smite": "⚔️ %s strikes with [Holy Smite] (-%d HP) and enters block!",
-	"combat.log.paladin_minor": "🛡️ %s raises [Sacred Shield] (+2 Def, -4 stress)!",
+	"combat.log.paladin_minor": "🛡️️ %s raises [Sacred Shield] (+2 Def, -4 stress)!",
 
 	"combat.log.warrior_rage":   "⚔️ %s enters [Rage State] (+5 Atk, -2 Def)!",
 	"combat.log.warrior_cleave": "⚔️ %s performs [Cleave] hitting %d enemies (-%d HP)!",
@@ -681,7 +735,7 @@ var dictEN = map[string]string{
 	"dungeon.log.stairs_descend":        "Descending to Floor %d!",
 	"dungeon.log.chest_open":            "🎁 Chest: +%dG and [%s].",
 	"dungeon.log.virtue":                "🌟 [VIRTUE] %s %s fear and %s second wind!",
-	"dungeon.log.affliction":            "👁️️ [AFFLICTION] %s %s: %s!",
+	"dungeon.log.affliction":            "👁 [AFFLICTION] %s %s: %s!",
 	"dungeon.log.heart_attack":          "💔 [HEART ATTACK] %s %s their chest! HP dropped to 1!",
 	"dungeon.log.heart_attack_death":    "💔 [HEART ATTACK] %s's heart gave out under madness! Death!",
 	"dungeon.death.heart_attack":        "Heart attack (%s)",
@@ -732,18 +786,34 @@ var dictEN = map[string]string{
 	"codex.mob_rage":          "(Rage)",
 	"codex.mob_vamp":          "(Vampiric)",
 	"codex.mob_dragon_breath": "AOE Fire Breath",
+	"codex.mob_poison":        "(Poison)",
+	"codex.mob_stun":          "(Stun)",
+	"codex.mob_slow":          "(Slow)",
+	"codex.mob_mana_drain":    "(Mana Drain)",
 
-	"codex.sec.1":         "1. CYCLICAL DUNGEON BIOMES:",
-	"codex.biome.1.title": "Floors 1, 6, 11... (Rotting Catacombs)",
-	"codex.biome.1.desc":  "Basic monsters, damp and decay.",
-	"codex.biome.2.title": "Floors 2, 7, 12... (Flooded Grottos)",
-	"codex.biome.2.desc":  "Slimes, drowned, lizards (-2 party speed).",
-	"codex.biome.3.title": "Floors 3, 8, 13... (Ashen Deeps)",
-	"codex.biome.3.desc":  "Ash imps, orcs, salamanders (+fire damage).",
-	"codex.biome.4.title": "Floors 4, 9, 14... (Crystal Labyrinth)",
-	"codex.biome.4.desc":  "Golems, gargoyles (+3 MP skill cost).",
-	"codex.biome.5.title": "Floors 5, 10, 15... (Throne of the Void)",
-	"codex.biome.5.desc":  "Demons, Death Knights, Dragon (+10% stress).",
+	"codex.sec.1":          "1. CYCLICAL DUNGEON BIOMES:",
+	"codex.biome.1.title":  "Floors 1, 12... (Rotting Catacombs)",
+	"codex.biome.1.desc":   "Basic monsters, damp and decay.",
+	"codex.biome.2.title":  "Floors 2, 13... (Flooded Grottos)",
+	"codex.biome.2.desc":   "Slimes, drowned, lizards (-2 party speed).",
+	"codex.biome.3.title":  "Floors 3, 14... (Ashen Deeps)",
+	"codex.biome.3.desc":   "Ash imps, orcs, salamanders (+fire damage).",
+	"codex.biome.4.title":  "Floors 4, 15... (Crystal Labyrinth)",
+	"codex.biome.4.desc":   "Golems, gargoyles (+3 MP skill cost).",
+	"codex.biome.5.title":  "Floors 5, 16... (Sunken Deadwood)",
+	"codex.biome.5.desc":   "Dryads, overgrown skeletons & treants.",
+	"codex.biome.6.title":  "Floors 6, 17... (Fungal Depths)",
+	"codex.biome.6.desc":   "Sporlings, tentacles & basilisks (poison).",
+	"codex.biome.7.title":  "Floors 7, 18... (Forgotten Archives)",
+	"codex.biome.7.desc":   "Living tomes, mimics & keepers (mana drain).",
+	"codex.biome.8.title":  "Floors 8, 19... (Obsidian Mines)",
+	"codex.biome.8.desc":   "Armored beetles & deep trolls (darkness).",
+	"codex.biome.9.title":  "Floors 9, 20... (Corrupted Sanctuary)",
+	"codex.biome.9.desc":   "Cultists & fallen crusaders (high stress).",
+	"codex.biome.10.title": "Floors 10, 21... (Astral Rift)",
+	"codex.biome.10.desc":  "Weavers, chrono-phantoms and devourers.",
+	"codex.biome.11.title": "Floors 11, 22... (Throne of the Void)",
+	"codex.biome.11.desc":  "Demons, Death Knights and the Dragon.",
 
 	"codex.sec.races":          "2. RACES & INNATE BONUSES:",
 	"codex.race.human.desc":    "+15% bonus EXP, 'Adaptation' clears stress on level-up.",
@@ -783,12 +853,18 @@ var dictEN = map[string]string{
 	"codex.spell.bard.med":     "Dissonance (-Atk to pack)",
 	"codex.spell.bard.minor":   "Lively Tune (+5 MP)",
 
-	"codex.sec.2":            "4. MONSTERS & STAT PROGRESSION:",
-	"codex.catacombs_header": " [Rotting Catacombs]",
-	"codex.grotto_header":    " [Flooded Grottos]",
-	"codex.inferno_header":   " [Ashen Deeps]",
-	"codex.crystal_header":   " [Crystal Labyrinth]",
-	"codex.abyss_header":     " [Throne of the Void & Bosses]",
+	"codex.sec.2":             "4. MONSTERS & STAT PROGRESSION:",
+	"codex.catacombs_header":  " [Rotting Catacombs]",
+	"codex.grotto_header":     " [Flooded Grottos]",
+	"codex.inferno_header":    " [Ashen Deeps]",
+	"codex.crystal_header":    " [Crystal Labyrinth]",
+	"codex.deadwood_header":   " [Sunken Deadwood]",
+	"codex.fungal_header":     " [Fungal Depths]",
+	"codex.archives_header":   " [Forgotten Archives]",
+	"codex.mines_header":      " [Obsidian Mines]",
+	"codex.sanctuary_header":  " [Corrupted Sanctuary]",
+	"codex.astral_header":     " [Astral Rift]",
+	"codex.abyss_header":      " [Throne of the Void & Bosses]",
 
 	"codex.sec.3":         "5. MONSTER AFFIXES:",
 	"codex.affix.1.title": "🔥 Fiery",
@@ -858,6 +934,36 @@ var dictEN = map[string]string{
 	"dungeon.log.rest.crystal.2": "🌿 Took cover in a crevice, watching reflections dance.",
 	"dungeon.log.rest.crystal.3": "🌿 Sat on a crystal edge, feeling the cold breath of gemstones.",
 	"dungeon.log.rest.crystal.4": "🌿 Huddled in the shadow of a crystalline pillar, easing their worries.",
+
+	"dungeon.log.rest.deadwood.1": "🌿 The party sheltered in a hollow mossy oak, scraping toxic spores from armor.",
+	"dungeon.log.rest.deadwood.2": "🌿 Huddled between massive roots, listening to creaking dead branches.",
+	"dungeon.log.rest.deadwood.3": "🌿 Rested on a bog island: campfire barely cuts through thick rot mist.",
+	"dungeon.log.rest.deadwood.4": "🌿 Pressed against a fallen trunk, catching breath in damp shadows.",
+
+	"dungeon.log.rest.fungal.1": "🌿 The party took cover under a giant mushroom cap, waiting out toxic spores.",
+	"dungeon.log.rest.fungal.2": "🌿 Caught their breath on a damp clearing of bioluminescent moss.",
+	"dungeon.log.rest.fungal.3": "🌿 Hid behind a thick puffball stalk, purifying water flasks.",
+	"dungeon.log.rest.fungal.4": "🌿 Gathered in the faint glow of phosphor mold, bandaging wounds.",
+
+	"dungeon.log.rest.archives.1": "🌿 Sat between dusty shelves, tired of whispers from forbidden pages.",
+	"dungeon.log.rest.archives.2": "🌿 Rested on marble slabs under the gaze of stone scholar statues.",
+	"dungeon.log.rest.archives.3": "🌿 Lit a small candle in the dim reading hall, listening to humming mana.",
+	"dungeon.log.rest.archives.4": "🌿 Leaned against ancient book stacks, easing their tired minds.",
+
+	"dungeon.log.rest.mines.1": "🌿 Pressed against a cold obsidian vein, listening to pickaxe echoes in the deep.",
+	"dungeon.log.rest.mines.2": "🌿 Caught their breath in an abandoned mine tunnel away from cave-ins.",
+	"dungeon.log.rest.mines.3": "🌿 Lit a tiny fire on a pile of raw ore, watching reflections in dark facets.",
+	"dungeon.log.rest.mines.4": "🌿 Gathered near a timber support beam, dusting off black soot.",
+
+	"dungeon.log.rest.sanctuary.1": "🌿 Huddled at the base of a shattered altar, murmuring quiet prayers.",
+	"dungeon.log.rest.sanctuary.2": "🌿 Took shelter behind stained-glass archways, cleaning blood from blades.",
+	"dungeon.log.rest.sanctuary.3": "🌿 Rested in the ruined nave: long shadows shifting in dead silence.",
+	"dungeon.log.rest.sanctuary.4": "🌿 Stood in a circle under a dome of corruption, shielding their last torch.",
+
+	"dungeon.log.rest.astral.1": "🌿 Froze on a floating shard of reality, gazing at distorted flows of time.",
+	"dungeon.log.rest.astral.2": "🌿 Caught their breath inside a gentle chrono-eddy, mending mental strain.",
+	"dungeon.log.rest.astral.3": "🌿 Rested among radiant threads of aether, enveloped by eternal silence.",
+	"dungeon.log.rest.astral.4": "🌿 Gathered closely at the edge of an impossible spatial rift.",
 
 	"dungeon.log.rest.abyss.1": "🌿 The party froze in the dark, listening to the breath of the void.",
 	"dungeon.log.rest.abyss.2": "🌿 Pressed to a wall where shadows seemed a little denser.",

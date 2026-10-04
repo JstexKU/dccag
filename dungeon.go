@@ -34,11 +34,11 @@ func generateRelic(level int) PartyRelic {
 }
 
 func generateAutoQuest(curFloor int) AutoQuest {
-	qType := QuestType(rng.Intn(6))
+	qType := QuestType(rng.Intn(7))
 	switch qType {
 	case QuestHuntMonster:
 		var pool []MonsterType
-		biomeCycle := (curFloor - 1) % 5
+		biomeCycle := (curFloor - 1) % 11
 		switch biomeCycle {
 		case 0:
 			pool = []MonsterType{MobRat, MobGoblin, MobSkeleton}
@@ -48,7 +48,19 @@ func generateAutoQuest(curFloor int) AutoQuest {
 			pool = []MonsterType{MobImp, MobOrc, MobSalamander}
 		case 3:
 			pool = []MonsterType{MobGargoyle, MobGolem, MobPhantom}
-		default:
+		case 4:
+			pool = []MonsterType{MobSproutSkeleton, MobDryad, MobBlightEnt}
+		case 5:
+			pool = []MonsterType{MobSporling, MobTentacle, MobToxicBasil}
+		case 6:
+			pool = []MonsterType{MobTomeBook, MobScrollMimic, MobArchiveKeeper}
+		case 7:
+			pool = []MonsterType{MobObsidianBeetle, MobDeepTroll, MobMinerGhoul}
+		case 8:
+			pool = []MonsterType{MobFallenCrusader, MobBloodCultist, MobShadowInquisitor}
+		case 9:
+			pool = []MonsterType{MobAstralWeaver, MobChronoPhantom, MobEssenceDevour}
+		default: // 10: Трон Бездны
 			pool = []MonsterType{MobVoidDemon, MobDeathKnight}
 		}
 		target := pool[rng.Intn(len(pool))]
@@ -57,6 +69,12 @@ func generateAutoQuest(curFloor int) AutoQuest {
 			Type: QuestHuntMonster, TargetMob: target, TargetCount: count,
 			TitleKey: "quest.hunt.title", DescKey: "quest.hunt.desc",
 			RewardGold: count * (20 + curFloor*5),
+		}
+	case QuestHuntMiniBoss:
+		return AutoQuest{
+			Type: QuestHuntMiniBoss, TargetCount: 1,
+			TitleKey: "quest.miniboss.title", DescKey: "quest.miniboss.desc",
+			RewardGold: 150 + curFloor*25,
 		}
 	case QuestOpenChests:
 		count := rng.Intn(2) + 2
@@ -420,7 +438,6 @@ func (m *Model) isMonsterNearby() bool {
 	return false
 }
 
-// hasUndergearedHeroes проверяет, остался ли кто-то из живых бойцов без оружия или доспехов
 func (m *Model) hasUndergearedHeroes() bool {
 	for _, h := range m.Party {
 		if h.IsDead {
@@ -433,7 +450,6 @@ func (m *Model) hasUndergearedHeroes() bool {
 	return false
 }
 
-// findEmergencyStep — аварийный поиск кратчайшего пути к целевому тайлу (TileStairs или TileExit)
 func (m *Model) findEmergencyStep(targetTile Tile) (Point, bool) {
 	queue := []Point{m.PartyPos}
 	visited := make(map[Point]bool)
@@ -521,7 +537,6 @@ func (m *Model) findNextStep() Point {
 		return m.PartyPos, false
 	}
 
-	// 1. Retreat — ищем выход
 	if retreat && !forceDeeper {
 		step, found := findPath(true, func(p Point, t Tile) bool {
 			return t == TileExit
@@ -537,7 +552,6 @@ func (m *Model) findNextStep() Point {
 		}
 	}
 
-	// 2. Источник по urgency
 	if seekingFountain {
 		step, found := findPath(true, func(p Point, t Tile) bool {
 			return t == TileFountain
@@ -547,7 +561,6 @@ func (m *Model) findNextStep() Point {
 		}
 	}
 
-	// 2a. Если кто-то без экипировки — целенаправленно обходим монстров и ищем сундуки/тайники
 	if needsGear && !bagFull {
 		step, found := findPath(true, func(p Point, t Tile) bool {
 			return t == TileChest || t == TileTrappedChest || t == TileRelic || t == TileEvent
@@ -557,13 +570,11 @@ func (m *Model) findNextStep() Point {
 		}
 	}
 
-	// 3. Обычные цели
 	isExplorationQuest := m.CurrentQuest.Type == QuestReachFloor && !m.CurrentQuest.Completed
 
 	isTarget := func(p Point, t Tile) bool {
 		_, hasPack := m.Packs[p]
 		if hasPack {
-			// Если кто-то голый, не лезем на монстров по своей воле
 			if needsGear {
 				return false
 			}
@@ -608,7 +619,6 @@ func (m *Model) findNextStep() Point {
 		return t == TileChest || t == TileStairs || t == TileAltar || t == TileFountain || t == TileTrappedChest || t == TileBarrel || t == TileRelic || t == TileEvent
 	}
 
-	// Если есть раздетые, сначала пробуем безопасный путь ко всем целям в обход монстров
 	if needsGear {
 		step, found := findPath(true, isTarget)
 		if found {
@@ -738,7 +748,6 @@ func (m *Model) checkAndDrinkPotions(h *Hero) {
 	if h.IsDead || len(h.Potions) == 0 || m.InTown {
 		return
 	}
-	// В ручном бою зелья пьёт игрок (команда P), а не автопилот.
 	if m.ManualMode && m.Combat != nil {
 		return
 	}
@@ -777,7 +786,7 @@ func (m *Model) checkAndDrinkPotions(h *Hero) {
 				h.HP = min(h.MaxHP, h.HP+p.Power)
 				m.addLog(potionStyle.Render(T(m.Lang, "dungeon.log.potion_hp", hName, verb, pName, p.Power)))
 			case PotionMP:
-				h.MP = min(h.MaxMP, h.MP+p.Power)
+				h.MP = min(h.MaxHP, h.MP+p.Power)
 				m.addLog(potionStyle.Render(T(m.Lang, "dungeon.log.potion_mp", hName, verb, pName, p.Power)))
 			case PotionStress:
 				h.Stress = max(0, h.Stress-p.Power)
@@ -1038,65 +1047,76 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 	pack := &MonsterPack{IsBoss: isBoss}
 	scaleMult := 1 + (floor / 8)
 
-	if isBoss {
-		if floor%10 == 0 {
-			dragonLvl := floor
-			dragonHP := (300 + (floor * 20)) * scaleMult
-			dragon := &Monster{
-				ID: 1, Type: MobDragon, NameKey: "mob.boss_dragon", Level: dragonLvl, Affix: AffixFire,
-				Glyph: 'D', Color: "196", HP: dragonHP, MaxHP: dragonHP,
-				Atk: (30 + floor*2) * scaleMult, Defense: (10 + floor/2) * scaleMult, Speed: 12, Exp: 450 * scaleMult,
-			}
-			pack.Members = append(pack.Members, dragon)
-
-			for i := 1; i <= 2; i++ {
-				guard := &Monster{
-					ID: i + 1, Type: MobDeathKnight, NameKey: "mob.death_knight", Level: dragonLvl - 1, Affix: AffixVampiric,
-					Glyph: 'K', Color: "89", HP: (85 + floor*6) * scaleMult, MaxHP: (85 + floor*6) * scaleMult,
-					Atk: (22 + floor*2) * scaleMult, Defense: (7 + floor/3) * scaleMult, Speed: 10, Exp: 75 * scaleMult,
-				}
-				pack.Members = append(pack.Members, guard)
-			}
-			return pack
+	// 1. Главный босс декады
+	if isBoss && floor%10 == 0 {
+		dragonLvl := floor
+		dragonHP := (300 + (floor * 20)) * scaleMult
+		dragon := &Monster{
+			ID: 1, Type: MobDragon, NameKey: "mob.boss_dragon", Level: dragonLvl, Affix: AffixFire,
+			Glyph: 'D', Color: "196", HP: dragonHP, MaxHP: dragonHP,
+			Atk: (30 + floor*2) * scaleMult, Defense: (10 + floor/2) * scaleMult, Speed: 12, Exp: 450 * scaleMult,
 		}
-
-		bossLvl := floor
-		hp := (90 + (bossLvl * 18)) * scaleMult
-		bType := MobOrc
-		bGlyph := 'B'
-		bColor := "202"
-		bNameKey := "mob.boss_orc"
-		bAtk := (16 + (bossLvl * 2)) * scaleMult
-		bDef := (5 + bossLvl/3) * scaleMult
-
-		if floor >= 7 {
-			bType = MobGolem
-			bNameKey = "mob.boss_golem"
-			bGlyph = 'G'
-			bColor = "141"
-			bDef = (9 + floor/4) * scaleMult
-		} else if floor >= 4 {
-			bType = MobDrowned
-			bNameKey = "mob.boss_leviathan"
-			bGlyph = 'L'
-			bColor = "31"
-		}
-
-		pack.Members = append(pack.Members, &Monster{
-			ID: 1, Type: bType, NameKey: bNameKey, Level: bossLvl, Affix: AffixStone,
-			Glyph: bGlyph, Color: bColor, HP: hp, MaxHP: hp,
-			Atk: bAtk, Defense: bDef, Speed: 10, Exp: (90 + bossLvl*10) * scaleMult,
-		})
+		pack.Members = append(pack.Members, dragon)
 		for i := 1; i <= 2; i++ {
 			pack.Members = append(pack.Members, &Monster{
-				ID: i + 1, Type: MobSkeleton, NameKey: "mob.skeleton", Level: floor, Affix: AffixNone,
-				Glyph: 's', Color: "245", HP: (28 + floor*6) * scaleMult, MaxHP: (28 + floor*6) * scaleMult,
-				Atk: (11 + floor*2) * scaleMult, Defense: 4 * scaleMult, Speed: 9, Exp: (22 + floor*3) * scaleMult,
+				ID: i + 1, Type: MobDeathKnight, NameKey: "mob.death_knight", Level: dragonLvl - 1, Affix: AffixVampiric,
+				Glyph: 'K', Color: "89", HP: (85 + floor*6) * scaleMult, MaxHP: (85 + floor*6) * scaleMult,
+				Atk: (22 + floor*2) * scaleMult, Defense: (7 + floor/3) * scaleMult, Speed: 10, Exp: 75 * scaleMult,
 			})
 		}
 		return pack
 	}
 
+	// 2. Спавн Мини-босса (шанс 20% на этажах от 3-го)
+	isMiniBoss := isBoss || (floor >= 3 && rng.Intn(100) < 20)
+	if isMiniBoss {
+		pack.IsMiniBoss = true
+		biomeCycle := (floor - 1) % 11
+		mbLvl := floor + 1
+		mbHP := (110 + (mbLvl * 16)) * scaleMult
+
+		var mbType MonsterType
+		var mbNameKey string
+		var mbGlyph rune
+		var mbColor string
+		var mbAtk, mbDef int
+		var mbAffix MonsterAffix = AffixStone
+
+		switch biomeCycle {
+		case 0, 1:
+			mbType, mbNameKey, mbGlyph, mbColor, mbAffix = MobMiniExecutioner, "mob.mini_executioner", 'E', "196", AffixPoison
+			mbAtk, mbDef = (18+floor*2)*scaleMult, (6+floor/3)*scaleMult
+		case 2, 7:
+			mbType, mbNameKey, mbGlyph, mbColor, mbAffix = MobMiniReaver, "mob.mini_reaver", 'R', "208", AffixFire
+			mbAtk, mbDef = (22+floor*2)*scaleMult, (4+floor/3)*scaleMult
+		case 3, 6:
+			mbType, mbNameKey, mbGlyph, mbColor, mbAffix = MobMiniColossus, "mob.mini_colossus", 'C', "51", AffixStone
+			mbAtk, mbDef = (17+floor*2)*scaleMult, (9+floor/3)*scaleMult
+		case 4, 5:
+			mbType, mbNameKey, mbGlyph, mbColor, mbAffix = MobMiniBoneblight, "mob.mini_boneblight", 'W', "118", AffixPoison
+			mbAtk, mbDef = (20+floor*2)*scaleMult, (7+floor/3)*scaleMult
+		default: // 8, 9, 10
+			mbType, mbNameKey, mbGlyph, mbColor, mbAffix = MobMiniStalker, "mob.mini_stalker", 'S', "93", AffixVampiric
+			mbAtk, mbDef = (24+floor*2)*scaleMult, (5+floor/3)*scaleMult
+		}
+
+		pack.Members = append(pack.Members, &Monster{
+			ID: 1, Type: mbType, NameKey: mbNameKey, Level: mbLvl, Affix: mbAffix,
+			Glyph: mbGlyph, Color: mbColor, HP: mbHP, MaxHP: mbHP,
+			Atk: mbAtk, Defense: mbDef, Speed: 10, Exp: (120 + mbLvl*8) * scaleMult,
+		})
+
+		for i := 1; i <= 2; i++ {
+			pack.Members = append(pack.Members, &Monster{
+				ID: i + 1, Type: MobSkeleton, NameKey: "mob.skeleton", Level: floor, Affix: AffixNone,
+				Glyph: 's', Color: "245", HP: (30 + floor*5) * scaleMult, MaxHP: (30 + floor*5) * scaleMult,
+				Atk: (12 + floor*2) * scaleMult, Defense: 4 * scaleMult, Speed: 8, Exp: (25 + floor*3) * scaleMult,
+			})
+		}
+		return pack
+	}
+
+	// 3. Обычные стаи (11 биомов)
 	maxExtra := floor / 6
 	if maxExtra > 4 {
 		maxExtra = 4
@@ -1109,7 +1129,6 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 		if rng.Intn(100) < 35 {
 			mobLvl++
 		}
-
 		aff := AffixNone
 		if floor >= 2 && rng.Intn(100) < (25+(floor*5)) {
 			aff = affixes[rng.Intn(len(affixes))]
@@ -1120,9 +1139,10 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 		var color string
 		var baseAtk, baseDef, baseHP int
 
-		biomeCycle := (floor - 1) % 5
+		biomeCycle := (floor - 1) % 11
 
-		if biomeCycle == 0 {
+		switch biomeCycle {
+		case 0:
 			roll := rng.Intn(3)
 			if roll == 0 {
 				mType, glyph, color, baseAtk, baseDef, baseHP = MobRat, 'r', "137", 6, 0, 15
@@ -1131,7 +1151,7 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 			} else {
 				mType, glyph, color, baseAtk, baseDef, baseHP = MobSkeleton, 's', "252", 10, 3, 25
 			}
-		} else if biomeCycle == 1 {
+		case 1:
 			roll := rng.Intn(3)
 			if roll == 0 {
 				mType, glyph, color, baseAtk, baseDef, baseHP = MobSlime, 'c', "43", 11, 1, 30
@@ -1140,7 +1160,7 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 			} else {
 				mType, glyph, color, baseAtk, baseDef, baseHP = MobLizard, 'l', "29", 14, 3, 34
 			}
-		} else if biomeCycle == 2 {
+		case 2:
 			roll := rng.Intn(3)
 			if roll == 0 {
 				mType, glyph, color, baseAtk, baseDef, baseHP = MobImp, 'i', "208", 15, 2, 40
@@ -1149,7 +1169,7 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 			} else {
 				mType, glyph, color, baseAtk, baseDef, baseHP = MobSalamander, 'm', "196", 18, 3, 46
 			}
-		} else if biomeCycle == 3 {
+		case 3:
 			roll := rng.Intn(3)
 			if roll == 0 {
 				mType, glyph, color, baseAtk, baseDef, baseHP = MobGargoyle, 'G', "102", 19, 6, 58
@@ -1158,12 +1178,66 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 			} else {
 				mType, glyph, color, baseAtk, baseDef, baseHP = MobPhantom, 'p', "159", 22, 2, 50
 			}
-		} else {
+		case 4: // Затонувший Лес
+			roll := rng.Intn(3)
+			if roll == 0 {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobSproutSkeleton, 's', "106", 12, 3, 28
+			} else if roll == 1 {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobDryad, 'd', "83", 16, 1, 38
+			} else {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobBlightEnt, 'T', "94", 18, 6, 56
+			}
+		case 5: // Грибные Топи
+			roll := rng.Intn(3)
+			if roll == 0 {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobSporling, 'x', "142", 13, 2, 32
+			} else if roll == 1 {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobTentacle, 't', "65", 15, 3, 42
+			} else {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobToxicBasil, 'b', "35", 19, 4, 48
+			}
+		case 6: // Забытые Архивы
+			roll := rng.Intn(3)
+			if roll == 0 {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobTomeBook, 'b', "221", 16, 1, 35
+			} else if roll == 1 {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobScrollMimic, 'm', "178", 18, 4, 44
+			} else {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobArchiveKeeper, 'A', "75", 21, 5, 54
+			}
+		case 7: // Обсидиановые Шахты
+			roll := rng.Intn(3)
+			if roll == 0 {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobObsidianBeetle, 'o', "238", 17, 8, 45
+			} else if roll == 1 {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobMinerGhoul, 'z', "243", 20, 3, 48
+			} else {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobDeepTroll, 'O', "130", 23, 6, 65
+			}
+		case 8: // Осквернённый Санктуарий
+			roll := rng.Intn(3)
+			if roll == 0 {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobBloodCultist, 'c', "161", 19, 2, 42
+			} else if roll == 1 {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobShadowInquisitor, 'i', "125", 22, 5, 52
+			} else {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobFallenCrusader, 'F', "196", 24, 7, 68
+			}
+		case 9: // Астральный Разлом
+			roll := rng.Intn(3)
+			if roll == 0 {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobAstralWeaver, 'w', "69", 20, 3, 46
+			} else if roll == 1 {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobChronoPhantom, 'p', "183", 22, 2, 50
+			} else {
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobEssenceDevour, 'D', "135", 25, 4, 60
+			}
+		default: // 10: Трон Бездны
 			roll := rng.Intn(2)
 			if roll == 0 {
-				mType, glyph, color, baseAtk, baseDef, baseHP = MobVoidDemon, 'V', "161", 24, 5, 75
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobVoidDemon, 'V', "161", 25, 5, 78
 			} else {
-				mType, glyph, color, baseAtk, baseDef, baseHP = MobDeathKnight, 'K', "89", 26, 7, 85
+				mType, glyph, color, baseAtk, baseDef, baseHP = MobDeathKnight, 'K', "89", 27, 8, 88
 			}
 		}
 
@@ -1180,7 +1254,7 @@ func spawnMonsterPack(isBoss bool, floor int) *MonsterPack {
 
 		pack.Members = append(pack.Members, &Monster{
 			ID: i, Type: mType, NameKey: "mob." + string(mType), Level: mobLvl, Affix: aff,
-			Glyph: glyph, Color: color, HP: hp, MaxHP: hp, Atk: atk, Defense: def, Speed: 8 + mobLvl/2, Exp: (12 + mobLvl*4) * scaleMult,
+			Glyph: glyph, Color: color, HP: hp, MaxHP: hp, Atk: atk, Defense: def, Speed: 8 + mobLvl/2, Exp: (14 + mobLvl*4) * scaleMult,
 		})
 	}
 	return pack
@@ -1272,8 +1346,6 @@ func (m *Model) step() {
 	// 6. Поиск следующего шага
 	var next Point
 
-	// Если уже зафиксирована коллизия (LoopDetectCount >= 3) — не пускаем обычный findNextStep,
-	// который хочет вернуться обратно в ловушку, а принудительно идём строго к выходу/лестнице!
 	if m.LoopDetectCount >= 3 {
 		targetTile := TileStairs
 		if m.evaluateRetreat() != RetreatNone {
@@ -1283,7 +1355,6 @@ func (m *Model) step() {
 		if found {
 			next = forcedStep
 		} else {
-			// Лестница отрезана геометрией генератора — аварийно переходим глубже
 			m.Floor++
 			m.Stats.FloorsCleared++
 			m.checkQuestProgress(QuestReachFloor, "", m.Floor)
@@ -1297,7 +1368,6 @@ func (m *Model) step() {
 		next = m.findNextStep()
 	}
 
-	// 6a. Детекция маятника и зацикливания:
 	isOscillating := false
 	histLen := len(m.PathHistory)
 	if histLen >= 2 && m.PathHistory[histLen-2] == next {
@@ -1314,16 +1384,13 @@ func (m *Model) step() {
 	if isOscillating || visitCount >= 2 || next == m.PartyPos {
 		m.LoopDetectCount++
 	} else if m.LoopDetectCount > 0 && m.LoopDetectCount < 3 {
-		// Обычный сброс работает ТОЛЬКО до входа в аварийный режим (никаких качелей 3 <-> 4!)
 		m.LoopDetectCount--
 	}
 
-	// Логируем предупреждение ровно 1 раз при входе в аварийный прорыв
 	if m.LoopDetectCount == 3 {
 		m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.collision_break")))
 	}
 
-	// Железный предохранитель: если аварийный режим за 6 шагов не вывел к цели — принудительно спускаемся!
 	if m.LoopDetectCount >= 6 {
 		m.Floor++
 		m.Stats.FloorsCleared++
@@ -1343,16 +1410,12 @@ func (m *Model) step() {
 	m.moveTo(next)
 }
 
-// moveTo переносит отряд на соседнюю клетку и обрабатывает всё, что на ней находится:
-// стаю монстров, сундуки, алтари, события, лестницу. Общая часть автопилота и ручного режима.
 func (m *Model) moveTo(next Point) {
-	// Пак на следующем тайле
 	if pack, exists := m.Packs[next]; exists {
 		m.startCombat(next, pack)
 		return
 	}
 
-	// 8. Отряд застрял — переход на новый этаж
 	if next == m.PartyPos {
 		m.Floor++
 		m.Stats.FloorsCleared++
@@ -1371,7 +1434,6 @@ func (m *Model) moveTo(next Point) {
 		return
 	}
 
-	// 9. Тайл, на который встаём
 	switch m.Grid[next.Y][next.X] {
 	case TileChest:
 		if len(m.Bag) >= m.currentBagCapacity() {

@@ -70,11 +70,12 @@ func (m Model) renderCodexTabWorld() string {
 
 	// Биомы
 	sb.WriteString(codexSecStyle.Render(T(m.Lang, "codex.sec.1")) + "\n")
-	sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexSubStyle.Render(T(m.Lang, "codex.biome.1.title")), T(m.Lang, "codex.biome.1.desc")))
-	sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexSubStyle.Render(T(m.Lang, "codex.biome.2.title")), T(m.Lang, "codex.biome.2.desc")))
-	sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexSubStyle.Render(T(m.Lang, "codex.biome.3.title")), T(m.Lang, "codex.biome.3.desc")))
-	sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexSubStyle.Render(T(m.Lang, "codex.biome.4.title")), T(m.Lang, "codex.biome.4.desc")))
-	sb.WriteString(fmt.Sprintf(" • %s: %s\n\n", codexSubStyle.Render(T(m.Lang, "codex.biome.5.title")), T(m.Lang, "codex.biome.5.desc")))
+	for i := 1; i <= 11; i++ {
+		tKey := fmt.Sprintf("codex.biome.%d.title", i)
+		dKey := fmt.Sprintf("codex.biome.%d.desc", i)
+		sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexSubStyle.Render(T(m.Lang, tKey)), T(m.Lang, dKey)))
+	}
+	sb.WriteString("\n")
 
 	// Расы
 	sb.WriteString(codexSecStyle.Render(T(m.Lang, "codex.sec.races")) + "\n")
@@ -130,14 +131,14 @@ func (m Model) renderCodexTabClasses() string {
 }
 
 // ============================================================
-// Вкладка 3: Бестиарий (15 монстров по биомам)
+// Вкладка 3: Бестиарий (11 биомов)
 // ============================================================
 
 func (m Model) renderCodexTabBestiary() string {
 	var sb strings.Builder
 
 	fmtMob := func(name string, hp, atk, def, spd int, extra string) string {
-		nameStr := codexMobStyle.Render(padRight(name, 16))
+		nameStr := codexMobStyle.Render(padRight(name, 18))
 		statsStr := fmt.Sprintf("%s%s %s%s %s%s %s%s",
 			codexHpStyle.Render("H:"), codexValStyle.Render(fmt.Sprintf("%-3d", hp)),
 			codexAtkStyle.Render("A:"), codexValStyle.Render(fmt.Sprintf("%-3d", atk)),
@@ -175,13 +176,49 @@ func (m Model) renderCodexTabBestiary() string {
 	sb.WriteString(fmtMob(T(m.Lang, "mob.phantom"), 50, 22, 2, 11, stressStyle.Render(T(m.Lang, "codex.mob_stress_18"))))
 	sb.WriteString("\n")
 
+	sb.WriteString(codexSubStyle.Render(T(m.Lang, "codex.deadwood_header")) + "\n")
+	sb.WriteString(fmtMob(T(m.Lang, "mob.sprout_skeleton"), 28, 12, 3, 8, subtleStyle.Render(T(m.Lang, "codex.mob_block"))))
+	sb.WriteString(fmtMob(T(m.Lang, "mob.dryad"), 38, 16, 1, 10, stressStyle.Render(T(m.Lang, "codex.mob_poison"))))
+	sb.WriteString(fmtMob(T(m.Lang, "mob.blight_ent"), 56, 18, 6, 7, subtleStyle.Render(T(m.Lang, "codex.mob_stun"))))
+	sb.WriteString("\n")
+
+	sb.WriteString(codexSubStyle.Render(T(m.Lang, "codex.fungal_header")) + "\n")
+	sb.WriteString(fmtMob(T(m.Lang, "mob.sporling"), 32, 13, 2, 9, stressStyle.Render(T(m.Lang, "codex.mob_poison"))))
+	sb.WriteString(fmtMob(T(m.Lang, "mob.tentacle"), 42, 15, 3, 8, subtleStyle.Render(T(m.Lang, "codex.mob_slow"))))
+	sb.WriteString(fmtMob(T(m.Lang, "mob.toxic_basil"), 48, 19, 4, 10, accentStyle.Render(T(m.Lang, "codex.mob_crits"))))
+	sb.WriteString("\n")
+
+	sb.WriteString(codexSubStyle.Render(T(m.Lang, "codex.archives_header")) + "\n")
+	sb.WriteString(fmtMob(T(m.Lang, "mob.tome_book"), 35, 16, 1, 11, fountStyle.Render(T(m.Lang, "codex.mob_mana_drain"))))
+	sb.WriteString(fmtMob(T(m.Lang, "mob.scroll_mimic"), 44, 18, 4, 10, subtleStyle.Render(T(m.Lang, "codex.mob_block"))))
+	sb.WriteString(fmtMob(T(m.Lang, "mob.archive_keeper"), 54, 21, 5, 9, stressStyle.Render(T(m.Lang, "codex.mob_stress_18"))))
+	sb.WriteString("\n")
+
+	sb.WriteString(codexSubStyle.Render(T(m.Lang, "codex.mines_header")) + "\n")
+	sb.WriteString(fmtMob(T(m.Lang, "mob.obsidian_beetle"), 45, 17, 8, 8, subtleStyle.Render(T(m.Lang, "codex.mob_block"))))
+	sb.WriteString(fmtMob(T(m.Lang, "mob.miner_ghoul"), 48, 20, 3, 10, dangerStyle.Render(T(m.Lang, "codex.mob_vamp"))))
+	sb.WriteString(fmtMob(T(m.Lang, "mob.deep_troll"), 65, 23, 6, 7, fireStyle.Render(T(m.Lang, "codex.mob_rage"))))
+	sb.WriteString("\n")
+
+	sb.WriteString(codexSubStyle.Render(T(m.Lang, "codex.sanctuary_header")) + "\n")
+	sb.WriteString(fmtMob(T(m.Lang, "mob.blood_cultist"), 42, 19, 2, 11, stressStyle.Render(T(m.Lang, "codex.mob_stress_18"))))
+	sb.WriteString(fmtMob(T(m.Lang, "mob.shadow_inquisitor"), 52, 22, 5, 10, accentStyle.Render(T(m.Lang, "codex.mob_crits"))))
+	sb.WriteString(fmtMob(T(m.Lang, "mob.fallen_crusader"), 68, 24, 7, 9, subtleStyle.Render(T(m.Lang, "codex.mob_block"))))
+	sb.WriteString("\n")
+
+	sb.WriteString(codexSubStyle.Render(T(m.Lang, "codex.astral_header")) + "\n")
+	sb.WriteString(fmtMob(T(m.Lang, "mob.astral_weaver"), 46, 20, 3, 10, accentStyle.Render(T(m.Lang, "codex.mob_crits"))))
+	sb.WriteString(fmtMob(T(m.Lang, "mob.chrono_phantom"), 50, 22, 2, 12, fountStyle.Render(T(m.Lang, "codex.mob_mana_drain"))))
+	sb.WriteString(fmtMob(T(m.Lang, "mob.essence_devourer"), 60, 25, 4, 9, dangerStyle.Render(T(m.Lang, "codex.mob_vamp"))))
+	sb.WriteString("\n")
+
 	sb.WriteString(codexSubStyle.Render(T(m.Lang, "codex.abyss_header")) + "\n")
 	sb.WriteString(fmtMob(T(m.Lang, "mob.void_demon"), 75, 24, 5, 12, stressStyle.Render(T(m.Lang, "codex.mob_stress_18"))))
 	sb.WriteString(fmtMob(T(m.Lang, "mob.death_knight"), 85, 26, 7, 12, dangerStyle.Render(T(m.Lang, "codex.mob_vamp"))))
 
-	// Боссы — отдельным блоком, с подсветкой имени
+	// Боссы
 	fmtBoss := func(name string, hp, atk, def, spd int, extra string) string {
-		nameStr := codexBossStyle.Render(padRight(name, 16))
+		nameStr := codexBossStyle.Render(padRight(name, 18))
 		statsStr := fmt.Sprintf("%s%s %s%s %s%s %s%s",
 			codexHpStyle.Render("H:"), codexValStyle.Render(fmt.Sprintf("%-3d", hp)),
 			codexAtkStyle.Render("A:"), codexValStyle.Render(fmt.Sprintf("%-3d", atk)),
@@ -235,7 +272,6 @@ func (m Model) renderCodexTabCrafts() string {
 	sb.WriteString(codexNoteStyle.Render("   "+T(m.Lang, "codex.forge_note")) + "\n")
 	sb.WriteString(codexNoteStyle.Render("   "+T(m.Lang, "codex.tanner_note")) + "\n\n")
 
-	// Оружие — по 1 строке на класс
 	weapons := []struct {
 		clsNameKey string
 		itemPrefix string
@@ -255,7 +291,6 @@ func (m Model) renderCodexTabCrafts() string {
 
 	sb.WriteString(codexSubStyle.Render(T(m.Lang, "codex.craft_header_weapons")) + "\n")
 	for _, w := range weapons {
-		// 13 глаголов: clsName(1) + tier/name/arrow ×3(9) + tier/name(2) + statLabel(1)
 		sb.WriteString(fmt.Sprintf(" • %-12s: %s %s %s %s %s %s %s %s %s %s %s (%s)\n",
 			T(m.Lang, w.clsNameKey),
 			codexTierStyle.Render("Т1"), T(m.Lang, w.itemPrefix+".1"), codexArrow,
@@ -266,7 +301,6 @@ func (m Model) renderCodexTabCrafts() string {
 	}
 	sb.WriteString("\n")
 
-	// Броня — 3 строки на класс (chest, head, legs)
 	armorClasses := []struct {
 		clsNameKey string
 		itemPrefix string
@@ -288,7 +322,6 @@ func (m Model) renderCodexTabCrafts() string {
 	for _, a := range armorClasses {
 		sb.WriteString(fmt.Sprintf(" • %-12s:\n", T(m.Lang, a.clsNameKey)))
 
-		// chest: slot(1) + tier/name/arrow ×3(9) + tier/name(2) + statLabel(1) = 13
 		sb.WriteString(fmt.Sprintf("     %s %s %s %s %s %s %s %s %s %s %s %s (%s)\n",
 			codexSubStyle.Render(T(m.Lang, "slot.chest")),
 			codexTierStyle.Render("Т1"), T(m.Lang, a.itemPrefix+".chest.1"), codexArrow,
@@ -297,7 +330,6 @@ func (m Model) renderCodexTabCrafts() string {
 			codexTierStyle.Render("Т4"), T(m.Lang, a.itemPrefix+".chest.4"),
 			a.statLabel))
 
-		// head
 		sb.WriteString(fmt.Sprintf("     %s  %s %s %s %s %s %s %s %s %s %s %s (%s)\n",
 			codexSubStyle.Render(T(m.Lang, "slot.head")),
 			codexTierStyle.Render("Т1"), T(m.Lang, a.itemPrefix+".head.1"), codexArrow,
@@ -306,7 +338,6 @@ func (m Model) renderCodexTabCrafts() string {
 			codexTierStyle.Render("Т4"), T(m.Lang, a.itemPrefix+".head.4"),
 			a.statLabel))
 
-		// legs
 		sb.WriteString(fmt.Sprintf("     %s  %s %s %s %s %s %s %s %s %s %s %s (%s)\n",
 			codexSubStyle.Render(T(m.Lang, "slot.legs")),
 			codexTierStyle.Render("Т1"), T(m.Lang, a.itemPrefix+".legs.1"), codexArrow,

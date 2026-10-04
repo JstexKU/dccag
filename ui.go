@@ -234,7 +234,7 @@ func padRight(s string, targetWidth int) string {
 }
 
 func getBiome(floor int) BiomeConfig {
-	cycle := (floor - 1) % 5
+	cycle := (floor - 1) % 11
 	switch cycle {
 	case 0:
 		return BiomeConfig{Name: BiomeCatacombs, WallColor: lipgloss.Color("240"), FloorColor: lipgloss.Color("236"), FloorRune: '·', EnvHazardKey: "hazard.catacombs"}
@@ -244,8 +244,20 @@ func getBiome(floor int) BiomeConfig {
 		return BiomeConfig{Name: BiomeInferno, WallColor: lipgloss.Color("124"), FloorColor: lipgloss.Color("52"), FloorRune: '≈', EnvHazardKey: "hazard.inferno"}
 	case 3:
 		return BiomeConfig{Name: BiomeCrystal, WallColor: lipgloss.Color("141"), FloorColor: lipgloss.Color("54"), FloorRune: '◊', EnvHazardKey: "hazard.crystal"}
+	case 4:
+		return BiomeConfig{Name: BiomeDeadwood, WallColor: lipgloss.Color("28"), FloorColor: lipgloss.Color("235"), FloorRune: '♣', EnvHazardKey: "hazard.deadwood"}
+	case 5:
+		return BiomeConfig{Name: BiomeFungal, WallColor: lipgloss.Color("100"), FloorColor: lipgloss.Color("58"), FloorRune: '§', EnvHazardKey: "hazard.fungal"}
+	case 6:
+		return BiomeConfig{Name: BiomeArchives, WallColor: lipgloss.Color("178"), FloorColor: lipgloss.Color("94"), FloorRune: '≡', EnvHazardKey: "hazard.archives"}
+	case 7:
+		return BiomeConfig{Name: BiomeMines, WallColor: lipgloss.Color("238"), FloorColor: lipgloss.Color("233"), FloorRune: '•', EnvHazardKey: "hazard.mines"}
+	case 8:
+		return BiomeConfig{Name: BiomeSanctuary, WallColor: lipgloss.Color("161"), FloorColor: lipgloss.Color("53"), FloorRune: '†', EnvHazardKey: "hazard.sanctuary"}
+	case 9:
+		return BiomeConfig{Name: BiomeAstral, WallColor: lipgloss.Color("69"), FloorColor: lipgloss.Color("17"), FloorRune: '¤', EnvHazardKey: "hazard.astral"}
 	default:
-		return BiomeConfig{Name: BiomeAbyss, WallColor: lipgloss.Color("89"), FloorColor: lipgloss.Color("233"), FloorRune: '×', EnvHazardKey: "hazard.abyss"}
+		return BiomeConfig{Name: BiomeAbyss, WallColor: lipgloss.Color("89"), FloorColor: lipgloss.Color("232"), FloorRune: '×', EnvHazardKey: "hazard.abyss"}
 	}
 }
 
@@ -274,26 +286,26 @@ func (m Model) renderMenuScreen() string {
 	case isFullMode:
 		// 1. Полноразмерный режим (Wide / Tall)
 		castleLines := []string{
-			`       / \                                                 / \       `,
-			`      /   \                  |>>>                         /   \      `,
-			`     /_____\                 |                           /_____\     `,
-			`    |  .-.  |            _  _|_  _                      |  .-.  |    `,
-			`    |  | |  |           |;|_|;|_|;|                     |  | |  |    `,
-			`    |  '-'  |           \\.    .  /                     |  '-'  |    `,
-			`    |       |            \\:  .  /                      |       |    `,
-			`  ,-'-------'-,           ||:   |                     ,-'-------'-,  `,
-			`,'  /═══════\  '.         ||:.  |                   ,'  /═══════\  '.`,
-			`/   /         \   \        ||:  .|                  /   /         \   \`,
+			`         / \                                                 / \       `,
+			`        /   \                  |>>>                         /   \      `,
+			`       /_____\                 |                           /_____\     `,
+			`      |  .-.  |            _  _|_  _                      |  .-.  |    `,
+			`      |  | |  |           |;|_|;|_|;|                     |  | |  |    `,
+			`      |  '-'  |           \\.    .  /                     |  '-'  |    `,
+			`      |       |            \\:  .  /                      |       |    `,
+			`    ,-'-------'-,           ||:   |                     ,-'-------'-,  `,
+			`  ,'  /═══════\  '.         ||:.  |                   ,'  /═══════\  '.`,
+			` /   /         \   \        ||:  .|                  /   /         \   \`,
 			`|   |           |   |       ||:   | ____            |   |           |   |`,
 			`|   |           |   |       ||: , !_|__|            |   |           |   |`,
 			`|===|===========|===|   ____||_ | |    |            |===|===========|===|`,
-			`|   |  D C C AG |   |  |___|__|_|_|_   |  ____      |   |  D C C AG |   |`,
+			`|   |   DCCAG   |   |  |___|__|_|_|_   |  ____      |   |   DCCAG   |   |`,
 			`|   |           |   |      |        |  | |____|     |   |           |   |`,
 			`|___|___________|___|      |________|__|_|    |     |___|___________|___|`,
 			`  [═══════════════]           /════════\  |___|       [═══════════════]  `,
 		}
 		sb.WriteString(townArtStyle.Render(strings.Join(castleLines, "\n")) + "\n")
-		sb.WriteString(lipgloss.NewStyle().Align(lipgloss.Center).Render(titleStyle.Render("       Dungeon Crawler Console Auto Game (dccag) v2.8.9")) + "\n\n")
+		sb.WriteString(lipgloss.NewStyle().Align(lipgloss.Center).Render(titleStyle.Render("       Dungeon Crawler Console Auto Game (dccag) v2.9.0")) + "\n\n")
 
 		var textBlock string
 		if m.Lang == LangEN {
@@ -329,16 +341,16 @@ func (m Model) renderMenuScreen() string {
 	case isMediumMode:
 		// 2. Средний режим (66 - 79 колонок)
 		logoLines := []string{
-			`╔═════════════════════════════════════════════════════════╗`,
-			`║ ░░░░▄ ▄░░░ ▄░░░  ▄░░░▄ ▄░░░       ▐░░ ▓▒░▄ ▄░░░▄ ▄░░░▄  ║`,
-			`║ ░░ ░░ ░░ ▀ ░░ ▀  ░░ ░░ ░░ ▀      ▐░░▌ ▀ ░░ ░░ ░░ ░░ ░░  ║`,
-			`║ ▒▒ ▒▒ ▒▒   ▒▒    ▒▒▒▒▒ ▒▒ ▄▄    ▐▒▒▌  ▄▒▒▀ ▀▒▒▒▀ ░░ ░░  ║`,
-			`║ ▓█ ▓█ ▓█   ▓█    ▓█ ▓█ ▓█ ▓█    ▓█▌   ▓█   ▓█ ▓█ ▀▒▒▒▀  ║`,
-			`║ ▄▄ ▄▄ ▄▄   ▄▄    ▄▄ ▄▄ ▄▄ ▄▄    ▄▄    ▄▄   ▄▄ ▄▄    ▄▄  ║`,
-			`║ ░░ ░░ ░░   ░░    ░░ ░░ ░░ ░░  ▐░░     ░░   ░░ ░░    ░░  ║`,
-			`║ ▒▒ ▒▒ ▒▒ ▄ ▒▒ ▄  ▒▒ ▒▒ ▒▒ ▒▒ ▐▒▒▌     ▒▒ ░ ▒▒ ▒▒ ▒▒ ▒▒  ║`,
-			`║ ▓▓▓▓▀ ▀▓▓▓ ▀▓▓▓ ▄▓▓ ▓▓ ▀▓▓▓▓ ▓▓▌      █▓▓▒ ▀▓▓▓▀ ▀▓▓▓▀  ║`,
-			`╚═════════════════════════════════════════════════════════╝`,
+			`╔══════════════════════════════╗`,
+			`║ ░░░░▄ ▄░░░ ▄░░░  ▄░░░▄ ▄░░░  ║`,
+			`║ ░░ ░░ ░░ ▀ ░░ ▀  ░░ ░░ ░░ ▀  ║`,
+			`║ ▒▒ ▒▒ ▒▒   ▒▒    ▒▒▒▒▒ ▒▒ ▄▄ ║`,
+			`║ ▓█ ▓█ ▓█   ▓█    ▓█ ▓█ ▓█ ▓█ ║`,
+			`║ ▄▄ ▄▄ ▄▄   ▄▄    ▄▄ ▄▄ ▄▄ ▄▄ ║`,
+			`║ ░░ ░░ ░░   ░░    ░░ ░░ ░░ ░░ ║`,
+			`║ ▒▒ ▒▒ ▒▒ ▄ ▒▒ ▄  ▒▒ ▒▒ ▒▒ ▒▒ ║`,
+			`║ ▓▓▓▓▀ ▀▓▓▓ ▀▓▓▓ ▄▓▓ ▓▓ ▀▓▓▓▓ ║`,
+			`╚══════════════════════════════╝`,
 		}
 		sb.WriteString(townArtStyle.Render(strings.Join(logoLines, "\n")) + "\n\n")
 
@@ -360,7 +372,7 @@ func (m Model) renderMenuScreen() string {
 		// 3. Компактный режим (Ширина < 66 или Высота < 24)
 		innerW := max(34, termW-6)
 
-		headerTitle := "⚔ DCCAG v2.8.9 ⚔"
+		headerTitle := "⚔ DCCAG v2.9.0 ⚔"
 		tagline := "Tactical Auto Dungeon Crawler"
 		if m.Lang == LangRU {
 			tagline = "Автономный тактический рогалик"
@@ -625,7 +637,7 @@ func (m Model) townActions() []townAction {
 		{TownPhaseChurch, "⛪", T(m.Lang, m.TownEst.ChurchKey), m.Legacy.ChurchLevel},
 		{TownPhaseTavern, "🍻", T(m.Lang, m.TownEst.TavernKey), m.Legacy.TavernLevel},
 		{TownPhaseGuild, "⚔", T(m.Lang, m.TownEst.GuildKey), 0},
-		{TownPhaseSmithy, "⚒️", T(m.Lang, m.TownEst.SmithyKey), m.Legacy.SmithyLevel},
+		{TownPhaseSmithy, "⚒️️", T(m.Lang, m.TownEst.SmithyKey), m.Legacy.SmithyLevel},
 		{TownPhaseTannery, "🎒", T(m.Lang, m.TownEst.TanneryKey), m.Legacy.TanneryLevel},
 		{TownPhaseAlchemist, "🧪", T(m.Lang, m.TownEst.AlchemistKey), 0},
 	}
@@ -1632,3 +1644,4 @@ func (m Model) renderControls(width int) string {
 	}
 	return subtleStyle.Render(shortenItemName(controlsText, width))
 }
+

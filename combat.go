@@ -300,6 +300,15 @@ func (m *Model) onMonsterKilled(h *Hero, mob *Monster) {
 	m.Stats.MonsterKills[mob.Type]++
 	m.checkQuestProgress(QuestHuntMonster, mob.Type, 1)
 
+	// Награда и прогресс за уничтожение Мини-босса
+	if m.Combat.Pack.IsMiniBoss && mob.ID == 1 {
+		m.checkQuestProgress(QuestHuntMiniBoss, mob.Type, 1)
+		miniBossItem := generateItemForClass(h.Class, m.Floor+1)
+		miniBossItem.UpgradeLevel = 2
+		m.addLog(accentStyle.Render(T(m.Lang, "combat.log.miniboss_trophy", miniBossItem.DisplayName(m.Lang))))
+		m.equipOrBag(miniBossItem)
+	}
+
 	if mob.Type == MobDragon {
 		h.Feats.BossKills++
 		bossItem := generateItemForClass(h.Class, m.Floor+2)
@@ -576,7 +585,7 @@ func (m *Model) executeCombatTurn() {
 				h.MP -= 6
 				volleyDmg := h.TotalAtk() + 1
 				for _, mob := range m.Combat.Pack.Members {
-					if !mob.IsDead && (mob.Type == MobImp || mob.Type == MobPhantom || mob.Type == MobVoidDemon) {
+					if !mob.IsDead && (mob.Type == MobImp || mob.Type == MobPhantom || mob.Type == MobVoidDemon || mob.Type == MobDryad || mob.Type == MobTomeBook || mob.Type == MobAstralWeaver) {
 						mob.HP -= volleyDmg
 						h.Feats.DamageDealt += volleyDmg
 						if mob.HP <= 0 {
@@ -783,7 +792,7 @@ func (m *Model) executeCombatTurn() {
 
 		mobDisplayName := T(m.Lang, targetMob.NameKey)
 
-		if (targetMob.Type == MobSkeleton || targetMob.Type == MobGolem || targetMob.Type == MobGargoyle) && rng.Intn(100) < 25 {
+		if (targetMob.Type == MobSkeleton || targetMob.Type == MobGolem || targetMob.Type == MobGargoyle || targetMob.Type == MobSproutSkeleton || targetMob.Type == MobObsidianBeetle || targetMob.Type == MobFallenCrusader) && rng.Intn(100) < 25 {
 			m.addLog(subtleStyle.Render(T(m.Lang, "combat.log.mob_block", mobDisplayName)))
 			return
 		}
@@ -812,7 +821,7 @@ func (m *Model) executeCombatTurn() {
 		// ==================== МАЛЫЕ НАВЫКИ (3-5 MP) ====================
 		minorClass := h.Class
 		if !useSkills {
-			minorClass = "" // простой удар не тратит ману на малые навыки
+			minorClass = ""
 		}
 		switch minorClass {
 		case ClassMage:
@@ -924,7 +933,6 @@ func (m *Model) executeCombatTurn() {
 		targetMob.HP -= dmg
 		h.Feats.DamageDealt += dmg
 
-		// Вампиризм (Зверолюди или экипировка)
 		lifesteal := raceMod.LifeStealPercent
 		if it := h.Weapon; it != nil && it.Suffix != nil && it.Suffix.Effect == SuffVampirism {
 			lifesteal += 0.25
@@ -961,7 +969,8 @@ func (m *Model) executeCombatTurn() {
 
 		mobDisplayName := T(m.Lang, mob.NameKey)
 		victimName := victim.DisplayName(m.Lang)
-		isRanged := (mob.Type == MobImp || mob.Type == MobPhantom || mob.Type == MobVoidDemon || mob.Type == MobDragon)
+		isRanged := (mob.Type == MobImp || mob.Type == MobPhantom || mob.Type == MobVoidDemon || mob.Type == MobDragon ||
+			mob.Type == MobDryad || mob.Type == MobTomeBook || mob.Type == MobBloodCultist || mob.Type == MobAstralWeaver)
 		if isRanged {
 			m.addLog(fireStyle.Render(T(m.Lang, "combat.log.mob_ranged", mobDisplayName, victimName)))
 		} else {
@@ -982,7 +991,6 @@ func (m *Model) executeCombatTurn() {
 			return
 		}
 
-		// Смертоносная формула урона монстров v2.4.3
 		rawDmg := int(float64(mob.Atk)*1.25) - (victim.TotalDef() / 2)
 		if victim.IsGuarding {
 			rawDmg = int(float64(rawDmg) * 0.6)

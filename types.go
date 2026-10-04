@@ -307,7 +307,6 @@ type HeroNameDef struct {
 	Gender  Gender
 }
 
-// Имена героев локализуются через NameKey
 var HeroNames = []HeroNameDef{
 	{NameKey: "hero.name.brand", Gender: GenderMale},
 	{NameKey: "hero.name.thorin", Gender: GenderMale},
@@ -727,6 +726,43 @@ const (
 	MobVoidDemon   MonsterType = "void_demon"
 	MobDeathKnight MonsterType = "death_knight"
 	MobDragon      MonsterType = "dragon"
+
+	// 5. Затонувший Лес Мертвецов
+	MobSproutSkeleton MonsterType = "sprout_skeleton"
+	MobDryad          MonsterType = "dryad"
+	MobBlightEnt      MonsterType = "blight_ent"
+
+	// 6. Грибные Топи
+	MobSporling   MonsterType = "sporling"
+	MobTentacle   MonsterType = "tentacle"
+	MobToxicBasil MonsterType = "toxic_basil"
+
+	// 7. Забытые Архивы
+	MobTomeBook      MonsterType = "tome_book"
+	MobScrollMimic   MonsterType = "scroll_mimic"
+	MobArchiveKeeper MonsterType = "archive_keeper"
+
+	// 8. Обсидиановые Шахты
+	MobObsidianBeetle MonsterType = "obsidian_beetle"
+	MobDeepTroll      MonsterType = "deep_troll"
+	MobMinerGhoul     MonsterType = "miner_ghoul"
+
+	// 9. Осквернённый Санктуарий
+	MobFallenCrusader   MonsterType = "fallen_crusader"
+	MobBloodCultist     MonsterType = "blood_cultist"
+	MobShadowInquisitor MonsterType = "shadow_inquisitor"
+
+	// 10. Астральный Разлом
+	MobAstralWeaver  MonsterType = "astral_weaver"
+	MobChronoPhantom MonsterType = "chrono_phantom"
+	MobEssenceDevour MonsterType = "essence_devourer"
+
+	// Мини-боссы
+	MobMiniBoneblight  MonsterType = "mini_boneblight"
+	MobMiniExecutioner MonsterType = "mini_executioner"
+	MobMiniColossus    MonsterType = "mini_colossus"
+	MobMiniReaver      MonsterType = "mini_reaver"
+	MobMiniStalker     MonsterType = "mini_stalker"
 )
 
 type Monster struct {
@@ -747,8 +783,9 @@ type Monster struct {
 }
 
 type MonsterPack struct {
-	Members []*Monster
-	IsBoss  bool
+	Members    []*Monster
+	IsBoss     bool
+	IsMiniBoss bool
 }
 
 func (p *MonsterPack) LivingCount() int {
@@ -852,6 +889,12 @@ const (
 	BiomeGrotto    BiomeType = "grotto"
 	BiomeInferno   BiomeType = "inferno"
 	BiomeCrystal   BiomeType = "crystal"
+	BiomeDeadwood  BiomeType = "deadwood"
+	BiomeFungal    BiomeType = "fungal"
+	BiomeArchives  BiomeType = "archives"
+	BiomeMines     BiomeType = "mines"
+	BiomeSanctuary BiomeType = "sanctuary"
+	BiomeAstral    BiomeType = "astral"
 	BiomeAbyss     BiomeType = "abyss"
 )
 
@@ -864,6 +907,7 @@ const (
 	QuestUseAltar
 	QuestFindRelic
 	QuestEscapeTrap
+	QuestHuntMiniBoss
 )
 
 type AutoQuest struct {
