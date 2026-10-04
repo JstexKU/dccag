@@ -151,9 +151,13 @@ func (m Model) renderLandscape(termW, termH int) string {
 	middleH := lipgloss.Height(middleTier)
 
 	controlsH := 1
-	logH := 4
-	if termH < 28 {
-		logH = 3
+
+	// Выделяем под лог от 5 до 8 строк (3–6 строк чистого текста логов)
+	logH := 6
+	if termH >= 38 {
+		logH = 8
+	} else if termH < 26 {
+		logH = 4
 	}
 
 	availableH := termH - controlsH - logH - 1
@@ -206,7 +210,6 @@ func (m Model) renderLandscape(termW, termH int) string {
 	availRows := max(1, boxInnerH-len(sbLines))
 	sbLines = append(sbLines, m.renderRightContentLines(sidebarInnerW, availRows)...)
 
-	// Жестко гарантируем, что сайдбар не превысит boxInnerH строк
 	sidebarContent := truncateLines(strings.Join(sbLines, "\n"), boxInnerH)
 
 	rightPane := lipgloss.NewStyle().
