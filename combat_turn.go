@@ -295,6 +295,17 @@ func (m *Model) executeCombatTurn() {
 				downedAlly.Stress = max(0, downedAlly.Stress-20)
 				h.AddRevive()
 				m.checkAndAwardTitle(h)
+				m.Stats.Resurrections++
+
+				// Добавляем бойца в спасённые
+				m.Stats.FallenHeroes = append(m.Stats.FallenHeroes, FallenHeroRecord{
+					FullName: downedAlly.FullName(m.Lang),
+					Class:    downedAlly.Class,
+					Cause:    T(m.Lang, "combat.log.cleric_revive_cause"),
+					Floor:    m.Floor,
+					Revived:  true,
+				})
+
 				m.addLog(healStyle.Render(T(m.Lang, "combat.log.cleric_revive", hName, downedAlly.DisplayName(m.Lang), reviveHP)))
 				return
 			}

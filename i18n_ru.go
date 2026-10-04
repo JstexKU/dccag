@@ -724,15 +724,16 @@ var dictRU = map[string]string{
 	"dungeon.log.relic_salvaged":        "✨ [Реликварий] Реликвия разобрана на +80G!",
 
 	// Новые статусы и логи эвакуации
-	"ui.downed":                "БЕЗ СОЗНАНИЯ",
-	"ui.awaiting_evac":         "Ждёт эвакуации",
-	"ui.left_in_abyss_status":  "Поглощён Бездной",
-	"combat.log.hero_downed":   "☠️ %s %s от удара [%s]!",
-	"combat.log.cleric_revive": "✨ %s возносит молитву Воскрешения! %s поднимается на ноги (+%d HP)!",
-	"combat.log.evac_drop":     "⚠️ В суматохе отступления раненый %s сорвался во тьму!",
-	"combat.log.evac_failed":   "Не удалось вынести из подземелья (20% неудача)",
-	"combat.log.flee_pursuit":  "погони",
-	"town.log.evac_failed":     "⚠️ Раненого %s не донесли до ворот: раны оказались смертельны!",
+	"ui.downed":                      "БЕЗ СОЗНАНИЯ",
+	"ui.awaiting_evac":               "Ждёт эвакуации",
+	"ui.left_in_abyss_status":        "Поглощён Бездной",
+	"combat.log.hero_downed":         "☠️ %s %s от удара [%s]!",
+	"combat.log.cleric_revive":       "✨ %s возносит молитву Воскрешения! %s поднимается на ноги (+%d HP)!",
+	"combat.log.evac_drop":           "⚠️ В суматохе отступления раненый %s сорвался во тьму!",
+	"combat.log.evac_failed":         "Не удалось вынести из подземелья (20% неудача)",
+	"combat.log.flee_pursuit":        "погони",
+	"town.log.evac_failed":           "⚠️ Раненого %s не донесли до ворот: раны оказались смертельны!",
+	"combat.log.cleric_revive_cause": "Поднят молитвой Клирика",
 
 	// --- Статистика и арсенал ---
 	"stats.manual_title":        "ЭКИПИРОВКА, НАСЛЕДИЕ И КНИГА ПАМЯТИ",

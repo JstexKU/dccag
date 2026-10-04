@@ -724,15 +724,16 @@ var dictEN = map[string]string{
 	"dungeon.log.relic_salvaged":        "✨ [Reliquary] Relic dismantled for +80G!",
 
 	// New statuses and evacuation logs
-	"ui.downed":                "UNCONSCIOUS",
-	"ui.awaiting_evac":         "Awaiting evacuation",
-	"ui.left_in_abyss_status":  "Swallowed by Abyss",
-	"combat.log.hero_downed":   "☠️ %s %s under attack of [%s]!",
-	"combat.log.cleric_revive": "✨ %s performs a Resurrection prayer! %s rises to their feet (+%d HP)!",
-	"combat.log.evac_drop":     "⚠️ In the chaos of retreat, wounded %s was lost to the dark!",
-	"combat.log.evac_failed":   "Lost during evacuation (20% failure roll)",
-	"combat.log.flee_pursuit":  "pursuit",
-	"town.log.evac_failed":     "⚠️ Wounded %s could not make it through town gates: succumbed to wounds!",
+	"ui.downed":                      "UNCONSCIOUS",
+	"ui.awaiting_evac":               "Awaiting evacuation",
+	"ui.left_in_abyss_status":        "Swallowed by Abyss",
+	"combat.log.hero_downed":         "☠️ %s %s under attack of [%s]!",
+	"combat.log.cleric_revive":       "✨ %s performs a Resurrection prayer! %s rises to their feet (+%d HP)!",
+	"combat.log.evac_drop":           "⚠️ In the chaos of retreat, wounded %s was lost to the dark!",
+	"combat.log.evac_failed":         "Lost during evacuation (20% failure roll)",
+	"combat.log.flee_pursuit":        "pursuit",
+	"town.log.evac_failed":           "⚠️ Wounded %s could not make it through town gates: succumbed to wounds!",
+	"combat.log.cleric_revive_cause": "Revived by Cleric prayer",
 
 	// --- Stats & Armory ---
 	"stats.manual_title":        "EQUIPMENT, LEGACY AND MEMORIAL BOOK",

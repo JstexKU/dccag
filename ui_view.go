@@ -112,14 +112,21 @@ func (m Model) View() string {
 	termH := max(22, m.TermHeight)
 
 	layout := detectLayout(termW, termH)
+	var output string
 	switch layout {
 	case LayoutLandscape:
-		return m.renderLandscape(termW, termH)
+		output = m.renderLandscape(termW, termH)
 	case LayoutPortraitWide:
-		return m.renderPortraitWide(termW, termH)
+		output = m.renderPortraitWide(termW, termH)
 	default:
-		return m.renderPortrait(termW, termH)
+		output = m.renderPortrait(termW, termH)
 	}
+
+	// 1. Убираем любые CRLF-артефакты Windows
+	cleanOutput := strings.ReplaceAll(output, "\r\n", "\n")
+
+	// 2. Гарантируем строгую фиксацию строк по высоте окна терминала
+	return truncateLines(cleanOutput, termH)
 }
 
 func (m Model) renderLandscape(termW, termH int) string {
@@ -128,7 +135,6 @@ func (m Model) renderLandscape(termW, termH int) string {
 	cardsPerRow := landscapeCardsPerRow(usableW)
 	cardWidth := max(16, usableW/cardsPerRow)
 
-	// Если ширина окна < 95 или высота < 48 — строго компактный вид
 	cardMode := CardCompact
 	if termH >= 48 && termW >= 120 {
 		cardMode = detectCardMode(cardWidth - 4)
@@ -152,7 +158,6 @@ func (m Model) renderLandscape(termW, termH int) string {
 
 	controlsH := 1
 
-	// Выделяем под лог от 5 до 8 строк (3–6 строк чистого текста логов)
 	logH := 6
 	if termH >= 38 {
 		logH = 8
@@ -162,7 +167,6 @@ func (m Model) renderLandscape(termW, termH int) string {
 
 	availableH := termH - controlsH - logH - 1
 
-	// Ограничиваем карточки, гарантируя минимум 6 строк сверху под карту
 	if availableH < middleH+6 {
 		middleH = max(6, availableH-6)
 		middleTier = truncateLines(middleTier, middleH)

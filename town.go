@@ -154,11 +154,23 @@ func (m *Model) stepTown() {
 				h.CauseOfDeath = ""
 				stabilizedCount++
 				m.Stats.Resurrections++
+
+				found := false
 				for idx := len(m.Stats.FallenHeroes) - 1; idx >= 0; idx-- {
 					if m.Stats.FallenHeroes[idx].FullName == h.FullName(m.Lang) && !m.Stats.FallenHeroes[idx].Revived {
 						m.Stats.FallenHeroes[idx].Revived = true
+						found = true
 						break
 					}
+				}
+				if !found {
+					m.Stats.FallenHeroes = append(m.Stats.FallenHeroes, FallenHeroRecord{
+						FullName: h.FullName(m.Lang),
+						Class:    h.Class,
+						Cause:    T(m.Lang, "ui.stabilized"),
+						Floor:    m.Floor,
+						Revived:  true,
+					})
 				}
 			} else if !h.IsDead && !h.IsDowned && (h.Stress > 20 || h.Affliction != AfflictionNone) {
 				cleanseCost := healBaseCost / 3
