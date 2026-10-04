@@ -106,6 +106,9 @@ func (m *Model) attemptFlee() {
 			// Эвристическая сортировка поверженных по ценности
 			sort.Slice(downed, func(i, j int) bool {
 				score := func(hero *Hero) int {
+					if hero.IsLeader {
+						return 1 << 20 // лидера выносят первым
+					}
 					s := hero.Mutations.Total()*200 + hero.Level*50
 					if hero.Class == ClassTank || hero.Class == ClassPaladin {
 						s += 400
@@ -119,9 +122,10 @@ func (m *Model) attemptFlee() {
 
 			rescuedCount := 0
 			for i, hero := range downed {
-				if i < carryCapacity {
-					// Проверка 80% / 20%: донесут ли тяжелораненого бойца сквозь хаос отступления
-					if rng.Intn(100) < 80 {
+				if i < carryCapacity || hero.IsLeader {
+					// Проверка 80% / 20%: донесут ли тяжелораненого бойца сквозь хаос отступления.
+					// Лидера не бросают: его доносят всегда.
+					if hero.IsLeader || rng.Intn(100) < 80 {
 						hero.HP = 0
 						hero.IsDowned = true // Тело спасено, ждет помощи в Храме
 						rescuedCount++
@@ -179,6 +183,7 @@ func (m *Model) attemptFlee() {
 					h.CauseOfDeath = T(m.Lang, "combat.log.death_flee")
 					verb := TVerb(m.Lang, h.Gender, "рухнул без сознания", "рухнула без сознания", "fell unconscious")
 					m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.hero_downed", h.DisplayName(m.Lang), verb, T(m.Lang, "combat.log.flee_pursuit"))))
+					m.onLeaderDowned(h)
 				}
 			}
 		}

@@ -52,8 +52,8 @@ func (m Model) renderMenuScreen() string {
 				" • Strategic evacuation: rescue veteran bodies equal to survivors count.\n\n" +
 				dangerStyle.Render(fmt.Sprintf("⏳ Expedition autostarts in: %d sec...\n\n", m.MenuCountdown)) +
 				healStyle.Render("[Space] or [Enter] — Embark immediately") + "\n" +
-				accentStyle.Render("[L] — Switch language (RU / EN)") + "\n" +
-				subtleStyle.Render("[I] — Codex  |  [E] — Armory  |  [S] — Stats  |  [+/-] — Speed  |  [Q] — Quit")
+				accentStyle.Render("[L] — Switch language (RU / EN)") + "   " + m.menuHeroKeys() + "\n" +
+				subtleStyle.Render("[+/-] — Speed  |  [Q] — Quit")
 		} else {
 			textBlock = "Добро пожаловать в мрачный тактический подземельный рогалик!\n" +
 				"Ваша задача — провести отряд сквозь БЕСКОНЕЧНЫЕ этажи опаснейших биомов.\n\n" +
@@ -64,10 +64,13 @@ func (m Model) renderMenuScreen() string {
 				" • Эвакуация при побеге: вынос тел ценных ветеранов по числу выживших.\n\n" +
 				dangerStyle.Render(fmt.Sprintf("⏳ Автоматический старт экспедиции через: %d сек...\n\n", m.MenuCountdown)) +
 				healStyle.Render("[Пробел] или [Enter] — Начать экспедицию немедленно") + "\n" +
-				accentStyle.Render("[L] — Сменить язык (RU / EN)") + "\n" +
-				subtleStyle.Render("[I] — Кодекс  |  [E] — Арсенал  |  [S] — Слава  |  [+/-] — Скор.  |  [Q] — Выход")
+				accentStyle.Render("[L] — Сменить язык (RU / EN)") + "   " + m.menuHeroKeys() + "\n" +
+				subtleStyle.Render("[+/-] — Скор.  |  [Q] — Выход")
 		}
 		sb.WriteString(lipgloss.NewStyle().Align(lipgloss.Left).Render(textBlock))
+		if line := m.menuHeroLine(); line != "" {
+			sb.WriteString("\n" + line)
+		}
 
 		box := menuBoxStyle.Render(sb.String())
 		return lipgloss.Place(termW, termH, lipgloss.Center, lipgloss.Center, box)
@@ -96,8 +99,11 @@ func (m Model) renderMenuScreen() string {
 		}
 
 		sb.WriteString(startBtn + "    " + timerStr + "\n\n")
-		sb.WriteString(accentStyle.Render("[L] Language (RU / EN)") + "\n")
-		sb.WriteString(subtleStyle.Render("[I] Codex  |  [E] Armory  |  [S] Stats  |  [Q] Quit"))
+		if line := m.menuHeroLine(); line != "" {
+			sb.WriteString(line + "\n")
+		}
+		sb.WriteString(accentStyle.Render("[L] Language (RU / EN)") + "  " + m.menuHeroKeys() + "\n")
+		sb.WriteString(subtleStyle.Render("[Q] Quit"))
 
 		box := menuBoxStyle.Render(sb.String())
 		return lipgloss.Place(termW, termH, lipgloss.Center, lipgloss.Center, box)
@@ -120,15 +126,19 @@ func (m Model) renderMenuScreen() string {
 			timerStr = dangerStyle.Render(fmt.Sprintf("⏳ Автостарт: %d сек", m.MenuCountdown))
 		}
 		sb.WriteString(timerStr + "\n\n")
+		if line := m.menuHeroLine(); line != "" {
+			sb.WriteString(line + "\n")
+		}
+		sb.WriteString(m.menuHeroKeys() + "\n")
 
 		if m.Lang == LangEN {
 			sb.WriteString(healStyle.Render("[Space] Start") + "\n")
 			sb.WriteString(accentStyle.Render("[L] Language (EN/RU)") + "\n")
-			sb.WriteString(subtleStyle.Render("[I] Codex | [E] Armory | [Q] Quit"))
+			sb.WriteString(subtleStyle.Render("[Q] Quit"))
 		} else {
 			sb.WriteString(healStyle.Render("[Пробел] Начать") + "\n")
 			sb.WriteString(accentStyle.Render("[L] Язык (RU/EN)") + "\n")
-			sb.WriteString(subtleStyle.Render("[I] Кодекс | [E] Арсенал | [Q] Выход"))
+			sb.WriteString(subtleStyle.Render("[Q] Выход"))
 		}
 
 		box := menuBoxStyle.Width(innerW).Render(sb.String())

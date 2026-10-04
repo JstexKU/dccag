@@ -12,7 +12,7 @@ import (
 
 // version подставляется при релизной сборке: -ldflags "-X main.version=v1.2.3".
 // В исходниках хранится номер без префикса «v».
-var version = "2.9.2"
+var version = "3.0.0"
 
 // displayVersion возвращает версию для интерфейса в виде «v2.9.0»:
 // релизная сборка подставляет тег целиком, локальная — только номер.
@@ -55,7 +55,7 @@ func main() {
 
 	m := initialModel()
 	if sd, ok := loadSave(); ok {
-		m = initialModelWithLegacy(sd.Legacy)
+		m = initialModelWith(sd.Legacy, sd.Hero)
 		m.Lang = sd.Lang
 		m.Tactics = sd.Tactics
 		m.relocalizeStart()
@@ -67,7 +67,7 @@ func main() {
 
 	// Выход из игры завершает экспедицию: наследие и настройки сохраняются.
 	if fm, ok := finalModel.(Model); ok {
-		persistState(fm.Lang, legacyAfterRun(fm), fm.Tactics)
+		persistState(fm.Lang, legacyAfterRun(fm), fm.Tactics, fm.Blueprint)
 		if *debugReportFlag {
 			fm.accumulateDebugReport()
 			saveDebugReportToFile()

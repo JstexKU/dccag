@@ -10,9 +10,10 @@ A grim tactical text-based dungeon crawler featuring autonomous squad mechanics 
 
 ## 🎮 About The Project
 
-**DCCAG** is an autonomous console roguelike. Each expedition you get a party of 5 heroes picked at random from **10 classes** (Tank, Warrior, Rogue, Mage, Cleric, Paladin, Ranger, Monk, Bard, Warlock) and 4 races (Human, Elf, Beastman, Olongr). The party explores infinite procedural floors, fights monster packs, manages stress and psychological afflictions, trades in the Capital and crafts gear, all inside a terminal UI. You don't steer the party: you set its **tactics** and watch.
+**DCCAG** is an autonomous console roguelike. Each expedition you get a party of 5 heroes picked at random from **10 classes** (Tank, Warrior, Rogue, Mage, Cleric, Paladin, Ranger, Monk, Bard, Warlock) and 4 races (Human, Elf, Beastman, Olongr). The party explores infinite procedural floors, fights monster packs, manages stress and psychological afflictions, trades in the Capital and crafts gear, all inside a terminal UI. You can set its **tactics** and watch, take **manual control**, or create **your own leader hero** who leads the party.
 
 ### ✨ Key Features
+* **Your Own Leader Hero** (`C` in the main menu): choose a name, gender, race, class and a *calling*, and spend 6 free points on health, mana, attack, defense and speed. The preview shows the final stats before you commit. The hero is saved to `save.json` and leads every new expedition (`★` on the card); the other four heroes are random and never share the leader's class. The leader is never left behind in the Abyss, the Church revives them for free and the Guild never replaces them, but their fall terrifies the party. Callings: *Inspirer* (allies take 15% less stress), *Strategist* (+10% gold), *Mentor* (+10% experience for the party). `Ctrl+R` in the editor rolls a random hero; `X` in the menu (pressed twice) removes the hero.
 * **Manual Control** (`M`): Take direct command of the expedition. Move through the labyrinth with arrow keys, make camp (`C`), exit voluntarily (`X`), command heroes during combat (`A` strike, `Space` skill, `D` guard, `P` potions), and select enemy focus targets (←/→). Toggle seamlessly between autopilot and manual control at any time.
 * **Autopilot Tactics** (`T`): Fine-tune squad thresholds for emergency retreat, combat flee, potion drinking, and decision rules for trapped chests, blood altars, and room events.
 * **Room Events** (`?` on the map): Campfires, wandering alchemical merchants, whispering idols, ambushes, and locked vaults (picked by rogues or smashed open by bruisers).
@@ -30,6 +31,7 @@ A grim tactical text-based dungeon crawler featuring autonomous squad mechanics 
 
 | Key | Action |
 | :--- | :--- |
+| **`C`** | *Main menu:* create or edit your leader hero (`X` twice removes it) |
 | **`Space`** / **`Enter`** | Pause / resume autopilot (or start the game from the menu) |
 | **`N`** | One step while paused |
 | **`M`** | Toggle manual control / autopilot |
@@ -134,6 +136,11 @@ Tests cover dictionary parity (RU/EN keys and format arguments), the autopilot t
 * `quests.go`: contracts and quest progress.
 * `step.go`: the main game step and movement onto a tile.
 * `biomes.go`: biome configuration.
+
+**Leader hero**
+* `hero_blueprint.go`: hero blueprint, point allocation, stat preview, starting party assembly.
+* `creator.go`: the creation screen, its input handling and the main-menu hero lines.
+* `leader.go`: leader rules (rescue, Church, Guild, shock on fall).
 
 **Party and decisions**
 * `party.go`: hero creation, stress, potions, experience, equipment, fallen heroes.

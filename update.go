@@ -27,9 +27,9 @@ func restartTickCmd() tea.Cmd {
 	})
 }
 
-func menuTickCmd() tea.Cmd {
-	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
-		return MenuTickMsg(t)
+func menuTickCmd(gen int) tea.Cmd {
+	return tea.Tick(time.Second, func(time.Time) tea.Msg {
+		return MenuTickMsg{Gen: gen}
 	})
 }
 
@@ -43,6 +43,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case MenuTickMsg:
+		// Тики устаревшего таймера меню (после входа в создание героя) отбрасываются.
+		if msg.Gen != m.MenuGen {
+			return m, nil
+		}
 		if m.State == StateMenu {
 			m.MenuCountdown--
 			if m.MenuCountdown <= 0 {
@@ -50,11 +54,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmd := m.restartTicks(m.SpeedMs)
 				return m, cmd
 			}
-			return m, menuTickCmd()
+			return m, menuTickCmd(m.MenuGen)
 		}
 
 	case tea.KeyMsg:
 		key := msg.String()
+
+		// Экран создания героя забирает все клавиши: буквы — это текст имени.
+		if m.State == StateCreator {
+			cmd := m.handleCreatorKey(msg)
+			return m, cmd
+		}
+		if m.State == StateMenu {
+			if cmd, handled := m.handleMenuKey(key); handled {
+				return m, cmd
+			}
+		}
 
 		// Экран тактики перехватывает свои клавиши раньше общей обработки.
 		if m.State == StateTactics {

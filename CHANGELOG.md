@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [3.0.0]
+
+### Added
+- **Leader hero creation** (`C` in the main menu). The editor lets the player enter a name, choose gender, race, class and a calling, and distribute 6 free points (health, mana, attack, defense, speed; `+5/+5/+1/+1/+1` per point, with per-stat caps). A live preview shows the final stats, the class skill and the combat role. `Ctrl+R` rolls a random hero, `Ctrl+L` switches the language, `Esc` goes back.
+- The hero is stored in `save.json` (`hero` section, optional, validated and sanitized on load) and rebuilt at level 1 for every new expedition, including restarts after a defeat. The other four party members are random and never share the leader's class. `X` pressed twice in the main menu removes the hero.
+- **Leader rules** (`leader.go`): the leader is marked with `★`; is always carried out first and never lost in the Abyss; is revived by the Church for free; is never replaced by the Guild; only loses consciousness (instead of dying) from altars and trapped chests; and their fall in battle gives every ally +14 stress.
+- **Callings:** *Inspirer* (allies take 15% less stress), *Strategist* (+10% gold from kills, chests and events), *Mentor* (+10% experience for the party). Bonuses work only while the leader is on their feet.
+- Tests for the blueprint, the preview/hero consistency, the editor input (including pasted text and hotkeys-as-text), save round-trips, leader rules and a long leader simulation.
+
+### Changed
+- `createHero` was split into `baseStatsFor` (class table) and `buildHero` (assembly); the numbers are unchanged and covered by a test.
+- Main-menu timer ticks carry a generation number (`MenuGen`), so a stale tick can no longer start the expedition from inside the editor.
+- `persistState` takes the hero blueprint as an extra argument.
+- Removed the `[I] Codex | [E] Armory | [S] Stats` hints from the main menu: those keys never worked there.
+
 ## [Unreleased]
 
 ### Changed

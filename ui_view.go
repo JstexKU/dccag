@@ -107,6 +107,9 @@ func (m Model) View() string {
 	if m.State == StateTactics {
 		return m.renderTacticsScreen()
 	}
+	if m.State == StateCreator {
+		return m.renderCreatorScreen()
+	}
 
 	termW := max(38, m.TermWidth)
 	termH := max(22, m.TermHeight)

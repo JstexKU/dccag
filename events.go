@@ -37,10 +37,14 @@ func (m *Model) pickEventKind() eventKind {
 }
 
 func (m *Model) goldMult() float64 {
+	mult := 1.0
 	if m.Relic != nil {
-		return m.Relic.GoldMult
+		mult = m.Relic.GoldMult
 	}
-	return 1.0
+	if m.activeCalling() == CallingStrategist {
+		mult *= 1 + float64(callingStrategistGoldPct)/100
+	}
+	return mult
 }
 
 // handleEventTile запускает случайное событие. pos — клетка, на которой оно произошло.

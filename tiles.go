@@ -48,7 +48,7 @@ func (m *Model) handleAltar() {
 		if target.HP <= 0 {
 			target.HP = 0
 			target.CauseOfDeath = T(m.Lang, "dungeon.death.altar")
-			m.recordFallenHero(target)
+			m.hazardDeath(target)
 			verb := TVerb(m.Lang, target.Gender, "пал", "пала", "fell")
 			m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.altar_death", hName, verb)))
 		} else {
@@ -95,7 +95,7 @@ func (m *Model) handleTrappedChest() {
 
 	if rollSuccess {
 		m.Stats.TrapsDisarmed++
-		gold := int(float64(rng.Intn(25)+15) * m.Relic.GoldMult)
+		gold := int(float64(rng.Intn(25)+15) * m.goldMult())
 		m.Gold += gold
 		m.Stats.TotalGoldEarned += gold
 
@@ -119,7 +119,7 @@ func (m *Model) handleTrappedChest() {
 				if h.HP <= 0 {
 					h.HP = 0
 					h.CauseOfDeath = T(m.Lang, "dungeon.death.trap")
-					m.recordFallenHero(h)
+					m.hazardDeath(h)
 				}
 			}
 		}

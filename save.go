@@ -9,12 +9,13 @@ import (
 const saveVersion = 1
 
 // SaveData — всё, что переживает закрытие игры: наследие столицы,
-// язык интерфейса и настройки автопилота.
+// язык интерфейса, настройки автопилота и созданный игроком герой-лидер.
 type SaveData struct {
-	Version int        `json:"version"`
-	Lang    Language   `json:"lang"`
-	Legacy  TownLegacy `json:"legacy"`
-	Tactics Tactics    `json:"tactics"`
+	Version int            `json:"version"`
+	Lang    Language       `json:"lang"`
+	Legacy  TownLegacy     `json:"legacy"`
+	Tactics Tactics        `json:"tactics"`
+	Hero    *HeroBlueprint `json:"hero,omitempty"`
 }
 
 var (
@@ -69,6 +70,14 @@ func loadSave() (SaveData, bool) {
 	if sd.Lang != LangEN && sd.Lang != LangRU {
 		sd.Lang = LangRU
 	}
+	if sd.Hero != nil {
+		hero := sd.Hero.Sanitized()
+		if hero.Valid() {
+			sd.Hero = &hero
+		} else {
+			sd.Hero = nil
+		}
+	}
 	return sd, true
 }
 
@@ -94,11 +103,11 @@ func writeSave(sd SaveData) error {
 }
 
 // persistState сохраняет состояние, если сохранения включены. Ошибки записи не должны ронять игру.
-func persistState(lang Language, legacy TownLegacy, t Tactics) {
+func persistState(lang Language, legacy TownLegacy, t Tactics, hero *HeroBlueprint) {
 	if !saveEnabled {
 		return
 	}
-	_ = writeSave(SaveData{Lang: lang, Legacy: legacy, Tactics: t})
+	_ = writeSave(SaveData{Lang: lang, Legacy: legacy, Tactics: t, Hero: hero})
 }
 
 // legacyAfterRun считает наследие, которое достанется следующему забегу:

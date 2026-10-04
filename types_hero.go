@@ -194,6 +194,9 @@ type HeroHeroics struct {
 
 type Hero struct {
 	NameKey        string
+	CustomName     string // имя, введённое игроком (для героя-лидера); если задано — вместо NameKey
+	IsLeader       bool
+	Calling        LeaderCalling
 	Race           RaceType
 	Gender         Gender
 	TitleKey       string
@@ -234,6 +237,9 @@ type Hero struct {
 }
 
 func (h *Hero) DisplayName(lang Language) string {
+	if h.CustomName != "" {
+		return h.CustomName
+	}
 	return T(lang, h.NameKey)
 }
 

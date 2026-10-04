@@ -184,7 +184,7 @@ func (m *Model) moveTo(next Point) {
 		}
 		m.Stats.ChestsOpened++
 		m.checkQuestProgress(QuestOpenChests, "", 1)
-		gold := int(float64(rng.Intn(16)+10+(m.Floor*2)) * m.Relic.GoldMult)
+		gold := int(float64(rng.Intn(16)+10+(m.Floor*2)) * m.goldMult())
 		m.Gold += gold
 		m.Stats.TotalGoldEarned += gold
 

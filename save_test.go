@@ -23,7 +23,7 @@ func TestSaveRoundTrip(t *testing.T) {
 	tc.RetreatHPPct = 50
 	legacy := TownLegacy{TreasuryGold: 120, SmithyLevel: 3, TanneryLevel: 2, ChurchLevel: 1, TavernLevel: 4, TotalInvested: 900}
 
-	persistState(LangEN, legacy, tc)
+	persistState(LangEN, legacy, tc, nil)
 
 	got, ok := loadSave()
 	if !ok {
@@ -111,7 +111,7 @@ func TestLoadSaveSanitizesValues(t *testing.T) {
 func TestSaveDisabledWritesNothing(t *testing.T) {
 	path := useTempSave(t)
 	saveEnabled = false
-	persistState(LangRU, TownLegacy{TreasuryGold: 5}, DefaultTactics())
+	persistState(LangRU, TownLegacy{TreasuryGold: 5}, DefaultTactics(), nil)
 	if _, err := os.Stat(path); err == nil {
 		t.Fatal("при -no-save файл создаваться не должен")
 	}
@@ -129,5 +129,73 @@ func TestLegacyAfterRun(t *testing.T) {
 	}
 	if got.TotalInvested != 500+wantTax {
 		t.Errorf("вклады: %d, ожидалось %d", got.TotalInvested, 500+wantTax)
+	}
+}
+
+func TestSaveRoundTripWithHero(t *testing.T) {
+	useTempSave(t)
+	bp := HeroBlueprint{Name: "Эдан", Gender: GenderFemale, Race: RaceElf, Class: ClassMage, Calling: CallingStrategist}
+	bp.AdjustPoint(StatAtk, 1)
+	bp.AdjustPoint(StatHP, 2)
+
+	persistState(LangRU, TownLegacy{TreasuryGold: 9}, DefaultTactics(), &bp)
+	got, ok := loadSave()
+	if !ok || got.Hero == nil {
+		t.Fatal("герой должен прочитаться из сохранения")
+	}
+	if *got.Hero != bp {
+		t.Fatalf("герой изменился: %+v != %+v", *got.Hero, bp)
+	}
+
+	persistState(LangRU, TownLegacy{}, DefaultTactics(), nil)
+	got, _ = loadSave()
+	if got.Hero != nil {
+		t.Fatal("без героя в сохранении его быть не должно")
+	}
+}
+
+func TestLoadSaveSanitizesHero(t *testing.T) {
+	path := useTempSave(t)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	raw := `{"version":1,"lang":"ru","hero":{"name":"Bob%d<>","gender":9,"race":"dragon","class":"hacker","calling":"king","points":[99,99,99,99,99]}}`
+	if err := os.WriteFile(path, []byte(raw), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, ok := loadSave()
+	if !ok || got.Hero == nil {
+		t.Fatal("испорченный герой с корректным именем должен исправляться, а не пропадать")
+	}
+	if got.Hero.Name != "Bobd" || !validRace(got.Hero.Race) || !validClass(got.Hero.Class) || !validCalling(got.Hero.Calling) {
+		t.Fatalf("герой не очищен: %+v", *got.Hero)
+	}
+	if got.Hero.PointsUsed() > creatorPoints {
+		t.Fatalf("лимит очков превышен: %d", got.Hero.PointsUsed())
+	}
+
+	raw = `{"version":1,"lang":"ru","hero":{"name":"%%","race":"elf","class":"mage"}}`
+	if err := os.WriteFile(path, []byte(raw), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, ok = loadSave()
+	if !ok || got.Hero != nil {
+		t.Fatal("герой без пригодного имени должен отбрасываться")
+	}
+}
+
+func TestOldSaveWithoutHeroStillLoads(t *testing.T) {
+	path := useTempSave(t)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	raw := `{"version":1,"lang":"en","legacy":{"TreasuryGold":40}}`
+	if err := os.WriteFile(path, []byte(raw), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, ok := loadSave()
+	if !ok || got.Hero != nil || got.Legacy.TreasuryGold != 40 || got.Lang != LangEN {
+		t.Fatalf("сохранение версии 2.x должно читаться: %+v", got)
 	}
 }

@@ -36,7 +36,11 @@ func (m Model) renderHeroCard(h *Hero, cardWidth int, forceMode ...CardMode) str
 
 	var sb strings.Builder
 
-	nameRaw := shortenItemName(h.FullName(m.Lang), textWidth)
+	fullName := h.FullName(m.Lang)
+	if h.IsLeader {
+		fullName = "★ " + fullName
+	}
+	nameRaw := shortenItemName(fullName, textWidth)
 	nameStr := nameRaw
 	if h.TitleKey != "" {
 		nameStr = titleStyle.Render(nameRaw)

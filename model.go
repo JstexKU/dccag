@@ -16,6 +16,7 @@ const (
 	StateArmory
 	StateInfoBook
 	StateTactics
+	StateCreator
 )
 
 type TownPhase int
@@ -76,36 +77,37 @@ type Model struct {
 	TacticsSel       int
 	ManualMode       bool // ручное управление: игрок ходит по карте и командует в бою
 	ManualLastCamp   int  // Stats.TotalSteps на момент последнего ручного привала
+
+	// Герой-лидер, созданный игроком (Blueprint == nil — отряд случайный), экран создания и меню.
+	Blueprint         *HeroBlueprint
+	Creator           CreatorState
+	MenuGen           int  // поколение таймера меню: устаревшие тики игнорируются
+	MenuConfirmRemove bool // в меню нажат X: ждём подтверждения удаления героя
 }
 
 type (
 	// TickMsg несёт номер поколения цепочки тиков (см. Model.restartTicks).
 	TickMsg        struct{ Gen int }
 	RestartTickMsg time.Time
-	MenuTickMsg    time.Time
+	// MenuTickMsg несёт номер поколения таймера меню (см. Model.MenuGen).
+	MenuTickMsg struct{ Gen int }
 )
 
 func initialModelWithLegacy(legacy TownLegacy) Model {
-	// rand.Seed убран: начиная с Go 1.20 глобальный math/rand автосидируется.
+	return initialModelWith(legacy, nil)
+}
 
-	// Перемешиваем все 10 классов и отбираем ровно 5 уникальных
-	shuffledClasses := make([]HeroClass, len(AllClasses))
-	copy(shuffledClasses, AllClasses)
-	rng.Shuffle(len(shuffledClasses), func(i, j int) {
-		shuffledClasses[i], shuffledClasses[j] = shuffledClasses[j], shuffledClasses[i]
-	})
-
-	var heroes []*Hero
-	for _, c := range shuffledClasses[:5] {
-		heroes = append(heroes, createHero(c, 1, legacy.SmithyLevel))
-	}
+// initialModelWith создаёт модель новой экспедиции; с чертежом отряд ведёт созданный игроком лидер.
+func initialModelWith(legacy TownLegacy, bp *HeroBlueprint) Model {
+	heroes := buildStartingParty(legacy.SmithyLevel, bp)
 
 	activeRelic := generateRelic(1)
 
 	m := Model{
 		Lang:             LangRU,
 		State:            StateMenu,
-		MenuCountdown:    20,
+		MenuCountdown:    menuCountdownStart,
+		Blueprint:        bp,
 		Party:            heroes,
 		Bag:              []EquipItem{},
 		BagLevel:         0,
@@ -153,7 +155,7 @@ func initialModel() Model {
 }
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(tea.EnterAltScreen, menuTickCmd())
+	return tea.Batch(tea.EnterAltScreen, menuTickCmd(m.MenuGen))
 }
 
 func (m *Model) addLog(msg string) {
@@ -170,9 +172,10 @@ func resetGameStatic(m Model) (Model, tea.Cmd) {
 
 	// Налог с добычи уходит в казну столицы и сохраняется на диск.
 	newLegacy := legacyAfterRun(m)
-	persistState(m.Lang, newLegacy, m.Tactics)
+	persistState(m.Lang, newLegacy, m.Tactics, m.Blueprint)
 
-	fresh := initialModelWithLegacy(newLegacy)
+	fresh := initialModelWith(newLegacy, m.Blueprint)
+	fresh.MenuGen = m.MenuGen + 1
 	fresh.Lang = m.Lang
 	fresh.Tactics = m.Tactics
 	fresh.ManualMode = m.ManualMode
@@ -182,7 +185,7 @@ func resetGameStatic(m Model) (Model, tea.Cmd) {
 	fresh.relocalizeStart()
 
 	// Новая экспедиция начинается с меню-заставки; цепочку игровых тиков запустит выход из меню.
-	return fresh, menuTickCmd()
+	return fresh, menuTickCmd(fresh.MenuGen)
 }
 
 func (m Model) resetGame() (Model, tea.Cmd) {

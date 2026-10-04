@@ -103,6 +103,9 @@ func (m *Model) stepTown() {
 			// Сортировка поверженных по ценности
 			sort.Slice(downedHeroes, func(i, j int) bool {
 				score := func(hero *Hero) int {
+					if hero.IsLeader {
+						return 1 << 20 // лидера выносят первым
+					}
 					s := hero.Mutations.Total()*200 + hero.Level*50
 					if hero.Class == ClassTank || hero.Class == ClassPaladin {
 						s += 400
@@ -116,7 +119,7 @@ func (m *Model) stepTown() {
 
 			for _, h := range downedHeroes {
 				// Если не хватило свободных рук — брошен в Бездне
-				if carryCapacity <= 0 {
+				if carryCapacity <= 0 && !h.IsLeader {
 					h.IsDead = true
 					h.IsDowned = false
 					h.LostInAbyss = true
@@ -127,7 +130,7 @@ func (m *Model) stepTown() {
 				carryCapacity--
 
 				// Бросок 80% / 20%: донесли ли раненого до ворот
-				if rng.Intn(100) >= 80 {
+				if !h.IsLeader && rng.Intn(100) >= 80 {
 					// 20% неудача при подъёме на поверхность
 					h.IsDead = true
 					h.IsDowned = false
@@ -144,9 +147,14 @@ func (m *Model) stepTown() {
 
 		// 2. Храм исцеляет и стабилизирует успешно доставленных бойцов (IsDowned)
 		for _, h := range m.Party {
-			if h.IsDowned && !h.IsDead && m.Gold >= healBaseCost {
-				m.Gold -= healBaseCost
-				totalChurchSpent += healBaseCost
+			if h.IsDowned && !h.IsDead && (h.IsLeader || m.Gold >= healBaseCost) {
+				if h.IsLeader {
+					// Лидера ставят на ноги за счёт ордена.
+					m.addLog(fountStyle.Render(T(m.Lang, "leader.church_free", churchName, h.DisplayName(m.Lang))))
+				} else {
+					m.Gold -= healBaseCost
+					totalChurchSpent += healBaseCost
+				}
 				h.IsDowned = false
 				h.HP = h.MaxHP / 2
 				h.MP = h.MaxMP / 2
@@ -235,8 +243,8 @@ func (m *Model) stepTown() {
 
 		recruitCost := max(45, 60+(m.Floor*25)-(m.Legacy.ChurchLevel*8))
 		for i, h := range m.Party {
-			// Заменяем окончательно погибших или оставшихся без помощи
-			if h.IsDead || h.IsDowned {
+			// Заменяем окончательно погибших или оставшихся без помощи; лидера Гильдия не заменяет
+			if (h.IsDead || h.IsDowned) && !(h.IsLeader && !h.IsDead) {
 				usedClasses := make(map[HeroClass]bool)
 				for _, ally := range m.Party {
 					if !ally.IsDead && !ally.IsDowned {

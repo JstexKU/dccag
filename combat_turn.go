@@ -758,6 +758,7 @@ func (m *Model) executeCombatTurn() {
 
 			verb := TVerb(m.Lang, actualHero.Gender, "рухнул без сознания", "рухнула без сознания", "fell unconscious")
 			m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.hero_downed", actualHeroName, verb, mobDisplayName)))
+			m.onLeaderDowned(actualHero)
 			for _, ally := range m.Party {
 				if !ally.IsDead && !ally.IsDowned {
 					m.addStress(ally, 18)

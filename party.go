@@ -45,6 +45,11 @@ func (m *Model) addStress(h *Hero, amt int) {
 	}
 	amt = amt * (100 - itemRes) / 100
 
+	// Призвание «Вдохновитель»: рядом с лидером союзники переносят стресс легче.
+	if !h.IsLeader && m.activeCalling() == CallingInspirer {
+		amt = amt * (100 - callingInspirerStressCut) / 100
+	}
+
 	h.Stress += amt
 
 	if amt >= 15 {
@@ -95,6 +100,7 @@ func (m *Model) addStress(h *Hero, amt int) {
 			h.IsAura = false
 			h.CauseOfDeath = T(m.Lang, "dungeon.death.heart_attack", T(m.Lang, "affliction."+string(h.Affliction)))
 			m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.heart_attack_death", h.DisplayName(m.Lang))))
+			m.onLeaderDowned(h)
 			for _, ally := range m.Party {
 				if !ally.IsDead && !ally.IsDowned {
 					ally.Stress += 35
@@ -172,10 +178,15 @@ func (m *Model) checkAndDrinkPotions(h *Hero) {
 	h.Potions = remainingPotions
 }
 
-func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
-	targetLevel := max(1, floor/2)
-	race := AllRaces[rng.Intn(len(AllRaces))]
+// classBase — стартовые характеристики класса до модификаторов расы.
+type classBase struct {
+	MaxHP, MaxMP, BaseDef, Speed int
+	SkillNameKey                 string
+	SkillCost                    int
+}
 
+// baseStatsFor возвращает стартовые характеристики и навык класса.
+func baseStatsFor(class HeroClass) classBase {
 	maxHP := 42
 	baseDef := 2
 	speed := 10
@@ -256,17 +267,40 @@ func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
 		maxMP = 40
 	}
 
+	return classBase{
+		MaxHP: maxHP, MaxMP: maxMP, BaseDef: baseDef, Speed: speed,
+		SkillNameKey: skillNameKey, SkillCost: skillCost,
+	}
+}
+
+// createHero создаёт героя заданного класса со случайными расой, именем и полом.
+func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
+	race := AllRaces[rng.Intn(len(AllRaces))]
+	nameDef := getRandomHeroName()
+	return buildHero(class, race, nameDef.NameKey, nameDef.Gender, floor, smithyLvl)
+}
+
+// buildHero собирает героя с заданными расой, именем и полом и выдаёт ему снаряжение класса.
+func buildHero(class HeroClass, race RaceType, nameKey string, gender Gender, floor int, smithyLvl int) *Hero {
+	targetLevel := max(1, floor/2)
+
+	base := baseStatsFor(class)
+	maxHP := base.MaxHP
+	maxMP := base.MaxMP
+	baseDef := base.BaseDef
+	speed := base.Speed
+	skillNameKey := base.SkillNameKey
+	skillCost := base.SkillCost
+
 	raceMod := GetRaceModifiers(race)
 	if raceMod.MaxHPBonusPercent != 0 {
 		maxHP += int(float64(maxHP) * raceMod.MaxHPBonusPercent)
 	}
 
-	nameDef := getRandomHeroName()
-
 	h := &Hero{
-		NameKey:      nameDef.NameKey,
+		NameKey:      nameKey,
 		Race:         race,
-		Gender:       nameDef.Gender,
+		Gender:       gender,
 		Class:        class,
 		Role:         GetClassRole(class),
 		Level:        1,
@@ -275,7 +309,7 @@ func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
 		HP:           maxHP,
 		MaxMP:        maxMP,
 		MP:           maxMP,
-		BaseAtk:      6 + smithyLvl,
+		BaseAtk:      heroBaseAtk + smithyLvl,
 		BaseDef:      baseDef,
 		Speed:        speed,
 		SkillNameKey: skillNameKey,
@@ -325,6 +359,9 @@ func (m *Model) distributePartyExp(expAmt int) {
 		raceMod := GetRaceModifiers(h.Race)
 		if raceMod.ExpBonusPercent > 0 {
 			actualExp += int(float64(actualExp) * raceMod.ExpBonusPercent)
+		}
+		if m.activeCalling() == CallingMentor {
+			actualExp += actualExp * callingMentorExpPct / 100
 		}
 
 		if h.GainExp(actualExp) {
