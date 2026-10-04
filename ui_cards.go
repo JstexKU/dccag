@@ -8,6 +8,11 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
+var heroCardDowned = lipgloss.NewStyle().
+	BorderStyle(lipgloss.RoundedBorder()).
+	BorderForeground(lipgloss.Color("208")).
+	Padding(0, 1)
+
 func (m Model) renderHeroCard(h *Hero, cardWidth int, forceMode ...CardMode) string {
 	innerWidth := max(14, cardWidth-4)
 	textWidth := max(12, innerWidth-2)
@@ -40,6 +45,8 @@ func (m Model) renderHeroCard(h *Hero, cardWidth int, forceMode ...CardMode) str
 
 	if h.IsDead {
 		sb.WriteString(renderDeadHeroCard(h, textWidth, mode, m.Lang))
+	} else if h.IsDowned {
+		sb.WriteString(renderDownedHeroCard(h, textWidth, mode, m.Lang))
 	} else {
 		switch mode {
 		case CardWide:
@@ -56,6 +63,8 @@ func (m Model) renderHeroCard(h *Hero, cardWidth int, forceMode ...CardMode) str
 	baseStyle := heroCardStyle
 	if h.IsDead {
 		baseStyle = heroCardDead
+	} else if h.IsDowned {
+		baseStyle = heroCardDowned
 	} else if isActiveTurn {
 		baseStyle = heroCardActive
 	}
@@ -74,7 +83,19 @@ func renderDeadHeroCard(h *Hero, textWidth int, mode CardMode, lang Language) st
 	sb.WriteString(subtleStyle.Render(padRightTruncate(infoLine, textWidth)) + "\n")
 	sb.WriteString(dangerStyle.Render(padRightTruncate(fmt.Sprintf("[%s]", T(lang, "ui.dead")), textWidth)) + "\n")
 	sb.WriteString(subtleStyle.Render(padRightTruncate(h.CauseOfDeath, textWidth)) + "\n")
-	sb.WriteString(subtleStyle.Render(padRightTruncate(fmt.Sprintf("[%s]", T(lang, "ui.awaiting_revive")), textWidth)))
+	sb.WriteString(subtleStyle.Render(padRightTruncate(fmt.Sprintf("[%s]", T(lang, "ui.left_in_abyss_status")), textWidth)))
+
+	return sb.String()
+}
+
+func renderDownedHeroCard(h *Hero, textWidth int, mode CardMode, lang Language) string {
+	var sb strings.Builder
+
+	infoLine := fmt.Sprintf("[%s | %s %d]", h.RaceName(lang), h.ShortClass(lang), h.Level)
+	sb.WriteString(subtleStyle.Render(padRightTruncate(infoLine, textWidth)) + "\n")
+	sb.WriteString(goldStyle.Render(padRightTruncate(fmt.Sprintf("[%s]", T(lang, "ui.downed")), textWidth)) + "\n")
+	sb.WriteString(dangerStyle.Render(padRightTruncate(fmt.Sprintf("HP: 0/%d", h.MaxHP), textWidth)) + "\n")
+	sb.WriteString(subtleStyle.Render(padRightTruncate(fmt.Sprintf("[%s]", T(lang, "ui.awaiting_evac")), textWidth)))
 
 	return sb.String()
 }
@@ -212,6 +233,10 @@ func beltSymbols(h *Hero, maxSlots int) string {
 
 func buffBadge(h *Hero) string {
 	switch {
+	case h.IsDowned:
+		return goldStyle.Render("[💤]")
+	case h.ReviveCooldown > 0:
+		return subtleStyle.Render("[⏳]")
 	case h.Affliction != AfflictionNone:
 		return stressStyle.Render("[👁]")
 	case h.IsGuarding:

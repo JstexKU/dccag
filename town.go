@@ -23,7 +23,7 @@ func (m *Model) stepTown() {
 		m.Bag = []EquipItem{}
 
 		for _, h := range m.Party {
-			if !h.IsDead {
+			if !h.IsDead && !h.IsDowned {
 				h.Stress = max(0, h.Stress-30)
 				if h.Stress < 50 {
 					h.Affliction = AfflictionNone
@@ -81,25 +81,78 @@ func (m *Model) stepTown() {
 
 	case TownPhaseChurch:
 		churchName := T(m.Lang, m.TownEst.ChurchKey)
-		reviveBaseCost := 120 + (m.Floor * 30) - (m.Legacy.ChurchLevel * 15)
-		if reviveBaseCost < 60 {
-			reviveBaseCost = 60
+		healBaseCost := 120 + (m.Floor * 30) - (m.Legacy.ChurchLevel * 15)
+		if healBaseCost < 60 {
+			healBaseCost = 60
 		}
 
-		revivedCount := 0
-		totalChurchSpent := 0
+		// 1. Проверяем эвакуацию тяжелораненых (IsDowned): 1 живой на ногах выносит 1 бойца
+		var livingHeroes []*Hero
+		var downedHeroes []*Hero
 
 		for _, h := range m.Party {
-			// Воскрешаем ТОЛЬКО тех павших, чьи тела были вынесены (LostInAbyss == false)
-			if h.IsDead && !h.LostInAbyss && m.Gold >= reviveBaseCost {
-				m.Gold -= reviveBaseCost
-				totalChurchSpent += reviveBaseCost
-				h.IsDead = false
+			if !h.IsDead && !h.IsDowned {
+				livingHeroes = append(livingHeroes, h)
+			} else if h.IsDowned && !h.IsDead {
+				downedHeroes = append(downedHeroes, h)
+			}
+		}
+
+		carryCapacity := len(livingHeroes)
+		if len(downedHeroes) > 0 {
+			// Сортировка поверженных по ценности
+			sort.Slice(downedHeroes, func(i, j int) bool {
+				score := func(hero *Hero) int {
+					s := hero.Mutations.Total()*200 + hero.Level*50
+					if hero.Class == ClassTank || hero.Class == ClassPaladin {
+						s += 400
+					} else if hero.Class == ClassCleric || hero.Class == ClassBard {
+						s += 300
+					}
+					return s
+				}
+				return score(downedHeroes[i]) > score(downedHeroes[j])
+			})
+
+			for _, h := range downedHeroes {
+				// Если не хватило свободных рук — брошен в Бездне
+				if carryCapacity <= 0 {
+					h.IsDead = true
+					h.IsDowned = false
+					h.LostInAbyss = true
+					h.CauseOfDeath = T(m.Lang, "combat.log.left_in_abyss")
+					m.recordFallenHero(h)
+					continue
+				}
+				carryCapacity--
+
+				// Бросок 80% / 20%: донесли ли раненого до ворот
+				if rng.Intn(100) >= 80 {
+					// 20% неудача при подъёме на поверхность
+					h.IsDead = true
+					h.IsDowned = false
+					h.LostInAbyss = true
+					h.CauseOfDeath = T(m.Lang, "combat.log.evac_failed")
+					m.recordFallenHero(h)
+					m.addLog(dangerStyle.Render(T(m.Lang, "town.log.evac_failed", h.DisplayName(m.Lang))))
+				}
+			}
+		}
+
+		stabilizedCount := 0
+		totalChurchSpent := 0
+
+		// 2. Храм исцеляет и стабилизирует успешно доставленных бойцов (IsDowned)
+		for _, h := range m.Party {
+			if h.IsDowned && !h.IsDead && m.Gold >= healBaseCost {
+				m.Gold -= healBaseCost
+				totalChurchSpent += healBaseCost
+				h.IsDowned = false
 				h.HP = h.MaxHP / 2
 				h.MP = h.MaxMP / 2
-				h.Stress = 90
+				h.Stress = 70
 				h.CauseOfDeath = ""
-				revivedCount++
+				stabilizedCount++
 				m.Stats.Resurrections++
 				for idx := len(m.Stats.FallenHeroes) - 1; idx >= 0; idx-- {
 					if m.Stats.FallenHeroes[idx].FullName == h.FullName(m.Lang) && !m.Stats.FallenHeroes[idx].Revived {
@@ -107,8 +160,8 @@ func (m *Model) stepTown() {
 						break
 					}
 				}
-			} else if !h.IsDead && (h.Stress > 20 || h.Affliction != AfflictionNone) {
-				cleanseCost := reviveBaseCost / 3
+			} else if !h.IsDead && !h.IsDowned && (h.Stress > 20 || h.Affliction != AfflictionNone) {
+				cleanseCost := healBaseCost / 3
 				if m.Gold >= cleanseCost {
 					m.Gold -= cleanseCost
 					totalChurchSpent += cleanseCost
@@ -119,9 +172,9 @@ func (m *Model) stepTown() {
 		}
 
 		if totalChurchSpent > 0 {
-			globalDebugReport.GoldSpentBreakdown["Церковь (исцеление/воскрешение)"] += totalChurchSpent
-			m.addLog(fountStyle.Render(T(m.Lang, "town.log.church_liturgy", churchName, totalChurchSpent, revivedCount)))
-			m.logTownAction("⛪", churchName, T(m.Lang, "town.log.church_hist", revivedCount, totalChurchSpent))
+			globalDebugReport.GoldSpentBreakdown["Храм (стабилизация/очищение)"] += totalChurchSpent
+			m.addLog(fountStyle.Render(T(m.Lang, "town.log.church_liturgy", churchName, totalChurchSpent, stabilizedCount)))
+			m.logTownAction("⛪", churchName, T(m.Lang, "town.log.church_hist", stabilizedCount, totalChurchSpent))
 		}
 		m.TownPhase = TownPhaseTavern
 
@@ -132,7 +185,7 @@ func (m *Model) stepTown() {
 			m.Gold -= tavernCost
 			globalDebugReport.GoldSpentBreakdown["Таверна (ночлег)"] += tavernCost
 			for _, h := range m.Party {
-				if !h.IsDead {
+				if !h.IsDead && !h.IsDowned {
 					h.HP = h.MaxHP
 					h.MP = h.MaxMP
 				}
@@ -146,7 +199,7 @@ func (m *Model) stepTown() {
 				globalDebugReport.GoldSpentBreakdown["Таверна (сарай)"] += barnCost
 			}
 			for _, h := range m.Party {
-				if !h.IsDead {
+				if !h.IsDead && !h.IsDowned {
 					h.HP = max(1, int(float64(h.MaxHP)*0.40))
 					h.MP = int(float64(h.MaxMP) * 0.40)
 				}
@@ -170,16 +223,15 @@ func (m *Model) stepTown() {
 
 		recruitCost := max(45, 60+(m.Floor*25)-(m.Legacy.ChurchLevel*8))
 		for i, h := range m.Party {
-			if h.IsDead {
-				// Классы, которые уже есть у живых участников отряда
+			// Заменяем окончательно погибших или оставшихся без помощи
+			if h.IsDead || h.IsDowned {
 				usedClasses := make(map[HeroClass]bool)
 				for _, ally := range m.Party {
-					if !ally.IsDead {
+					if !ally.IsDead && !ally.IsDowned {
 						usedClasses[ally.Class] = true
 					}
 				}
 
-				// Фильтруем пул доступных классов без повторов
 				var availableClasses []HeroClass
 				for _, c := range AllClasses {
 					if !usedClasses[c] {
@@ -201,7 +253,6 @@ func (m *Model) stepTown() {
 					m.logTownAction("⚔️", guildName, T(m.Lang, "town.log.guild_vet_hist",
 						m.Party[i].DisplayName(m.Lang), m.Party[i].ShortClass(m.Lang), m.Party[i].Level, recruitCost))
 				} else {
-					// Масштабированное ополчение — тир зависит от m.Legacy.TotalInvested.
 					m.Party[i] = m.createMilitiaForGuild(newClass)
 					newHero := m.Party[i]
 					tierName := T(m.Lang, newHero.TitleKey)
@@ -238,7 +289,7 @@ func (m *Model) stepTown() {
 			minCost := 999999
 
 			for _, h := range m.Party {
-				if h.IsDead {
+				if h.IsDead || h.IsDowned {
 					continue
 				}
 				for _, slot := range []EquipSlot{SlotWeapon, SlotHead, SlotChest, SlotLegs} {
@@ -330,7 +381,7 @@ func (m *Model) stepTown() {
 			minCost := 999999
 
 			for _, h := range m.Party {
-				if h.IsDead {
+				if h.IsDead || h.IsDowned {
 					continue
 				}
 				for _, slot := range []EquipSlot{SlotHead, SlotChest, SlotLegs, SlotWeapon} {
@@ -391,7 +442,7 @@ func (m *Model) stepTown() {
 		for alchBudget > 0 {
 			var candidates []*Hero
 			for _, h := range m.Party {
-				if !h.IsDead {
+				if !h.IsDead && !h.IsDowned {
 					candidates = append(candidates, h)
 				}
 			}
@@ -469,7 +520,7 @@ func (m *Model) stepTown() {
 
 		maxPots := m.MaxPotionSlots()
 		for _, h := range m.Party {
-			if h.IsDead {
+			if h.IsDead || h.IsDowned {
 				continue
 			}
 			for h.HasFreePotionSlot(maxPots) {
@@ -500,6 +551,10 @@ func (m *Model) stepTown() {
 		m.TownPhase = TownPhaseDepart
 
 	case TownPhaseDepart:
+		// Сбрасываем кулдаун воскрешения Клирика к новому походу
+		for _, h := range m.Party {
+			h.ReviveCooldown = 0
+		}
 		m.TownHistory = []string{}
 		m.InTown = false
 		m.PathHistory = []Point{}

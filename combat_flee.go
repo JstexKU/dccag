@@ -5,8 +5,6 @@ import (
 )
 
 // shouldForceRetreatFromCombat решает, критично ли отступать прямо из боя.
-// BagFull/QuestDone — не критично (сначала добиваем пак).
-// LowHP/NoResources/TooFewAlive — критично, телепорт в город.
 func (m *Model) shouldForceRetreatFromCombat(reason RetreatReason) bool {
 	switch reason {
 	case RetreatLowHP, RetreatNoResources, RetreatTooFewAlive:
@@ -23,7 +21,6 @@ func (m *Model) forceRetreatToTown(reason RetreatReason) {
 	goldPenalty := int(float64(m.Gold) * 0.20)
 	m.Gold -= goldPenalty
 
-	// Запись в историю города
 	reasonKey := "town.log.retreat_reason.low_hp"
 	switch reason {
 	case RetreatLowHP:
@@ -48,7 +45,6 @@ func (m *Model) shouldAttemptFlee() bool {
 		return false
 	}
 
-	// Если retreat критичен — пытаемся бежать даже при высоком HP
 	if m.shouldForceRetreatFromCombat(m.evaluateRetreat()) {
 		return true
 	}
@@ -56,7 +52,7 @@ func (m *Model) shouldAttemptFlee() bool {
 	curHP, maxHP := 0, 0
 	livingCount := 0
 	for _, h := range m.Party {
-		if !h.IsDead {
+		if !h.IsDead && !h.IsDowned {
 			curHP += h.HP
 			maxHP += h.MaxHP
 			livingCount++
@@ -75,7 +71,7 @@ func (m *Model) attemptFlee() {
 	chance := 45
 
 	for _, h := range m.Party {
-		if !h.IsDead {
+		if !h.IsDead && !h.IsDowned {
 			if h.Class == ClassRogue || h.Class == ClassRanger {
 				chance += 20
 			}
@@ -96,19 +92,19 @@ func (m *Model) attemptFlee() {
 		m.addLog(healStyle.Render(T(m.Lang, "combat.log.flee_success")))
 
 		var survivors []*Hero
-		var fallen []*Hero
+		var downed []*Hero
 		for _, h := range m.Party {
-			if !h.IsDead {
+			if !h.IsDead && !h.IsDowned {
 				survivors = append(survivors, h)
-			} else {
-				fallen = append(fallen, h)
+			} else if h.IsDowned && !h.IsDead {
+				downed = append(downed, h)
 			}
 		}
 
 		carryCapacity := len(survivors)
-		if len(fallen) > 0 {
-			// Эвристическая сортировка павших по ценности (мутации > уровень > роль)
-			sort.Slice(fallen, func(i, j int) bool {
+		if len(downed) > 0 {
+			// Эвристическая сортировка поверженных по ценности
+			sort.Slice(downed, func(i, j int) bool {
 				score := func(hero *Hero) int {
 					s := hero.Mutations.Total()*200 + hero.Level*50
 					if hero.Class == ClassTank || hero.Class == ClassPaladin {
@@ -118,17 +114,30 @@ func (m *Model) attemptFlee() {
 					}
 					return s
 				}
-				return score(fallen[i]) > score(fallen[j])
+				return score(downed[i]) > score(downed[j])
 			})
 
 			rescuedCount := 0
-			for i, hero := range fallen {
+			for i, hero := range downed {
 				if i < carryCapacity {
-					hero.HP = 1 // Тело спасено, ждёт службы в Храме
-					rescuedCount++
+					// Проверка 80% / 20%: донесут ли тяжелораненого бойца сквозь хаос отступления
+					if rng.Intn(100) < 80 {
+						hero.HP = 0
+						hero.IsDowned = true // Тело спасено, ждет помощи в Храме
+						rescuedCount++
+					} else {
+						// 20% неудача при выносе
+						hero.IsDead = true
+						hero.LostInAbyss = true
+						hero.CauseOfDeath = T(m.Lang, "combat.log.evac_failed")
+						m.recordFallenHero(hero)
+						m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.evac_drop", hero.DisplayName(m.Lang))))
+					}
 				} else {
+					// Не хватило свободных рук
+					hero.IsDead = true
+					hero.LostInAbyss = true
 					hero.CauseOfDeath = T(m.Lang, "combat.log.left_in_abyss")
-					hero.LostInAbyss = true // Тело безвозвратно потеряно в Бездне
 					m.recordFallenHero(hero)
 				}
 			}
@@ -136,8 +145,8 @@ func (m *Model) attemptFlee() {
 			if rescuedCount > 0 {
 				m.addLog(altarStyle.Render(T(m.Lang, "combat.log.evacuation", rescuedCount)))
 			}
-			if len(fallen) > rescuedCount {
-				m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.left_behind", len(fallen)-rescuedCount)))
+			if len(downed) > rescuedCount {
+				m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.left_behind", len(downed)-rescuedCount)))
 			}
 		}
 
@@ -150,7 +159,7 @@ func (m *Model) attemptFlee() {
 		m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.flee_fail")))
 
 		for _, h := range m.Party {
-			if !h.IsDead {
+			if !h.IsDead && !h.IsDowned {
 				chipDamage := int(float64(h.HP) * 0.20)
 				if chipDamage < 2 {
 					chipDamage = 2
@@ -161,8 +170,15 @@ func (m *Model) attemptFlee() {
 
 				if h.HP <= 0 {
 					h.HP = 0
+					h.IsDowned = true
+					h.IsGuarding = false
+					h.IsBerserk = false
+					h.IsStealthed = false
+					h.IsCharged = false
+					h.IsAura = false
 					h.CauseOfDeath = T(m.Lang, "combat.log.death_flee")
-					m.recordFallenHero(h)
+					verb := TVerb(m.Lang, h.Gender, "рухнул без сознания", "рухнула без сознания", "fell unconscious")
+					m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.hero_downed", h.DisplayName(m.Lang), verb, T(m.Lang, "combat.log.flee_pursuit"))))
 				}
 			}
 		}

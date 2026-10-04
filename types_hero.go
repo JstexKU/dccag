@@ -193,35 +193,37 @@ type HeroHeroics struct {
 }
 
 type Hero struct {
-	NameKey      string
-	Race         RaceType
-	Gender       Gender
-	TitleKey     string
-	Class        HeroClass
-	Role         CombatRole
-	Level        int
-	Exp          int
-	MaxHP        int
-	HP           int
-	MaxMP        int
-	MP           int
-	Stress       int
-	Affliction   AfflictionType
-	BaseAtk      int
-	BaseDef      int
-	Speed        int
-	IsDead       bool
-	LostInAbyss  bool
-	IsGuarding   bool
-	IsBerserk    bool
-	IsStealthed  bool
-	IsCharged    bool
-	IsAura       bool
-	CauseOfDeath string
-	SkillNameKey string
-	SkillCost    int
-	Mutations    HeroMutations
-	Feats        HeroHeroics
+	NameKey        string
+	Race           RaceType
+	Gender         Gender
+	TitleKey       string
+	Class          HeroClass
+	Role           CombatRole
+	Level          int
+	Exp            int
+	MaxHP          int
+	HP             int
+	MaxMP          int
+	MP             int
+	Stress         int
+	Affliction     AfflictionType
+	BaseAtk        int
+	BaseDef        int
+	Speed          int
+	IsDead         bool
+	IsDowned       bool // Без сознания / при смерти (ожидает выноса или помощи Клирика)
+	LostInAbyss    bool
+	IsGuarding     bool
+	IsBerserk      bool
+	IsStealthed    bool
+	IsCharged      bool
+	IsAura         bool
+	ReviveCooldown int // Шагов/этажей до повторного боевого поднятия на ноги (для Клирика)
+	CauseOfDeath   string
+	SkillNameKey   string
+	SkillCost      int
+	Mutations      HeroMutations
+	Feats          HeroHeroics
 
 	Weapon *EquipItem
 	Head   *EquipItem
@@ -420,23 +422,13 @@ func (h *Hero) HasFreePotionSlot(maxSlots int) bool {
 }
 
 func (h *Hero) AddTreasure()       { h.Feats.TreasureFound++ }
-
 func (h *Hero) RevealSecret()      { h.Feats.SecretsRevealed++ }
-
 func (h *Hero) AddBlock()          { h.Feats.Blocks++ }
-
 func (h *Hero) PullAggro()         { h.Feats.AggroPulled++ }
-
 func (h *Hero) AddCriticalStrike() { h.Feats.CriticalStrikes++ }
-
 func (h *Hero) AddBackstab()       { h.Feats.Backstabs++ }
-
 func (h *Hero) StealLoot()         { h.Feats.LootStolen++ }
-
 func (h *Hero) AddCCDuration()     { h.Feats.CCDuration++ }
-
 func (h *Hero) AddManaBurst()      { h.Feats.ManaBursts++ }
-
 func (h *Hero) AddRevive()         { h.Feats.Revives++ }
-
 func (h *Hero) RemoveDot()         { h.Feats.DoTsRemoved++ }

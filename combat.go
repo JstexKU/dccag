@@ -9,7 +9,7 @@ func (m *Model) SelectTarget() *Hero {
 	totalWeight := 0
 
 	for _, h := range m.Party {
-		if !h.IsDead {
+		if !h.IsDead && !h.IsDowned {
 			w := h.Role.AggroWeight
 			if h.HP < h.MaxHP/3 {
 				w += 25
@@ -41,7 +41,7 @@ func (m *Model) SelectTarget() *Hero {
 func (m *Model) ApplyDamage(target *Hero, rawDmg int) (actual *Hero, finalDmg int, guarded bool) {
 	if target.Class != ClassTank && target.Class != ClassPaladin {
 		for _, guard := range m.Party {
-			if !guard.IsDead && guard.Role.CanGuard && guard != target && guard.HP > guard.MaxHP/4 {
+			if !guard.IsDead && !guard.IsDowned && guard.Role.CanGuard && guard != target && guard.HP > guard.MaxHP/4 {
 				chance := 30
 				mitigation := 0.75
 				if guard.Class == ClassTank {
@@ -83,7 +83,7 @@ func (m *Model) startCombat(pos Point, pack *MonsterPack) {
 	}
 
 	for _, h := range m.Party {
-		if !h.IsDead {
+		if !h.IsDead && !h.IsDowned {
 			h.IsGuarding = false
 			h.IsBerserk = false
 			h.IsStealthed = false

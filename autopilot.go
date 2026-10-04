@@ -13,7 +13,7 @@ func (m *Model) evaluateRetreat() RetreatReason {
 	totalPotions := 0
 	totalStress := 0
 	for _, h := range m.Party {
-		if h.IsDead {
+		if h.IsDead || h.IsDowned {
 			continue
 		}
 		living++
@@ -47,7 +47,7 @@ func (m *Model) evaluateHealingUrgency() HealingUrgency {
 	totalStress := 0
 
 	for _, h := range m.Party {
-		if h.IsDead {
+		if h.IsDead || h.IsDowned {
 			continue
 		}
 		living++
@@ -162,7 +162,7 @@ func (m *Model) isMonsterNearby() bool {
 
 func (m *Model) hasUndergearedHeroes() bool {
 	for _, h := range m.Party {
-		if h.IsDead {
+		if h.IsDead || h.IsDowned {
 			continue
 		}
 		if h.Weapon == nil || h.Head == nil || h.Chest == nil || h.Legs == nil {

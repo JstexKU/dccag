@@ -19,7 +19,7 @@ func (m *Model) executeCombatTurn() {
 		return
 	}
 
-	// 2. Поражение
+	// 2. Поражение (все погибли или лежат без сознания)
 	if m.isPartyWiped() {
 		m.State = StateDefeat
 		m.Combat = nil
@@ -61,7 +61,7 @@ func (m *Model) executeCombatTurn() {
 
 	if current.Type == CombatantHero {
 		h := current.HeroRef
-		if h.IsDead {
+		if h.IsDead || h.IsDowned {
 			return
 		}
 
@@ -136,7 +136,7 @@ func (m *Model) executeCombatTurn() {
 		if useSkills && h.Class == ClassPaladin {
 			var woundedAlly *Hero
 			for _, ally := range m.Party {
-				if !ally.IsDead && float64(ally.HP)/float64(ally.MaxHP) <= 0.45 {
+				if !ally.IsDead && !ally.IsDowned && float64(ally.HP)/float64(ally.MaxHP) <= 0.45 {
 					woundedAlly = ally
 					break
 				}
@@ -277,9 +277,32 @@ func (m *Model) executeCombatTurn() {
 
 		// 7. КЛИРИК
 		if useSkills && h.Class == ClassCleric {
+			// А. Приоритет: поднятие на ноги союзника без сознания
+			var downedAlly *Hero
+			for _, ally := range m.Party {
+				if ally.IsDowned && !ally.IsDead {
+					downedAlly = ally
+					break
+				}
+			}
+
+			if downedAlly != nil && h.MP >= (skillCost+4) && h.ReviveCooldown <= 0 {
+				h.MP -= (skillCost + 4)
+				h.ReviveCooldown = 3
+				downedAlly.IsDowned = false
+				reviveHP := max(12, downedAlly.MaxHP/4)
+				downedAlly.HP = reviveHP
+				downedAlly.Stress = max(0, downedAlly.Stress-20)
+				h.AddRevive()
+				m.checkAndAwardTitle(h)
+				m.addLog(healStyle.Render(T(m.Lang, "combat.log.cleric_revive", hName, downedAlly.DisplayName(m.Lang), reviveHP)))
+				return
+			}
+
+			// Б. Обычное исцеление раненых
 			var criticalAlly *Hero
 			for _, ally := range m.Party {
-				if !ally.IsDead && float64(ally.HP)/float64(ally.MaxHP) <= 0.45 {
+				if !ally.IsDead && !ally.IsDowned && float64(ally.HP)/float64(ally.MaxHP) <= 0.45 {
 					criticalAlly = ally
 					break
 				}
@@ -322,7 +345,7 @@ func (m *Model) executeCombatTurn() {
 		if useSkills && h.Class == ClassBard {
 			hasHighStress := false
 			for _, ally := range m.Party {
-				if !ally.IsDead && ally.Stress >= 50 {
+				if !ally.IsDead && !ally.IsDowned && ally.Stress >= 50 {
 					hasHighStress = true
 					break
 				}
@@ -331,7 +354,7 @@ func (m *Model) executeCombatTurn() {
 			if hasHighStress && h.MP >= skillCost {
 				h.MP -= skillCost
 				for _, ally := range m.Party {
-					if !ally.IsDead {
+					if !ally.IsDead && !ally.IsDowned {
 						ally.Stress = max(0, ally.Stress-15)
 						if ally.Stress < 60 {
 							ally.Affliction = AfflictionNone
@@ -424,7 +447,7 @@ func (m *Model) executeCombatTurn() {
 			if h.HP > 15 && h.MP >= skillCost {
 				needMana := false
 				for _, ally := range m.Party {
-					if !ally.IsDead && ally != h && float64(ally.MP)/float64(ally.MaxMP) <= 0.30 {
+					if !ally.IsDead && !ally.IsDowned && ally != h && float64(ally.MP)/float64(ally.MaxMP) <= 0.30 {
 						needMana = true
 						break
 					}
@@ -434,7 +457,7 @@ func (m *Model) executeCombatTurn() {
 					h.MP -= skillCost
 					h.HP -= 6
 					for _, ally := range m.Party {
-						if !ally.IsDead && ally != h {
+						if !ally.IsDead && !ally.IsDowned && ally != h {
 							ally.MP = min(ally.MaxMP, ally.MP+12)
 						}
 					}
@@ -511,7 +534,7 @@ func (m *Model) executeCombatTurn() {
 			if h.MP >= 4 {
 				h.MP -= 4
 				for _, ally := range m.Party {
-					if !ally.IsDead && ally.Stress > 0 {
+					if !ally.IsDead && !ally.IsDowned && ally.Stress > 0 {
 						ally.Stress = max(0, ally.Stress-6)
 						h.RemoveDot()
 						m.addLog(fountStyle.Render(T(m.Lang, "combat.log.blessing", hName, ally.DisplayName(m.Lang))))
@@ -564,7 +587,7 @@ func (m *Model) executeCombatTurn() {
 			if h.MP >= 3 {
 				h.MP -= 3
 				for _, ally := range m.Party {
-					if !ally.IsDead && (ally.Class == ClassMage || ally.Class == ClassCleric || ally.Class == ClassWarlock) && ally.MP < ally.MaxMP {
+					if !ally.IsDead && !ally.IsDowned && (ally.Class == ClassMage || ally.Class == ClassCleric || ally.Class == ClassWarlock) && ally.MP < ally.MaxMP {
 						ally.MP = min(ally.MaxMP, ally.MP+5)
 						m.addLog(potionStyle.Render(T(m.Lang, "combat.log.bard_minor", hName, ally.DisplayName(m.Lang))))
 						break
@@ -714,13 +737,19 @@ func (m *Model) executeCombatTurn() {
 
 		if actualHero.HP <= 0 {
 			actualHero.HP = 0
+			actualHero.IsDowned = true
+			actualHero.IsGuarding = false
+			actualHero.IsBerserk = false
+			actualHero.IsStealthed = false
+			actualHero.IsCharged = false
+			actualHero.IsAura = false
 			actualHero.CauseOfDeath = T(m.Lang, "combat.log.death_cause_mob", mobDisplayName)
-			m.recordFallenHero(actualHero)
-			verb := TVerb(m.Lang, actualHero.Gender, "пал", "пала", "fell")
-			m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.hero_slain", actualHeroName, verb, mobDisplayName)))
+
+			verb := TVerb(m.Lang, actualHero.Gender, "рухнул без сознания", "рухнула без сознания", "fell unconscious")
+			m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.hero_downed", actualHeroName, verb, mobDisplayName)))
 			for _, ally := range m.Party {
-				if !ally.IsDead {
-					m.addStress(ally, 25)
+				if !ally.IsDead && !ally.IsDowned {
+					m.addStress(ally, 18)
 				}
 			}
 		} else {

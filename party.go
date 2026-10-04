@@ -6,7 +6,7 @@ func (m *Model) currentBagCapacity() int {
 
 func (m *Model) isPartyWiped() bool {
 	for _, h := range m.Party {
-		if !h.IsDead {
+		if !h.IsDead && !h.IsDowned {
 			return false
 		}
 	}
@@ -16,7 +16,7 @@ func (m *Model) isPartyWiped() bool {
 func (m *Model) getRandomLivingHero() *Hero {
 	var living []*Hero
 	for _, h := range m.Party {
-		if !h.IsDead {
+		if !h.IsDead && !h.IsDowned {
 			living = append(living, h)
 		}
 	}
@@ -27,7 +27,7 @@ func (m *Model) getRandomLivingHero() *Hero {
 }
 
 func (m *Model) addStress(h *Hero, amt int) {
-	if h.IsDead {
+	if h.IsDead || h.IsDowned {
 		return
 	}
 	if m.Relic != nil && m.Relic.StressRes > 0 {
@@ -50,7 +50,7 @@ func (m *Model) addStress(h *Hero, amt int) {
 	if amt >= 15 {
 		splash := amt / 2
 		for _, ally := range m.Party {
-			if !ally.IsDead && ally != h {
+			if !ally.IsDead && !ally.IsDowned && ally != h {
 				ally.Stress += splash
 			}
 		}
@@ -70,7 +70,7 @@ func (m *Model) addStress(h *Hero, amt int) {
 			verb2 := TVerb(m.Lang, h.Gender, "обрел", "обрела", "gained")
 			m.addLog(healStyle.Render(T(m.Lang, "dungeon.log.virtue", h.FullName(m.Lang), verb1, verb2)))
 			for _, ally := range m.Party {
-				if !ally.IsDead {
+				if !ally.IsDead && !ally.IsDowned {
 					ally.Stress = max(0, ally.Stress-20)
 				}
 			}
@@ -87,11 +87,16 @@ func (m *Model) addStress(h *Hero, amt int) {
 		h.Stress = 200
 		if h.HP <= 1 {
 			h.HP = 0
+			h.IsDowned = true
+			h.IsGuarding = false
+			h.IsBerserk = false
+			h.IsStealthed = false
+			h.IsCharged = false
+			h.IsAura = false
 			h.CauseOfDeath = T(m.Lang, "dungeon.death.heart_attack", T(m.Lang, "affliction."+string(h.Affliction)))
-			m.recordFallenHero(h)
 			m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.heart_attack_death", h.DisplayName(m.Lang))))
 			for _, ally := range m.Party {
-				if !ally.IsDead {
+				if !ally.IsDead && !ally.IsDowned {
 					ally.Stress += 35
 				}
 			}
@@ -103,7 +108,7 @@ func (m *Model) addStress(h *Hero, amt int) {
 		verb := TVerb(m.Lang, h.Gender, "схватился", "схватилась", "clutched")
 		m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.heart_attack", h.FullName(m.Lang), verb)))
 		for _, ally := range m.Party {
-			if !ally.IsDead && ally != h {
+			if !ally.IsDead && !ally.IsDowned && ally != h {
 				ally.Stress += 20
 			}
 		}
@@ -111,7 +116,7 @@ func (m *Model) addStress(h *Hero, amt int) {
 }
 
 func (m *Model) checkAndDrinkPotions(h *Hero) {
-	if h.IsDead || len(h.Potions) == 0 || m.InTown {
+	if h.IsDead || h.IsDowned || len(h.Potions) == 0 || m.InTown {
 		return
 	}
 	if m.ManualMode && m.Combat != nil {
@@ -276,6 +281,7 @@ func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
 		SkillNameKey: skillNameKey,
 		SkillCost:    skillCost,
 		IsDead:       false,
+		IsDowned:     false,
 		Potions:      []*Potion{},
 	}
 
@@ -301,7 +307,7 @@ func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
 func (m *Model) distributePartyExp(expAmt int) {
 	var living []*Hero
 	for _, h := range m.Party {
-		if !h.IsDead {
+		if !h.IsDead && !h.IsDowned {
 			living = append(living, h)
 		}
 	}
@@ -333,7 +339,7 @@ func (m *Model) equipOrBag(item EquipItem) {
 	maxDiff := -99999
 
 	for _, h := range m.Party {
-		if h.IsDead {
+		if h.IsDead || h.IsDowned {
 			continue
 		}
 		if item.AllowedClass != "" && item.AllowedClass != h.Class {
@@ -356,8 +362,6 @@ func (m *Model) equipOrBag(item EquipItem) {
 	if bestHero != nil && maxDiff > 0 {
 		oldItem := bestHero.GetItemInSlot(item.Slot)
 		if oldItem != nil {
-			// При смене экипировки старый предмет идёт в мешок.
-			// Если мешок полон — старый предмет теряется (не кладём сверх лимита).
 			if len(m.Bag) < m.currentBagCapacity() {
 				m.Bag = append(m.Bag, *oldItem)
 			} else {
@@ -371,7 +375,6 @@ func (m *Model) equipOrBag(item EquipItem) {
 		m.addLog(healStyle.Render(T(m.Lang, "dungeon.log.equip_swap",
 			bestHero.DisplayName(m.Lang), verb, slotName, newItem.DisplayName(m.Lang), newItem.TotalStat())))
 	} else {
-		// Страховка: не класть в переполненный мешок.
 		if len(m.Bag) >= m.currentBagCapacity() {
 			m.addLog(subtleStyle.Render(T(m.Lang, "dungeon.log.bag_full", item.DisplayName(m.Lang))))
 			return
@@ -390,6 +393,7 @@ func (m *Model) recordFallenHero(h *Hero) {
 	})
 
 	h.IsDead = true
+	h.IsDowned = false
 	h.IsGuarding = false
 	h.IsBerserk = false
 	h.IsStealthed = false
@@ -404,7 +408,7 @@ func (m *Model) recordFallenHero(h *Hero) {
 	if m.Relic != nil && m.Relic.MartyrFury {
 		m.addLog(fireStyle.Render(T(m.Lang, "dungeon.log.martyr_crown")))
 		for _, ally := range m.Party {
-			if !ally.IsDead {
+			if !ally.IsDead && !ally.IsDowned {
 				ally.BaseAtk += 4
 			}
 		}
