@@ -748,9 +748,9 @@ var dictRU = map[string]string{
 	"stats.survivors_header":    "ВЫЖИВШИЕ БОЙЦЫ",
 	"stats.fallen_heroes":       "КНИГА ПАМЯТИ (ПАВШИЕ)",
 	"stats.no_fallen":           "Ни один боец не погиб в этом походе.",
-	"stats.revived_heroes":      "ВОСКРЕШЕННЫЕ ГЕРОИ",
-	"stats.no_revived":          "Ни один боец пока не воскрешался в Храме.",
-	"ui.revived":                "Воскрешён в Храме",
+	"stats.saved_heroes":        "СПАСЁННЫЕ И ИСЦЕЛЁННЫЕ БОЙЦЫ",
+	"stats.no_saved":            "Ни один боец пока не проходил стабилизацию в Храме.",
+	"ui.stabilized":             "Исцелён в Храме",
 	"stats.militia_tier":        "Ополчение столицы",
 	"armory.title":              "═══ АРСЕНАЛ ОТРЯДА И АЛХИМИЧЕСКИЕ МУТАЦИИ",
 
@@ -1049,4 +1049,3 @@ var dictRU = map[string]string{
 	"ctl.bar.potion":  "🧪 %s: %s | [←/→] Кому: %s | [Esc] Отмена",
 	"ctl.bar.wait":    "⏳ Ходят противники… | [F] Побег | [←/→] Цель | [M] Авто | [Q] Выход",
 }
-

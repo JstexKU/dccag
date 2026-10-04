@@ -748,9 +748,9 @@ var dictEN = map[string]string{
 	"stats.survivors_header":    "SURVIVING HEROES",
 	"stats.fallen_heroes":       "MEMORIAL BOOK (FALLEN)",
 	"stats.no_fallen":           "No casualties. All heroes stand tall!",
-	"stats.revived_heroes":      "REVIVED HEROES",
-	"stats.no_revived":          "No heroes have been revived at the Temple yet.",
-	"ui.revived":                "Revived at Temple",
+	"stats.saved_heroes":        "RESCUED & STABILIZED HEROES",
+	"stats.no_saved":            "No heroes have required stabilization at the Temple yet.",
+	"ui.stabilized":             "Stabilized at Temple",
 	"stats.militia_tier":        "Capital militia",
 	"armory.title":              "═══ PARTY ARMORY AND ALCHEMICAL MUTATIONS",
 
@@ -1049,4 +1049,3 @@ var dictEN = map[string]string{
 	"ctl.bar.potion":  "🧪 %s: %s | [←/→] Give to: %s | [Esc] Cancel",
 	"ctl.bar.wait":    "⏳ Enemies are acting… | [F] Flee | [←/→] Target | [M] Auto | [Q] Quit",
 }
-

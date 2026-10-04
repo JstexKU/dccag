@@ -39,7 +39,7 @@ func (m Model) renderMenuScreen() string {
 			`  [═══════════════]           /════════\  |___|       [═══════════════]  `,
 		}
 		sb.WriteString(townArtStyle.Render(strings.Join(castleLines, "\n")) + "\n")
-		sb.WriteString(lipgloss.NewStyle().Align(lipgloss.Center).Render(titleStyle.Render("       Dungeon Crawler Console Auto Game (dccag) " + displayVersion())) + "\n\n")
+		sb.WriteString(lipgloss.NewStyle().Align(lipgloss.Center).Render(titleStyle.Render("       Dungeon Crawler Console Auto Game (dccag) "+displayVersion())) + "\n\n")
 
 		var textBlock string
 		if m.Lang == LangEN {
@@ -172,12 +172,13 @@ func (m Model) renderStatsScreen(title string, titleColor lipgloss.Color) string
 		T(m.Lang, "stats.upgrades_forged"), m.Stats.UpgradesForged,
 		T(m.Lang, "stats.chests_opened"), m.Stats.ChestsOpened))
 
-	// Динамическая ширина под имена бойцов: от 22 до 36 символов вместо жестких 16
-	maxNameW := max(22, min(36, m.TermWidth-55))
+	// Безопасная ширина под имена бойцов без вылезания за границы
+	boxInnerW := max(40, m.TermWidth-8)
+	maxNameW := max(20, min(32, boxInnerW-50))
 
 	sb.WriteString(lipgloss.NewStyle().Bold(true).Render(T(m.Lang, "stats.survivors_header") + ":\n"))
 	for _, h := range m.Party {
-		if !h.IsDead {
+		if !h.IsDead && !h.IsDowned {
 			heroName := h.FullName(m.Lang)
 			if h.TitleKey != "" {
 				heroName = titleStyle.Render(heroName)
@@ -191,19 +192,19 @@ func (m Model) renderStatsScreen(title string, titleColor lipgloss.Color) string
 	}
 	sb.WriteString("\n")
 
-	// Разделяем павших навсегда и воскрешённых
+	// Разделяем павших навсегда и спасённых/исцелённых
 	var deadForever []FallenHeroRecord
-	var revivedList []FallenHeroRecord
+	var savedList []FallenHeroRecord
 
 	for _, f := range m.Stats.FallenHeroes {
 		if f.Revived {
-			revivedList = append(revivedList, f)
+			savedList = append(savedList, f)
 		} else {
 			deadForever = append(deadForever, f)
 		}
 	}
 
-	// 1. Павшие навсегда
+	// 1. Павшие навсегда (оставленные в Бездне)
 	sb.WriteString(lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("☠️ %s (%d):\n", T(m.Lang, "stats.fallen_heroes"), len(deadForever))))
 	if len(deadForever) == 0 {
 		sb.WriteString(subtleStyle.Render(" " + T(m.Lang, "stats.no_fallen") + "\n"))
@@ -217,16 +218,16 @@ func (m Model) renderStatsScreen(title string, titleColor lipgloss.Color) string
 	}
 	sb.WriteString("\n")
 
-	// 2. Воскрешённые герои
-	sb.WriteString(lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("✨ %s (%d):\n", T(m.Lang, "stats.revived_heroes"), len(revivedList))))
-	if len(revivedList) == 0 {
-		sb.WriteString(subtleStyle.Render(" " + T(m.Lang, "stats.no_revived") + "\n"))
+	// 2. Спасённые и стабилизированные
+	sb.WriteString(lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("✨ %s (%d):\n", T(m.Lang, "stats.saved_heroes"), len(savedList))))
+	if len(savedList) == 0 {
+		sb.WriteString(subtleStyle.Render(" " + T(m.Lang, "stats.no_saved") + "\n"))
 	} else {
-		for _, f := range revivedList {
+		for _, f := range savedList {
 			clsStr := TranslateEnum(m.Lang, "class", string(f.Class)+".short")
 			sb.WriteString(fmt.Sprintf(" ✨ %s (%s) | %s:%d | %s\n",
 				healStyle.Render(padRight(shortenItemName(f.FullName, maxNameW), maxNameW)),
-				clsStr, T(m.Lang, "ui.floor"), f.Floor, subtleStyle.Render(T(m.Lang, "ui.revived"))))
+				clsStr, T(m.Lang, "ui.floor"), f.Floor, subtleStyle.Render(T(m.Lang, "ui.stabilized"))))
 		}
 	}
 
@@ -250,7 +251,11 @@ func (m Model) renderStatsScreen(title string, titleColor lipgloss.Color) string
 	endIdx := min(len(lines), m.StatsScroll+maxVisibleLines)
 	visibleLines := lines[m.StatsScroll:endIdx]
 
-	box := statsBoxStyle.Width(max(40, m.TermWidth-4)).Render(strings.Join(visibleLines, "\n"))
+	box := statsBoxStyle.
+		Width(max(40, m.TermWidth-4)).
+		Height(maxVisibleLines).
+		Render(strings.Join(visibleLines, "\n"))
+
 	return lipgloss.Place(m.TermWidth, m.TermHeight, lipgloss.Center, lipgloss.Center, box)
 }
 
