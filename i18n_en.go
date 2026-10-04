@@ -2,35 +2,16 @@ package main
 
 var dictEN = map[string]string{
 	// --- Main UI & Buttons ---
-	"ui.too_small":       "Terminal window is too small! Please enlarge (min 60x20).",
-	"ui.press_start":     "Embark immediately",
 	"ui.quit":            "Quit",
 	"ui.floor":           "Floor",
-	"ui.gold":            "G",
 	"ui.bag":             "Backpack",
-	"ui.contract":        "Contract",
 	"ui.dead":            "DEAD",
 	"ui.alive":           "ALIVE",
-	"ui.potions_short":   "Potions",
-	"ui.potions_belt":    "Potion Belt",
-	"ui.btn_stats":       "Stats",
-	"ui.btn_armory":      "Armory",
-	"ui.btn_codex":       "Codex",
 	"ui.btn_restart":     "Restart",
 	"ui.btn_back":        "Back",
-	"ui.speed":           "Speed",
-	"ui.speed_short":     "Spd",
-	"ui.pause":           "Pause",
-	"ui.logs":            "Logs",
-	"ui.flee":            "Flee",
-	"ui.tabs":            "Tabs [I]",
-	"ui.glory":           "Glory",
 	"ui.scroll":          "Scroll",
-	"ui.total":           "Total",
 	"ui.none":            "None",
-	"ui.slots":           "Slots",
 	"ui.slots_short":     "slots",
-	"ui.mutations":       "Mutations",
 	"ui.level_short":     "Lvl",
 	"ui.atk_short":       "Atk",
 	"ui.def_short":       "Def",
@@ -40,20 +21,14 @@ var dictEN = map[string]string{
 	"ui.no_relic":        "No relic found",
 	"ui.scouting":        "AREA RECON",
 	"ui.treasury":        "Treasury",
-	"ui.hazard":          "Hazard",
 	"ui.turn_in":         "TURN IN",
 	"ui.chronicles":      "EXPEDITION CHRONICLES",
-	"ui.archive":         "Archive",
 
 	// Menu & Defeat
 	"defeat.title":         "DEFEAT: THE PARTY HAS FALLEN INTO THE ABYSS...",
 	"defeat.restart_timer": "⏳ Automatic restart in: %d sec...",
 
 	// Statuses
-	"status.guard":   "[BLOCK]",
-	"status.rage":    "RAGE",
-	"status.stealth": "[STEALTH]",
-	"status.aura":    "[AURA]",
 
 	// --- Races ---
 	"race.human.name":    "Human",
@@ -561,7 +536,6 @@ var dictEN = map[string]string{
 	"town.market":     "Market Square",
 	"town.magistrate": "Town Magistrate",
 	"town.hub_title":  "═══ CAPITAL DISTRICT & SERVICES ═══",
-	"town.log_title":  "PARTY ACTIONS IN TOWN",
 	"town.camp":       "Camp",
 	"town.management": "CAPITAL MANAGEMENT",
 	"town.tax_active": "Treasury quota active.",
@@ -569,8 +543,6 @@ var dictEN = map[string]string{
 	"town.tannery":    "Tannery Workshop",
 	"town.church":     "Temple",
 	"town.tavern":     "Tavern",
-	"town.guild":      "Guild",
-	"town.alchemist":  "Alchemist Lab",
 
 	"town.smithy.1": "Dragon's Breath",
 	"town.smithy.2": "Blazing Forge",
@@ -649,7 +621,6 @@ var dictEN = map[string]string{
 	"town.log.bought_upgrade_hist": "%s purchased upgraded item [%s] (-%dG)",
 
 	// --- Combat Logs ---
-	"combat.barrel":              "POWDER",
 	"combat.enemy_pack":          "ENEMY PACK",
 	"combat.log.start":           "⚔️ COMBAT! Enemy pack (%d beasts)!",
 	"combat.log.pack_defeated":   "💀 Enemy pack defeated!",
@@ -728,7 +699,6 @@ var dictEN = map[string]string{
 	"dungeon.log.equip_swap":            "✨ %s %s [%s] for [%s] (Power: %d)!",
 	"dungeon.log.bag_stored":            "📦 %s placed into backpack.",
 	"dungeon.log.martyr_crown":          "👑 [Crown] Fallen ally's rage empowered the living (+4 Atk)!",
-	"dungeon.log.rest_tick":             "🌿 [Rest] In the quiet dungeon, the party caught their breath (+1 HP/MP, -1 Stress).",
 	"dungeon.log.collision_break":       "⚠️ [Collision] Emergency breakout into an open hall.",
 	"dungeon.log.floor_cleared":         "Floor %d cleared! Descending deeper.",
 	"dungeon.log.floor_cleared_boss":    "🌟 FLOOR %d CLEARED! The Abyss beckons...",
@@ -775,9 +745,6 @@ var dictEN = map[string]string{
 
 	// --- Full Expanded DCCAG Codex ---
 	"codex.header":            "═══ DCCAG KNOWLEDGE BASE & CODEX [I] ═══",
-	"codex.growth_label":      "Growth",
-	"codex.block_stat":        "Block",
-	"codex.crit_stat":         "Crit",
 	"codex.mob_block":         "(Block 25%)",
 	"codex.mob_stress_10":     "(+10 Str)",
 	"codex.mob_stress_18":     "(+18 Str)",
@@ -881,13 +848,6 @@ var dictEN = map[string]string{
 	"codex.sec.4":          "6. EQUIPMENT TIERS & WORKSHOPS:",
 	"codex.forge_note":     "[Blacksmith - Metals: Iron x1 | Steel x2 | Mithril x3 | Adamant x4]",
 	"codex.tanner_note":    "[Tannery - Organics: Raw x1 | Boiled x2 | Basilisk x3 | Dragon x4]",
-	"codex.forge_header":   " [BLACKSMITH: TANK, WARRIOR, PALADIN - Heavy Plate & Steel]",
-	"codex.tanner_header":  " [TANNER: ROGUE, RANGER, MONK, MAGE, WARLOCK, BARD - Leather & Cloth]",
-	"codex.item.tank_w":    "Tank Weapon",
-	"codex.item.tank_a":    "Tank Armor",
-	"codex.item.warr_w":    "Warr Weapon",
-	"codex.item.warr_a":    "Warr Armor",
-	"codex.item.mage_robe": "Mage Robe",
 
 	"codex.sec.5": "7. LEVEL PROGRESSION & CLASS EXP (XP):",
 	"codex.xp.1":  " • XP from defeated enemies is shared equally among all living heroes.",
@@ -898,11 +858,6 @@ var dictEN = map[string]string{
 	"codex.xp.6":  " • Cleric/Bard Growth: +5-6 HP, +6 MP, +1 Atk.",
 
 	"codex.sec.6":            "8. ALCHEMICAL MUTATIONS & PRIORS:",
-	"codex.base_260g":        "(Base 280G)",
-	"codex.base_220g":        "(Base 240G)",
-	"codex.base_210g":        "(Base 230G)",
-	"codex.base_200g":        "(Base 220G)",
-	"codex.base_240g":        "(Base 260G)",
 	"codex.mut_chimera_desc": "+8 HP, +5 MP, +1 Atk, +1 Def (Universal)",
 	"codex.mut_fury_desc":    "+3 Atk, +2 HP (Priority: Rogue, Warrior, Mage)",
 	"codex.mut_titan_desc":   "+20 MaxHP (Emergency survival priority)",

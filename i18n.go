@@ -4,6 +4,13 @@ import (
 	"fmt"
 )
 
+type Language string
+
+const (
+	LangRU Language = "ru"
+	LangEN Language = "en"
+)
+
 func T(lang Language, key string, args ...any) string {
 	var dict map[string]string
 	if lang == LangEN {

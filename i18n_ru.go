@@ -2,35 +2,16 @@ package main
 
 var dictRU = map[string]string{
 	// --- Главный интерфейс и кнопки ---
-	"ui.too_small":       "Терминал слишком мал! Увеличьте окно (минимум 60x20).",
-	"ui.press_start":     "Начать экспедицию немедленно",
 	"ui.quit":            "Выход",
 	"ui.floor":           "Этаж",
-	"ui.gold":            "G",
 	"ui.bag":             "Рюкзак",
-	"ui.contract":        "Контракт",
 	"ui.dead":            "ПАЛ",
 	"ui.alive":           "В СТРОЮ",
-	"ui.potions_short":   "Зелья",
-	"ui.potions_belt":    "Пояс зелий",
-	"ui.btn_stats":       "Статистика",
-	"ui.btn_armory":      "Арсенал",
-	"ui.btn_codex":       "Кодекс",
 	"ui.btn_restart":     "Заново",
 	"ui.btn_back":        "Назад",
-	"ui.speed":           "Скор.",
-	"ui.speed_short":     "Скор",
-	"ui.pause":           "Пауза",
-	"ui.logs":            "Логи",
-	"ui.flee":            "Побег",
-	"ui.tabs":            "Вкладки [I]",
-	"ui.glory":           "Слава",
 	"ui.scroll":          "Прокрутка",
-	"ui.total":           "Итого",
 	"ui.none":            "Нет",
-	"ui.slots":           "Слотов",
 	"ui.slots_short":     "слотов",
-	"ui.mutations":       "Мутации",
 	"ui.level_short":     "Ур",
 	"ui.atk_short":       "Атк",
 	"ui.def_short":       "Защ",
@@ -40,20 +21,14 @@ var dictRU = map[string]string{
 	"ui.no_relic":        "Реликвия не найдена",
 	"ui.scouting":        "РАЗВЕДКА ТЕРРИТОРИИ",
 	"ui.treasury":        "Казна",
-	"ui.hazard":          "Опасность",
 	"ui.turn_in":         "СДАТЬ",
 	"ui.chronicles":      "ХРОНИКИ ЭКСПЕДИЦИИ",
-	"ui.archive":         "Архив",
 
 	// Меню и поражение
 	"defeat.title":         "ПОРАЖЕНИЕ: ВЕСЬ ОТРЯД ПАЛ ВО ТЬМЕ...",
 	"defeat.restart_timer": "⏳ Автоматический перезапуск через: %d сек...",
 
 	// Статусы
-	"status.guard":   "[БЛОК]",
-	"status.rage":    "ЯРОСТЬ",
-	"status.stealth": "[СКРЫТ]",
-	"status.aura":    "[АУРА]",
 
 	// --- Расы героев ---
 	"race.human.name":    "Человек",
@@ -561,7 +536,6 @@ var dictRU = map[string]string{
 	"town.market":     "Рыночная площадь",
 	"town.magistrate": "Магистрат Столицы",
 	"town.hub_title":  "═══ СТОЛИЧНЫЙ КВАРТАЛ И СЛУЖБЫ ═══",
-	"town.log_title":  "ЖУРНАЛ ДЕЙСТВИЙ ОТРЯДА В ГОРОДЕ",
 	"town.camp":       "Лагерь",
 	"town.management": "СТОЛИЧНОЕ УПРАВЛЕНИЕ",
 	"town.tax_active": "Квотирование казны активно.",
@@ -569,8 +543,6 @@ var dictRU = map[string]string{
 	"town.tannery":    "Мастерская кожевника",
 	"town.church":     "Храм",
 	"town.tavern":     "Таверна",
-	"town.guild":      "Гильдия",
-	"town.alchemist":  "Лаборатория алхимика",
 
 	"town.smithy.1": "Драконий Вздох",
 	"town.smithy.2": "Пылающий Горн",
@@ -649,7 +621,6 @@ var dictRU = map[string]string{
 	"town.log.bought_upgrade_hist": "%s купил улучшенный предмет [%s] (-%dG)",
 
 	// --- Логи боя ---
-	"combat.barrel":              "ПОРОХ",
 	"combat.enemy_pack":          "ВРАЖЕСКАЯ СТАЯ",
 	"combat.log.start":           "⚔️ СХВАТКА! Вражеский отряд (%d тварей)!",
 	"combat.log.pack_defeated":   "💀 Вражеский отряд повержен!",
@@ -728,7 +699,6 @@ var dictRU = map[string]string{
 	"dungeon.log.equip_swap":            "✨ %s %s [%s] на [%s] (Мощь: %d)!",
 	"dungeon.log.bag_stored":            "📦 %s сложен в сумку.",
 	"dungeon.log.martyr_crown":          "👑 [Корона] Ярость павшего усилила живых (+4 Atk)!",
-	"dungeon.log.rest_tick":             "🌿 [Привал] В тишине подземелья отряд немного передохнул (+1 HP/MP, -1 Стресс).",
 	"dungeon.log.collision_break":       "⚠️ [Коллизия] Экстренный прорыв к свободному залу.",
 	"dungeon.log.floor_cleared":         "Этаж %d пройден! Спуск глубже.",
 	"dungeon.log.floor_cleared_boss":    "🌟 ЭТАЖ %d ПРОЙДЕН! Бездна зовет...",
@@ -775,9 +745,6 @@ var dictRU = map[string]string{
 
 	// --- Полный расширенный Кодекс DCCAG ---
 	"codex.header":            "═══ КОДЕКС ЗНАНИЙ И БАЗА ДАННЫХ DCCAG [I] ═══",
-	"codex.growth_label":      "Рост",
-	"codex.block_stat":        "Блок",
-	"codex.crit_stat":         "Крит",
 	"codex.mob_block":         "(Блок 25%)",
 	"codex.mob_stress_10":     "(+10 Стр)",
 	"codex.mob_stress_18":     "(+18 Стр)",
@@ -881,13 +848,6 @@ var dictRU = map[string]string{
 	"codex.sec.4":          "6. ТАБЛИЦА СНАРЯЖЕНИЯ И МАСТЕРСКИЕ:",
 	"codex.forge_note":     "[Кузница - Металлы: Железн. x1 | Стальн. x2 | Мифрил. x3 | Адамант. x4]",
 	"codex.tanner_note":    "[Кожевник - Органика: Сыромятн. x1 | Варён. x2 | Василиск. x3 | Драконь. x4]",
-	"codex.forge_header":   " [КУЗНИЦА: ТАНК, ВОИН, ПАЛАДИН - Латы и сталь]",
-	"codex.tanner_header":  " [КОЖЕВНИК: РОГА, ЕГЕРЬ, МОНАХ, МАГ, ВАРЛОК, БАРД - Кожа и шёлк]",
-	"codex.item.tank_w":    "Танк оружие",
-	"codex.item.tank_a":    "Танк доспех",
-	"codex.item.warr_w":    "Воин оружие",
-	"codex.item.warr_a":    "Воин доспех",
-	"codex.item.mage_robe": "Маг мантия",
 
 	"codex.sec.5":  "7. ПРОГРЕССИЯ УРОВНЕЙ И КЛАССОВЫЙ ОПЫТ (XP):",
 	"codex.xp.1":   " • Опыт от убитых врагов делится поровну между всеми живыми героями.",
@@ -898,11 +858,6 @@ var dictRU = map[string]string{
 	"codex.xp.6":   " • Прирост Жреца/Барда: +5-6 HP, +6 MP, +1 Atk.",
 
 	"codex.sec.6":            "8. АЛХИМИЧЕСКИЕ МУТАЦИИ И ПРИОРИТЕТЫ:",
-	"codex.base_260g":        "(База 280G)",
-	"codex.base_220g":        "(База 240G)",
-	"codex.base_210g":        "(База 230G)",
-	"codex.base_200g":        "(База 220G)",
-	"codex.base_240g":        "(База 260G)",
 	"codex.mut_chimera_desc": "+8 HP, +5 MP, +1 Atk, +1 Def (Универсально)",
 	"codex.mut_fury_desc":    "+3 Atk, +2 HP (Приоритет: Рога, Воин, Маг)",
 	"codex.mut_titan_desc":   "+20 MaxHP (Экстренное спасение при ранениях)",
