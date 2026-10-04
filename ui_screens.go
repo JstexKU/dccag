@@ -142,14 +142,18 @@ func (m Model) renderStatsScreen(title string, titleColor lipgloss.Color) string
 	header := lipgloss.NewStyle().Foreground(titleColor).Bold(true).Render(title)
 	sb.WriteString(fmt.Sprintf("═══ %s ═══\n\n", header))
 
-	sb.WriteString(lipgloss.NewStyle().Bold(true).Render(T(m.Lang, "stats.legacy_header") + ":\n"))
-	sb.WriteString(fmt.Sprintf(" • %s: %s\n", T(m.Lang, "stats.legacy_treasury"), goldStyle.Render(fmt.Sprintf("%dG", int(float64(m.Gold)*LegacyTaxRate)))))
+	// 1. Наследие
+	sb.WriteString(lipgloss.NewStyle().Bold(true).Render(T(m.Lang, "stats.legacy_header") + ":"))
+	sb.WriteString("\n")
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n",
+		T(m.Lang, "stats.legacy_treasury"),
+		goldStyle.Render(fmt.Sprintf("%dG", int(float64(m.Gold)*LegacyTaxRate)))))
 	sb.WriteString(fmt.Sprintf(" • %s «%s»: %s.%d | %s «%s»: %s.%d\n",
 		T(m.Lang, "town.smithy"), T(m.Lang, m.TownEst.SmithyKey), T(m.Lang, "ui.level_short"), m.Legacy.SmithyLevel,
 		T(m.Lang, "town.tannery"), T(m.Lang, m.TownEst.TanneryKey), T(m.Lang, "ui.level_short"), m.Legacy.TanneryLevel))
 	sb.WriteString(fmt.Sprintf(" • %s «%s»: %s.%d | %s «%s»: %s.%d\n",
 		T(m.Lang, "town.church"), T(m.Lang, m.TownEst.ChurchKey), T(m.Lang, "ui.level_short"), m.Legacy.ChurchLevel,
-		T(m.Lang, "town.tavern"), T(m.Lang, m.TownEst.TavernKey), T(m.Lang, "ui.level_short"), m.Legacy.TanneryLevel))
+		T(m.Lang, "town.tavern"), T(m.Lang, m.TownEst.TavernKey), T(m.Lang, "ui.level_short"), m.Legacy.TavernLevel))
 
 	tier := militiaTierForInvestment(m.Legacy.TotalInvested)
 	militiaLine := fmt.Sprintf(" • %s: %s (%dG)",
@@ -162,7 +166,9 @@ func (m Model) renderStatsScreen(title string, titleColor lipgloss.Color) string
 	}
 	sb.WriteString(militiaLine + "\n\n")
 
-	sb.WriteString(lipgloss.NewStyle().Bold(true).Render(T(m.Lang, "stats.achievements_header") + ":\n"))
+	// 2. Достижения
+	sb.WriteString(lipgloss.NewStyle().Bold(true).Render(T(m.Lang, "stats.achievements_header") + ":"))
+	sb.WriteString("\n")
 	sb.WriteString(fmt.Sprintf(" • %s: %d | %s: %d | %s: %s\n",
 		T(m.Lang, "stats.floors_cleared"), m.Stats.FloorsCleared,
 		T(m.Lang, "stats.total_steps"), m.Stats.TotalSteps,
@@ -172,27 +178,23 @@ func (m Model) renderStatsScreen(title string, titleColor lipgloss.Color) string
 		T(m.Lang, "stats.upgrades_forged"), m.Stats.UpgradesForged,
 		T(m.Lang, "stats.chests_opened"), m.Stats.ChestsOpened))
 
-	// Безопасная ширина под имена бойцов без вылезания за границы
-	boxInnerW := max(40, m.TermWidth-8)
-	maxNameW := max(20, min(32, boxInnerW-50))
-
-	sb.WriteString(lipgloss.NewStyle().Bold(true).Render(T(m.Lang, "stats.survivors_header") + ":\n"))
+	// 3. Выжившие бойцы
+	sb.WriteString(lipgloss.NewStyle().Bold(true).Render(T(m.Lang, "stats.survivors_header") + ":"))
+	sb.WriteString("\n")
+	nameColWidth := 20
 	for _, h := range m.Party {
 		if !h.IsDead && !h.IsDowned {
-			heroName := h.FullName(m.Lang)
-			if h.TitleKey != "" {
-				heroName = titleStyle.Render(heroName)
-			}
+			rawName := shortenItemName(h.FullName(m.Lang), nameColWidth)
+			paddedName := padRight(rawName, nameColWidth)
 			raceStr := h.RaceName(m.Lang)
 			sb.WriteString(fmt.Sprintf(" • %s (%s %s %d) [%s] (Atk:%2d Def:%2d)\n",
-				padRight(shortenItemName(heroName, maxNameW), maxNameW),
+				paddedName,
 				raceStr, h.ShortClass(m.Lang), h.Level, healStyle.Render(T(m.Lang, "ui.alive")),
 				h.TotalAtk(), h.TotalDef()))
 		}
 	}
 	sb.WriteString("\n")
 
-	// Разделяем павших навсегда и спасённых/исцелённых
 	var deadForever []FallenHeroRecord
 	var savedList []FallenHeroRecord
 
@@ -204,29 +206,33 @@ func (m Model) renderStatsScreen(title string, titleColor lipgloss.Color) string
 		}
 	}
 
-	// 1. Павшие навсегда (оставленные в Бездне)
-	sb.WriteString(lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("☠️ %s (%d):\n", T(m.Lang, "stats.fallen_heroes"), len(deadForever))))
+	// 4. Павшие навсегда
+	sb.WriteString(lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("☠️ %s (%d):", T(m.Lang, "stats.fallen_heroes"), len(deadForever))))
+	sb.WriteString("\n")
 	if len(deadForever) == 0 {
-		sb.WriteString(subtleStyle.Render(" " + T(m.Lang, "stats.no_fallen") + "\n"))
+		sb.WriteString("   " + subtleStyle.Render(T(m.Lang, "stats.no_fallen")) + "\n")
 	} else {
 		for _, f := range deadForever {
 			clsStr := TranslateEnum(m.Lang, "class", string(f.Class)+".short")
-			sb.WriteString(fmt.Sprintf(" ☠️ %s (%s) | %s:%d | %s\n",
-				dangerStyle.Render(padRight(shortenItemName(f.FullName, maxNameW), maxNameW)),
+			rawName := shortenItemName(f.FullName, nameColWidth)
+			sb.WriteString(fmt.Sprintf(" • %s (%s) | %s:%d | %s\n",
+				dangerStyle.Render(padRight(rawName, nameColWidth)),
 				clsStr, T(m.Lang, "ui.floor"), f.Floor, subtleStyle.Render(f.Cause)))
 		}
 	}
 	sb.WriteString("\n")
 
-	// 2. Спасённые и стабилизированные
-	sb.WriteString(lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("✨ %s (%d):\n", T(m.Lang, "stats.saved_heroes"), len(savedList))))
+	// 5. Спасённые и исцелённые
+	sb.WriteString(lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("✨ %s (%d):", T(m.Lang, "stats.saved_heroes"), len(savedList))))
+	sb.WriteString("\n")
 	if len(savedList) == 0 {
-		sb.WriteString(subtleStyle.Render(" " + T(m.Lang, "stats.no_saved") + "\n"))
+		sb.WriteString("   " + subtleStyle.Render(T(m.Lang, "stats.no_saved")) + "\n")
 	} else {
 		for _, f := range savedList {
 			clsStr := TranslateEnum(m.Lang, "class", string(f.Class)+".short")
-			sb.WriteString(fmt.Sprintf(" ✨ %s (%s) | %s:%d | %s\n",
-				healStyle.Render(padRight(shortenItemName(f.FullName, maxNameW), maxNameW)),
+			rawName := shortenItemName(f.FullName, nameColWidth)
+			sb.WriteString(fmt.Sprintf(" • %s (%s) | %s:%d | %s\n",
+				healStyle.Render(padRight(rawName, nameColWidth)),
 				clsStr, T(m.Lang, "ui.floor"), f.Floor, subtleStyle.Render(T(m.Lang, "ui.stabilized"))))
 		}
 	}
