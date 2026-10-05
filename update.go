@@ -85,6 +85,33 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+		// Ручное управление в заведениях города (когда отряд не исследует подземелье).
+		if m.ManualMode && m.InTown && !m.manualDungeon() {
+			var cmd tea.Cmd
+			var handled bool
+			switch m.TownPhase {
+			case TownPhaseSellLoot:
+				cmd, handled = m.handleMarketKey(key)
+			case TownPhaseMagistrate:
+				cmd, handled = m.handleMagistrateKey(key)
+			case TownPhaseChurch:
+				cmd, handled = m.handleChurchKey(key)
+			case TownPhaseTavern:
+				cmd, handled = m.handleTavernKey(key)
+			case TownPhaseGuild:
+				cmd, handled = m.handleGuildKey(key)
+			case TownPhaseSmithy:
+				cmd, handled = m.handleSmithyKey(key)
+			case TownPhaseTannery:
+				cmd, handled = m.handleTanneryKey(key)
+			case TownPhaseAlchemist:
+				cmd, handled = m.handleAlchemistKey(key)
+			}
+			if handled {
+				return m, cmd
+			}
+		}
+
 		switch key {
 		case "ctrl+c", "q":
 			return m, tea.Quit
@@ -245,10 +272,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if m.State == StatePlaying && m.AutoMode {
-			// Ручной режим: ход в подземелье делает игрок. Тики нужны только для ходов
-			// монстров в бою и для города, а пока игра ждёт команду — просто простаивают.
+			// Ручной режим: ход в подземелье делает игрок.
 			if m.manualDungeon() && (m.Combat == nil || m.awaitingCommand()) {
 				return m, tickCmd(m.SpeedMs, m.TickGen)
+			}
+			// В ручном режиме город не прокручивается по таймеру сам — ждём решений игрока.
+			if m.ManualMode && m.InTown && !m.manualDungeon() {
+				return m, tickCmd(m.TownDelayMs, m.TickGen)
 			}
 			m.step()
 			if m.State == StateDefeat {

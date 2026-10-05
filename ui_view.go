@@ -111,6 +111,30 @@ func (m Model) View() string {
 		return m.renderCreatorScreen()
 	}
 
+	// Если отряд находится в городе — отображаем карточку заведения
+	if m.InTown {
+		switch m.TownPhase {
+		case TownPhaseSellLoot:
+			return m.renderMarketScreen(m.MarketState)
+		case TownPhaseMagistrate:
+			return m.renderMagistrateScreen(m.MagistrateState)
+		case TownPhaseChurch:
+			return m.renderChurchScreen(m.ChurchState)
+		case TownPhaseTavern:
+			return m.renderTavernScreen(m.TavernState)
+		case TownPhaseGuild:
+			return m.renderGuildScreen(m.GuildState)
+		case TownPhaseSmithy:
+			title := "⚒ " + T(m.Lang, m.TownEst.SmithyKey)
+			return m.renderForgeScreen(title, m.SmithyState, false)
+		case TownPhaseTannery:
+			title := "🎒 " + T(m.Lang, m.TownEst.TanneryKey)
+			return m.renderForgeScreen(title, m.TanneryState, true)
+		case TownPhaseAlchemist:
+			return m.renderAlchemistScreen(m.AlchemistState)
+		}
+	}
+
 	termW := max(38, m.TermWidth)
 	termH := max(22, m.TermHeight)
 

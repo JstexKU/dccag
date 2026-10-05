@@ -85,13 +85,17 @@ func (m *Model) removeHero() {
 	persistState(m.Lang, m.Legacy, m.Tactics, nil)
 }
 
-// handleMenuKey — клавиши главного меню, связанные с героем. Второе значение: «обработана».
+// handleMenuKey — клавиши главного меню, связанные с героем и режимом игры. Второе значение: «обработана».
 // Удаление героя требует повторного нажатия X, любая другая клавиша отменяет его.
 func (m *Model) handleMenuKey(key string) (tea.Cmd, bool) {
 	if key != "x" {
 		m.MenuConfirmRemove = false
 	}
 	switch key {
+	case "m", "M", "ь", "Ь":
+		m.ManualMode = !m.ManualMode
+		m.MenuCountdown = menuCountdownStart
+		return nil, true
 	case "c":
 		m.openCreator()
 		return nil, true
@@ -161,8 +165,6 @@ func (m *Model) handleCreatorKey(msg tea.KeyMsg) tea.Cmd {
 	c := &m.Creator
 	c.Err = ""
 
-	// Печатные символы — всегда текст, даже если пришла пачка из нескольких рун:
-	// вставленное слово «esc» или «up» не должно сработать как команда.
 	if msg.Type == tea.KeyRunes || msg.Type == tea.KeySpace {
 		if msg.Alt {
 			return nil
@@ -280,7 +282,7 @@ func (m Model) renderCreatorScreen() string {
 	boxW := max(40, m.TermWidth-4)
 	innerW := max(30, boxW-6)
 	tight := m.TermHeight < 30
-	gap := "\n" // пустая строка между блоками; в тесном окне убирается
+	gap := "\n"
 	if tight {
 		gap = ""
 	}

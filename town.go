@@ -1,13 +1,20 @@
 package main
 
 import (
+	"fmt"
 	"sort"
 )
 
 func (m *Model) stepTown() {
 	switch m.TownPhase {
 	case TownPhaseSellLoot:
-		// Сначала покупаем недостающие или лучшие вещи
+		m.initMarketScreen()
+
+		if m.ManualMode {
+			return
+		}
+
+		// Автопилот на Рынке
 		m.buyMissingOrBetterGear()
 
 		soldGold := 0
@@ -19,6 +26,11 @@ func (m *Model) stepTown() {
 			m.Stats.TotalGoldEarned += soldGold
 			m.addLog(goldStyle.Render(T(m.Lang, "town.log.market_sold", soldGold)))
 			m.logTownAction("⚖️", T(m.Lang, "town.market"), T(m.Lang, "town.log.market_history", soldGold))
+			m.MarketState.Section = MarketSectionLoot
+			m.MarketState.LootIdx = len(m.Bag)
+			m.MarketState.ActionSummary = fmt.Sprintf("Продана вся добыча из рюкзака (+%dG)", soldGold)
+		} else {
+			m.MarketState.ActionSummary = "Рюкзак пуст. Снаряжение отряда в порядке."
 		}
 		m.Bag = []EquipItem{}
 
@@ -33,25 +45,31 @@ func (m *Model) stepTown() {
 		m.TownPhase = TownPhaseMagistrate
 
 	case TownPhaseMagistrate:
+		m.initMagistrateScreen()
+		if m.ManualMode {
+			return
+		}
+
 		budget := AllocateBudget(m.Gold)
 		investAmt := budget.Treasury
 		if investAmt > 0 {
 			m.Gold -= investAmt
 			globalDebugReport.GoldSpentBreakdown["Инвестиции в Магистрат"] += investAmt
 
-			// Параллельно копим мета-вложения в столицу (прогрессия ополчения).
 			prevTier := militiaTierForInvestment(m.Legacy.TotalInvested)
 			m.Legacy.TotalInvested += investAmt
 
 			type Building struct {
-				Key   string
-				Level int
+				Key    string
+				Level  int
+				Target MagistrateTarget
+				Idx    int
 			}
 			buildings := []Building{
-				{Key: m.TownEst.SmithyKey, Level: m.Legacy.SmithyLevel},
-				{Key: m.TownEst.TanneryKey, Level: m.Legacy.TanneryLevel},
-				{Key: m.TownEst.ChurchKey, Level: m.Legacy.ChurchLevel},
-				{Key: m.TownEst.TavernKey, Level: m.Legacy.TavernLevel},
+				{Key: m.TownEst.SmithyKey, Level: m.Legacy.SmithyLevel, Target: MagistrateSmithy, Idx: 0},
+				{Key: m.TownEst.TanneryKey, Level: m.Legacy.TanneryLevel, Target: MagistrateTannery, Idx: 1},
+				{Key: m.TownEst.ChurchKey, Level: m.Legacy.ChurchLevel, Target: MagistrateChurch, Idx: 2},
+				{Key: m.TownEst.TavernKey, Level: m.Legacy.TavernLevel, Target: MagistrateTavern, Idx: 3},
 			}
 			sort.Slice(buildings, func(i, j int) bool { return buildings[i].Level < buildings[j].Level })
 
@@ -70,23 +88,31 @@ func (m *Model) stepTown() {
 			m.addLog(titleStyle.Render(T(m.Lang, "town.log.magistrate_tax", investAmt, bldName, targetBld.Level+1)))
 			m.logTownAction("🏛️", T(m.Lang, "town.magistrate"), T(m.Lang, "town.log.magistrate_hist", investAmt, bldName, targetBld.Level+1))
 
-			// Если тир ополчения поднялся — торжественный лог.
+			m.MagistrateState.Cursor = targetBld.Idx
+			m.MagistrateState.ActionSummary = fmt.Sprintf("Инвестировано %dG в «%s» (Ур.%d)", investAmt, bldName, targetBld.Level+1)
+
 			if newTier := militiaTierForInvestment(m.Legacy.TotalInvested); newTier.TitleKey != prevTier.TitleKey {
 				tierName := T(m.Lang, newTier.TitleKey)
 				m.addLog(titleStyle.Render(T(m.Lang, "town.log.militia_upgrade", tierName)))
 				m.logTownAction("🎖️", T(m.Lang, "town.magistrate"), T(m.Lang, "town.log.militia_upgrade_hist", tierName))
 			}
+		} else {
+			m.MagistrateState.ActionSummary = "Казна пуста. В Магистрате не проводилось инвестиций."
 		}
 		m.TownPhase = TownPhaseChurch
 
 	case TownPhaseChurch:
+		m.initChurchScreen()
+		if m.ManualMode {
+			return
+		}
+
 		churchName := T(m.Lang, m.TownEst.ChurchKey)
 		healBaseCost := 120 + (m.Floor * 30) - (m.Legacy.ChurchLevel * 15)
 		if healBaseCost < 60 {
 			healBaseCost = 60
 		}
 
-		// 1. Проверяем эвакуацию тяжелораненых (IsDowned): 1 живой на ногах выносит 1 бойца
 		var livingHeroes []*Hero
 		var downedHeroes []*Hero
 
@@ -100,11 +126,10 @@ func (m *Model) stepTown() {
 
 		carryCapacity := len(livingHeroes)
 		if len(downedHeroes) > 0 {
-			// Сортировка поверженных по ценности
 			sort.Slice(downedHeroes, func(i, j int) bool {
 				score := func(hero *Hero) int {
 					if hero.IsLeader {
-						return 1 << 20 // лидера выносят первым
+						return 1 << 20
 					}
 					s := hero.Mutations.Total()*200 + hero.Level*50
 					if hero.Class == ClassTank || hero.Class == ClassPaladin {
@@ -118,7 +143,6 @@ func (m *Model) stepTown() {
 			})
 
 			for _, h := range downedHeroes {
-				// Если не хватило свободных рук — брошен в Бездне
 				if carryCapacity <= 0 && !h.IsLeader {
 					h.IsDead = true
 					h.IsDowned = false
@@ -129,9 +153,7 @@ func (m *Model) stepTown() {
 				}
 				carryCapacity--
 
-				// Бросок 80% / 20%: донесли ли раненого до ворот
 				if !h.IsLeader && rng.Intn(100) >= 80 {
-					// 20% неудача при подъёме на поверхность
 					h.IsDead = true
 					h.IsDowned = false
 					h.LostInAbyss = true
@@ -145,11 +167,9 @@ func (m *Model) stepTown() {
 		stabilizedCount := 0
 		totalChurchSpent := 0
 
-		// 2. Храм исцеляет и стабилизирует успешно доставленных бойцов (IsDowned)
-		for _, h := range m.Party {
+		for idx, h := range m.Party {
 			if h.IsDowned && !h.IsDead && (h.IsLeader || m.Gold >= healBaseCost) {
 				if h.IsLeader {
-					// Лидера ставят на ноги за счёт ордена.
 					m.addLog(fountStyle.Render(T(m.Lang, "leader.church_free", churchName, h.DisplayName(m.Lang))))
 				} else {
 					m.Gold -= healBaseCost
@@ -163,23 +183,8 @@ func (m *Model) stepTown() {
 				stabilizedCount++
 				m.Stats.Resurrections++
 
-				found := false
-				for idx := len(m.Stats.FallenHeroes) - 1; idx >= 0; idx-- {
-					if m.Stats.FallenHeroes[idx].FullName == h.FullName(m.Lang) && !m.Stats.FallenHeroes[idx].Revived {
-						m.Stats.FallenHeroes[idx].Revived = true
-						found = true
-						break
-					}
-				}
-				if !found {
-					m.Stats.FallenHeroes = append(m.Stats.FallenHeroes, FallenHeroRecord{
-						FullName: h.FullName(m.Lang),
-						Class:    h.Class,
-						Cause:    T(m.Lang, "ui.stabilized"),
-						Floor:    m.Floor,
-						Revived:  true,
-					})
-				}
+				m.ChurchState.Cursor = idx
+				m.ChurchState.ActionSummary = fmt.Sprintf("Стабилизирован тяжелораненый боец %s", h.DisplayName(m.Lang))
 			} else if !h.IsDead && !h.IsDowned && (h.Stress > 20 || h.Affliction != AfflictionNone) {
 				cleanseCost := healBaseCost / 3
 				if m.Gold >= cleanseCost {
@@ -187,6 +192,9 @@ func (m *Model) stepTown() {
 					totalChurchSpent += cleanseCost
 					h.Stress = max(0, h.Stress-60)
 					h.Affliction = AfflictionNone
+
+					m.ChurchState.Cursor = idx
+					m.ChurchState.ActionSummary = fmt.Sprintf("Очищен разум бойца %s (-60 стресса)", h.DisplayName(m.Lang))
 				}
 			}
 		}
@@ -196,9 +204,17 @@ func (m *Model) stepTown() {
 			m.addLog(fountStyle.Render(T(m.Lang, "town.log.church_liturgy", churchName, totalChurchSpent, stabilizedCount)))
 			m.logTownAction("⛪", churchName, T(m.Lang, "town.log.church_hist", stabilizedCount, totalChurchSpent))
 		}
+		if m.ChurchState.ActionSummary == "" {
+			m.ChurchState.ActionSummary = "Отряд благословлен, раненых нет."
+		}
 		m.TownPhase = TownPhaseTavern
 
 	case TownPhaseTavern:
+		m.initTavernScreen()
+		if m.ManualMode {
+			return
+		}
+
 		tavernCost := max(40, (25*m.Floor)-(m.Legacy.TavernLevel*10))
 		tavernName := T(m.Lang, m.TownEst.TavernKey)
 		if m.Gold >= tavernCost {
@@ -212,6 +228,9 @@ func (m *Model) stepTown() {
 			}
 			m.addLog(healStyle.Render(T(m.Lang, "town.log.tavern_rest", tavernName, tavernCost)))
 			m.logTownAction("🍻", tavernName, T(m.Lang, "town.log.tavern_hist", tavernCost))
+
+			m.TavernState.Cursor = 0
+			m.TavernState.ActionSummary = fmt.Sprintf("Отряд отдохнул в комфортных покоях (-%dG, 100%% HP/MP)", tavernCost)
 		} else {
 			barnCost := max(5, tavernCost/4)
 			if m.Gold >= barnCost {
@@ -226,10 +245,18 @@ func (m *Model) stepTown() {
 			}
 			m.addLog(dangerStyle.Render(T(m.Lang, "town.log.tavern_barn")))
 			m.logTownAction("🏚️", tavernName, T(m.Lang, "town.log.tavern_barn_hist"))
+
+			m.TavernState.Cursor = 1
+			m.TavernState.ActionSummary = "Казна пуста. Ночлег на сеновале у очага (40% сил)."
 		}
 		m.TownPhase = TownPhaseGuild
 
 	case TownPhaseGuild:
+		m.initGuildScreen()
+		if m.ManualMode {
+			return
+		}
+
 		guildName := T(m.Lang, m.TownEst.GuildKey)
 		if m.CurrentQuest.Completed {
 			reward := m.CurrentQuest.RewardGold
@@ -243,7 +270,6 @@ func (m *Model) stepTown() {
 
 		recruitCost := max(45, 60+(m.Floor*25)-(m.Legacy.ChurchLevel*8))
 		for i, h := range m.Party {
-			// Заменяем окончательно погибших или оставшихся без помощи; лидера Гильдия не заменяет
 			if (h.IsDead || h.IsDowned) && !(h.IsLeader && !h.IsDead) {
 				usedClasses := make(map[HeroClass]bool)
 				for _, ally := range m.Party {
@@ -272,6 +298,8 @@ func (m *Model) stepTown() {
 						guildName, m.Party[i].DisplayName(m.Lang), m.Party[i].RaceName(m.Lang), m.Party[i].ShortClass(m.Lang), m.Party[i].Level, recruitCost)))
 					m.logTownAction("⚔️", guildName, T(m.Lang, "town.log.guild_vet_hist",
 						m.Party[i].DisplayName(m.Lang), m.Party[i].ShortClass(m.Lang), m.Party[i].Level, recruitCost))
+
+					m.GuildState.ActionSummary = fmt.Sprintf("Нанят ветеран %s (%s, -%dG)", m.Party[i].DisplayName(m.Lang), newClass, recruitCost)
 				} else {
 					m.Party[i] = m.createMilitiaForGuild(newClass)
 					newHero := m.Party[i]
@@ -280,12 +308,22 @@ func (m *Model) stepTown() {
 						guildName, newHero.DisplayName(m.Lang), tierName, newHero.RaceName(m.Lang), newHero.ShortClass(m.Lang))))
 					m.logTownAction("🤝", guildName, T(m.Lang, "town.log.guild_mil_hist",
 						newHero.DisplayName(m.Lang), tierName, newHero.ShortClass(m.Lang)))
+
+					m.GuildState.ActionSummary = fmt.Sprintf("Призван ополченец %s (%s, бесплатно)", newHero.DisplayName(m.Lang), newClass)
 				}
 			}
+		}
+		if m.GuildState.ActionSummary == "" {
+			m.GuildState.ActionSummary = "Все позиции укомплектованы. Отряд полон."
 		}
 		m.TownPhase = TownPhaseSmithy
 
 	case TownPhaseSmithy:
+		m.initSmithyScreen()
+		if m.ManualMode {
+			return
+		}
+
 		budget := AllocateBudget(m.Gold)
 		smithyBudget := budget.Forge
 		upgradesCount := 0
@@ -351,6 +389,14 @@ func (m *Model) stepTown() {
 			bestHero.SetItemInSlot(bestSlot, bestItem)
 			upgradesCount++
 			m.Stats.UpgradesForged++
+
+			for i, off := range m.SmithyState.Offers {
+				if off.ItemName == bestItem.DisplayName(m.Lang) {
+					m.SmithyState.Cursor = i
+					break
+				}
+			}
+			m.SmithyState.ActionSummary = fmt.Sprintf("Заточено: %s (+%d) для %s (-%dG)", bestItem.DisplayName(m.Lang), bestItem.UpgradeLevel, bestHero.DisplayName(m.Lang), minCost)
 		}
 
 		if totalSpent > 0 {
@@ -358,9 +404,17 @@ func (m *Model) stepTown() {
 			m.addLog(goldStyle.Render(T(m.Lang, "town.log.smithy_done", smithyName, upgradesCount, totalSpent)))
 			m.logTownAction("⚒️", smithyName, T(m.Lang, "town.log.smithy_hist", upgradesCount, totalSpent))
 		}
+		if m.SmithyState.ActionSummary == "" {
+			m.SmithyState.ActionSummary = "Лимит бюджета исчерпан или экипировка максимально заточена."
+		}
 		m.TownPhase = TownPhaseTannery
 
 	case TownPhaseTannery:
+		m.initTanneryScreen()
+		if m.ManualMode {
+			return
+		}
+
 		budget := AllocateBudget(m.Gold)
 		tanneryBudget := budget.Tannery + budget.Bags
 		totalSpent := 0
@@ -379,10 +433,13 @@ func (m *Model) stepTown() {
 				bagName := T(m.Lang, nextBag.NameKey)
 				m.addLog(goldStyle.Render(T(m.Lang, "town.log.tannery_bag", tanneryName, bagName, nextBag.Capacity, nextBag.Cost)))
 				m.logTownAction("🎒", tanneryName, T(m.Lang, "town.log.tannery_bag_hist", bagName, nextBag.Capacity, nextBag.Cost))
+
+				m.TanneryState.Cursor = 0
+				m.TanneryState.ActionSummary = fmt.Sprintf("Сшита %s (%d слотов, -%dG)", bagName, nextBag.Capacity, nextBag.Cost)
 			}
 		}
 
-		// 2. Выделка легкой и средней брони, а также легкого оружия
+		// 2. Выделка легкой и средней брони
 		getUpgradeCost := func(it *EquipItem) int {
 			if it == nil {
 				return 999999
@@ -443,6 +500,18 @@ func (m *Model) stepTown() {
 			bestHero.SetItemInSlot(bestSlot, bestItem)
 			craftedItems++
 			m.Stats.UpgradesForged++
+
+			offset := 0
+			if m.BagLevel < len(bagUpgrades)-1 {
+				offset = 1
+			}
+			for i, off := range m.TanneryState.Offers {
+				if off.ItemName == bestItem.DisplayName(m.Lang) {
+					m.TanneryState.Cursor = offset + i
+					break
+				}
+			}
+			m.TanneryState.ActionSummary = fmt.Sprintf("Выделка: %s (+%d) для %s (-%dG)", bestItem.DisplayName(m.Lang), bestItem.UpgradeLevel, bestHero.DisplayName(m.Lang), minCost)
 		}
 
 		if totalSpent > 0 {
@@ -452,9 +521,17 @@ func (m *Model) stepTown() {
 				m.logTownAction("🎒", tanneryName, T(m.Lang, "town.log.tannery_hist", craftedItems, totalSpent))
 			}
 		}
+		if m.TanneryState.ActionSummary == "" {
+			m.TanneryState.ActionSummary = "Сумка расширена, доспехи в отличном состоянии."
+		}
 		m.TownPhase = TownPhaseAlchemist
 
 	case TownPhaseAlchemist:
+		m.initAlchemistScreen()
+		if m.ManualMode {
+			return
+		}
+
 		budget := AllocateBudget(m.Gold)
 		alchBudget := budget.Alchemy
 		spentAlch := 0
@@ -533,6 +610,15 @@ func (m *Model) stepTown() {
 					target.HP += 6
 					m.addLog(healStyle.Render(T(m.Lang, "town.log.mut_bastion", hName, verbApplied, T(m.Lang, "mut.bastion.name"), cost)))
 				}
+
+				mutTitle := T(m.Lang, "mut."+string(pref)+".name")
+				for i, off := range m.AlchemistState.Offers {
+					if off.HeroName == hName && off.ItemTitle == mutTitle {
+						m.AlchemistState.Cursor = i
+						break
+					}
+				}
+				m.AlchemistState.ActionSummary = fmt.Sprintf("Принята мутация: %s для %s (-%dG)", mutTitle, hName, cost)
 			} else {
 				break
 			}
@@ -568,10 +654,12 @@ func (m *Model) stepTown() {
 			globalDebugReport.GoldSpentBreakdown["Алхимия и зелья"] += spentAlch
 			m.logTownAction("🧪", T(m.Lang, m.TownEst.AlchemistKey), T(m.Lang, "town.log.alch_hist", spentAlch))
 		}
+		if m.AlchemistState.ActionSummary == "" {
+			m.AlchemistState.ActionSummary = "Пояса укомплектованы зельями. Мутации не требуются."
+		}
 		m.TownPhase = TownPhaseDepart
 
 	case TownPhaseDepart:
-		// Сбрасываем кулдаун воскрешения Клирика к новому походу
 		for _, h := range m.Party {
 			h.ReviveCooldown = 0
 		}

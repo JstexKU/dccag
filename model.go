@@ -77,6 +77,14 @@ type Model struct {
 	TacticsSel       int
 	ManualMode       bool // ручное управление: игрок ходит по карте и командует в бою
 	ManualLastCamp   int  // Stats.TotalSteps на момент последнего ручного привала
+	MarketState      MarketServiceState
+	MagistrateState  MagistrateServiceState
+	ChurchState      ChurchServiceState
+	TavernState      TavernServiceState
+	GuildState       GuildServiceState
+	SmithyState      ForgeServiceState
+	TanneryState     ForgeServiceState
+	AlchemistState   AlchemistServiceState
 
 	// Герой-лидер, созданный игроком (Blueprint == nil — отряд случайный), экран создания и меню.
 	Blueprint         *HeroBlueprint
@@ -191,3 +199,4 @@ func resetGameStatic(m Model) (Model, tea.Cmd) {
 func (m Model) resetGame() (Model, tea.Cmd) {
 	return resetGameStatic(m)
 }
+

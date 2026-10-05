@@ -7,6 +7,28 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+func (m Model) renderMenuModeToggle() string {
+	modeLabel := "⚙️ Автоигра"
+	if m.Lang == LangEN {
+		modeLabel = "⚙️ Auto-play"
+	}
+	modeStyle := subtleStyle
+
+	if m.ManualMode {
+		modeLabel = "🎮 Ручное управление"
+		if m.Lang == LangEN {
+			modeLabel = "🎮 Manual control"
+		}
+		modeStyle = accentStyle.Copy().Bold(true)
+	}
+
+	prefix := "[M] Режим:"
+	if m.Lang == LangEN {
+		prefix = "[M] Mode:"
+	}
+	return fmt.Sprintf("%s %s", prefix, modeStyle.Render(modeLabel))
+}
+
 func (m Model) renderMenuScreen() string {
 	termW := max(38, m.TermWidth)
 	termH := max(20, m.TermHeight)
@@ -52,6 +74,7 @@ func (m Model) renderMenuScreen() string {
 				" • Strategic evacuation: rescue veteran bodies equal to survivors count.\n\n" +
 				dangerStyle.Render(fmt.Sprintf("⏳ Expedition autostarts in: %d sec...\n\n", m.MenuCountdown)) +
 				healStyle.Render("[Space] or [Enter] — Embark immediately") + "\n" +
+				m.renderMenuModeToggle() + "\n" +
 				accentStyle.Render("[L] — Switch language (RU / EN)") + "   " + m.menuHeroKeys() + "\n" +
 				subtleStyle.Render("[+/-] — Speed  |  [Q] — Quit")
 		} else {
@@ -64,6 +87,7 @@ func (m Model) renderMenuScreen() string {
 				" • Эвакуация при побеге: вынос тел ценных ветеранов по числу выживших.\n\n" +
 				dangerStyle.Render(fmt.Sprintf("⏳ Автоматический старт экспедиции через: %d сек...\n\n", m.MenuCountdown)) +
 				healStyle.Render("[Пробел] или [Enter] — Начать экспедицию немедленно") + "\n" +
+				m.renderMenuModeToggle() + "\n" +
 				accentStyle.Render("[L] — Сменить язык (RU / EN)") + "   " + m.menuHeroKeys() + "\n" +
 				subtleStyle.Render("[+/-] — Скор.  |  [Q] — Выход")
 		}
@@ -98,7 +122,8 @@ func (m Model) renderMenuScreen() string {
 			startBtn = healStyle.Render("[Пробел / Enter] Начать экспедицию")
 		}
 
-		sb.WriteString(startBtn + "    " + timerStr + "\n\n")
+		sb.WriteString(startBtn + "    " + timerStr + "\n")
+		sb.WriteString(m.renderMenuModeToggle() + "\n\n")
 		if line := m.menuHeroLine(); line != "" {
 			sb.WriteString(line + "\n")
 		}
@@ -125,7 +150,8 @@ func (m Model) renderMenuScreen() string {
 		if m.Lang == LangRU {
 			timerStr = dangerStyle.Render(fmt.Sprintf("⏳ Автостарт: %d сек", m.MenuCountdown))
 		}
-		sb.WriteString(timerStr + "\n\n")
+		sb.WriteString(timerStr + "\n")
+		sb.WriteString(m.renderMenuModeToggle() + "\n\n")
 		if line := m.menuHeroLine(); line != "" {
 			sb.WriteString(line + "\n")
 		}
