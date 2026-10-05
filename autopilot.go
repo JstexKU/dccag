@@ -122,7 +122,6 @@ func (m *Model) distanceToNearest(cond func(Point, Tile) bool) (int, bool) {
 			if m.Grid[ny][nx] == TileWall {
 				continue
 			}
-			// Проверяем условие только если клетка уже открыта на карте
 			if m.Explored[ny][nx] && cond(Point{nx, ny}, m.Grid[ny][nx]) {
 				return curr.dist + 1, true
 			}
@@ -160,7 +159,6 @@ func (m *Model) isMonsterNearby() bool {
 			if x < 0 || x >= m.MapWidth || y < 0 || y >= m.MapHeight {
 				continue
 			}
-			// Считаем опасными только видимых монстров
 			if m.Explored[y][x] {
 				if _, hasPack := m.Packs[Point{x, y}]; hasPack {
 					return true
@@ -224,6 +222,26 @@ func (m *Model) findEmergencyStep(targetTile Tile) (Point, bool) {
 	return m.PartyPos, false
 }
 
+// explorationRatio возвращает процент исследованных проходимых клеток (0.0..1.0)
+func (m *Model) explorationRatio() float64 {
+	totalWalkable := 0
+	exploredWalkable := 0
+	for y := 0; y < m.MapHeight; y++ {
+		for x := 0; x < m.MapWidth; x++ {
+			if m.Grid[y][x] != TileWall {
+				totalWalkable++
+				if m.Explored[y][x] {
+					exploredWalkable++
+				}
+			}
+		}
+	}
+	if totalWalkable == 0 {
+		return 1.0
+	}
+	return float64(exploredWalkable) / float64(totalWalkable)
+}
+
 func (m *Model) findNextStep() Point {
 	retreatReason := m.evaluateRetreat()
 	retreat := retreatReason != RetreatNone
@@ -235,6 +253,27 @@ func (m *Model) findNextStep() Point {
 
 	totalCells := m.MapWidth * m.MapHeight
 
+	// Вычисляем вектор последнего шага для сохранения инерции (чтобы не вихлять по коридорам)
+	lastDir := Point{1, 0}
+	if len(m.PathHistory) >= 1 {
+		prev := m.PathHistory[len(m.PathHistory)-1]
+		dx := m.PartyPos.X - prev.X
+		dy := m.PartyPos.Y - prev.Y
+		if dx != 0 || dy != 0 {
+			lastDir = Point{dx, dy}
+		}
+	}
+
+	baseDirs := []Point{{0, -1}, {0, 1}, {-1, 0}, {1, 0}}
+	var searchDirs []Point
+	searchDirs = append(searchDirs, lastDir)
+	for _, d := range baseDirs {
+		if d != lastDir && (d.X != -lastDir.X || d.Y != -lastDir.Y) {
+			searchDirs = append(searchDirs, d)
+		}
+	}
+	searchDirs = append(searchDirs, Point{-lastDir.X, -lastDir.Y})
+
 	findPath := func(avoidMonsters bool, targetCondition func(Point, Tile) bool) (Point, bool) {
 		visited := make([]bool, totalCells)
 		cameFrom := make([]int, totalCells)
@@ -245,7 +284,6 @@ func (m *Model) findNextStep() Point {
 		startIdx := m.PartyPos.Y*m.MapWidth + m.PartyPos.X
 		visited[startIdx] = true
 		queue := []Point{m.PartyPos}
-		dirs := []Point{{0, -1}, {0, 1}, {-1, 0}, {1, 0}}
 
 		for len(queue) > 0 {
 			curr := queue[0]
@@ -259,17 +297,15 @@ func (m *Model) findNextStep() Point {
 				return Point{X: currIdx % m.MapWidth, Y: currIdx / m.MapWidth}, true
 			}
 
-			for _, d := range dirs {
+			for _, d := range searchDirs {
 				nx := curr.X + d.X
 				ny := curr.Y + d.Y
 				if nx >= 0 && nx < m.MapWidth && ny >= 0 && ny < m.MapHeight {
 					nIdx := ny*m.MapWidth + nx
 					if !visited[nIdx] && m.Grid[ny][nx] != TileWall {
-						// Ловушки обходятся, только если разведаны
 						if m.Tactics.SkipTraps && m.Explored[ny][nx] && m.Grid[ny][nx] == TileTrappedChest && m.CurrentQuest.Type != QuestOpenChests {
 							continue
 						}
-						// Монстров обходим, только если они разведаны
 						if avoidMonsters && m.Explored[ny][nx] {
 							if _, hasMob := m.Packs[Point{nx, ny}]; hasMob {
 								continue
@@ -285,7 +321,7 @@ func (m *Model) findNextStep() Point {
 		return m.PartyPos, false
 	}
 
-	// 1. Отступление к выходу (выход ищется только если он разведан на карте)
+	// 1. Отступление к выходу при критическом уроне/стрессе/полной сумке
 	if retreat && !forceDeeper {
 		step, found := findPath(true, func(p Point, t Tile) bool {
 			return m.Explored[p.Y][p.X] && t == TileExit
@@ -301,7 +337,7 @@ func (m *Model) findNextStep() Point {
 		}
 	}
 
-	// 2. Поиск источника исцеления (только среди открытых фонтанов)
+	// 2. Срочный поиск источника исцеления
 	if seekingFountain {
 		step, found := findPath(true, func(p Point, t Tile) bool {
 			return m.Explored[p.Y][p.X] && t == TileFountain
@@ -324,88 +360,89 @@ func (m *Model) findNextStep() Point {
 		}
 	}
 
-	isExplorationQuest := m.CurrentQuest.Type == QuestReachFloor && !m.CurrentQuest.Completed
-
-	// 4. Поиск открытых целей на карте (ЧЕСТНАЯ ПРОВЕРКА m.Explored)
-	isKnownTarget := func(p Point, t Tile) bool {
-		// Автопилот не видит сквозь туман войны
+	// 4. Поиск открытых интерактивных объектов (сундуки, алтари, бочки, монстры)
+	// ВАЖНО: Лестницы ЗДЕСЬ НЕТ. Отряд не пойдет на лестницу, пока исследует этаж.
+	isLootOrTarget := func(p Point, t Tile) bool {
 		if !m.Explored[p.Y][p.X] {
 			return false
 		}
 
-		_, hasPack := m.Packs[p]
-		if hasPack {
-			if needsGear {
-				return false
-			}
-			return true
+		// Монстров бьем, если открыты
+		if _, hasPack := m.Packs[p]; hasPack {
+			return !needsGear
 		}
+
 		if seekingFountain && t == TileAltar {
 			return false
 		}
-		if t == TileStairs && isExplorationQuest {
-			return true
+
+		if (t == TileChest || t == TileTrappedChest) && bagFull {
+			return false
 		}
 
-		if t == TileChest || t == TileTrappedChest {
-			if bagFull {
-				return false
-			}
-		}
-
-		if t == TileStairs && !forceDeeper {
-			hasVisibleLoot := false
-			for y := 0; y < m.MapHeight; y++ {
-				for x := 0; x < m.MapWidth; x++ {
-					if m.Explored[y][x] {
-						tile := m.Grid[y][x]
-						if (tile == TileChest || tile == TileRelic) && !bagFull {
-							hasVisibleLoot = true
-							break
-						}
-					}
-				}
-			}
-			if hasVisibleLoot {
-				return false
-			}
-		}
 		if t == TileTrappedChest && m.Tactics.SkipTraps && m.CurrentQuest.Type != QuestOpenChests {
 			return false
 		}
 		if t == TileAltar && m.Tactics.SkipAltars && (m.CurrentQuest.Type != QuestUseAltar || m.CurrentQuest.Completed) {
 			return false
 		}
-		return t == TileChest || t == TileStairs || t == TileAltar || t == TileFountain || t == TileTrappedChest || t == TileBarrel || t == TileRelic || t == TileEvent
+
+		return t == TileChest || t == TileAltar || t == TileFountain || t == TileTrappedChest || t == TileBarrel || t == TileRelic || t == TileEvent
 	}
 
 	if needsGear {
-		if step, found := findPath(true, isKnownTarget); found {
+		if step, found := findPath(true, isLootOrTarget); found {
 			return step
 		}
 	}
-	if step, found := findPath(false, isKnownTarget); found {
+	if step, found := findPath(false, isLootOrTarget); found {
 		return step
 	}
 
 	// 5. РЕЖИМ ИССЛЕДОВАТЕЛЯ (Frontier Exploration):
-	// Если известных целей нет — идём к ближайшей открытой клетке, граничащей с неразведанной тьмой
+	// Идем открывать неизведанную тьму, пока не изучим хотя бы 70% карты
+	exploredPct := m.explorationRatio()
+	needMoreExploration := exploredPct < 0.70 && !forceDeeper && !bagFull
+
 	isFrontier := func(p Point, t Tile) bool {
 		if !m.Explored[p.Y][p.X] || t == TileWall {
 			return false
 		}
 		dirs := []Point{{0, -1}, {0, 1}, {-1, 0}, {1, 0}}
 		for _, d := range dirs {
-			nx, ny := p.X+d.X, p.Y+d.Y
+			nx, ny := p.X + d.X, p.Y + d.Y
 			if nx >= 0 && nx < m.MapWidth && ny >= 0 && ny < m.MapHeight {
 				if !m.Explored[ny][nx] && m.Grid[ny][nx] != TileWall {
-					return true // Клетка граничит с неизведанным проходом
+					return true
 				}
 			}
 		}
 		return false
 	}
 
+	// Если этаж ещё мало исследован (<70%), сначала в приоритете поиск тумана войны!
+	if needMoreExploration {
+		if step, found := findPath(true, isFrontier); found {
+			return step
+		}
+		if step, found := findPath(false, isFrontier); found {
+			return step
+		}
+	}
+
+	// 6. СПУСК ПО ЛЕСТНИЦЕ:
+	// Сюда мы попадаем, если:
+	// - Исследовали >= 70% карты
+	// - Либо нет доступных границ тумана войны (все залы обойдены)
+	// - Либо переполнен мешок / включен режим побега из ловушки
+	step, found := findPath(false, func(p Point, t Tile) bool {
+		return m.Explored[p.Y][p.X] && t == TileStairs
+	})
+	if found {
+		return step
+	}
+
+	// 7. Если лестница ещё не найдена в разведанной зоне, продолжаем открывать остатки карты
 	if step, found := findPath(true, isFrontier); found {
 		return step
 	}

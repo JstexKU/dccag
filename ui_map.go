@@ -6,20 +6,33 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-func (m Model) renderMap(viewW, viewH int) string {
-	if viewW <= 0 || viewH <= 0 {
-		return ""
-	}
-	if m.InTown {
-		return m.renderTownHub(viewW, viewH)
+// updateCamera вычисляет начало видимой области с учётом мёртвой зоны (deadzone),
+// исключая скачки экрана вверх-вниз при локальных шагах отряда.
+func (m *Model) updateCamera(viewW, viewH int) (int, int) {
+	if m.CameraPos.X == 0 && m.CameraPos.Y == 0 {
+		m.CameraPos = m.PartyPos
 	}
 
-	biome := getBiome(m.Floor)
-	customWall := lipgloss.NewStyle().Foreground(biome.WallColor).Render("#")
-	customFloor := lipgloss.NewStyle().Foreground(biome.FloorColor).Render(string(biome.FloorRune))
+	deadzoneX := max(2, viewW/6)
+	deadzoneY := max(2, viewH/6)
 
-	startX := m.PartyPos.X - viewW/2
-	startY := m.PartyPos.Y - viewH/2
+	dx := m.PartyPos.X - m.CameraPos.X
+	dy := m.PartyPos.Y - m.CameraPos.Y
+
+	if dx > deadzoneX {
+		m.CameraPos.X = m.PartyPos.X - deadzoneX
+	} else if dx < -deadzoneX {
+		m.CameraPos.X = m.PartyPos.X + deadzoneX
+	}
+
+	if dy > deadzoneY {
+		m.CameraPos.Y = m.PartyPos.Y - deadzoneY
+	} else if dy < -deadzoneY {
+		m.CameraPos.Y = m.PartyPos.Y + deadzoneY
+	}
+
+	startX := m.CameraPos.X - viewW/2
+	startY := m.CameraPos.Y - viewH/2
 
 	if startX+viewW > m.MapWidth {
 		startX = m.MapWidth - viewW
@@ -33,6 +46,23 @@ func (m Model) renderMap(viewW, viewH int) string {
 	if startY < 0 {
 		startY = 0
 	}
+
+	return startX, startY
+}
+
+func (m Model) renderMap(viewW, viewH int) string {
+	if viewW <= 0 || viewH <= 0 {
+		return ""
+	}
+	if m.InTown {
+		return m.renderTownHub(viewW, viewH)
+	}
+
+	biome := getBiome(m.Floor)
+	customWall := lipgloss.NewStyle().Foreground(biome.WallColor).Render("#")
+	customFloor := lipgloss.NewStyle().Foreground(biome.FloorColor).Render(string(biome.FloorRune))
+
+	startX, startY := m.updateCamera(viewW, viewH)
 
 	out := make([]string, viewH)
 	for y := 0; y < viewH; y++ {

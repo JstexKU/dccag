@@ -17,9 +17,8 @@ func renderAutoBanner(summary string, width int) string {
 }
 
 // 1. РЫНОК
-func (m Model) renderMarketScreen(state MarketServiceState) string {
-	boxW := max(44, m.TermWidth-4)
-	innerW := max(38, boxW-4)
+func (m Model) renderMarketScreen(state MarketServiceState, viewW, viewH int) string {
+	innerW := max(34, viewW)
 	halfW := (innerW - 3) / 2
 
 	var sb strings.Builder
@@ -27,7 +26,19 @@ func (m Model) renderMarketScreen(state MarketServiceState) string {
 	goldStr := goldStyle.Render(fmt.Sprintf("%dG", m.Gold))
 	bagStr := subtleStyle.Render(fmt.Sprintf("%s: %d/%d", T(m.Lang, "ui.bag"), len(m.Bag), m.currentBagCapacity()))
 	sb.WriteString(fmt.Sprintf("%s  |  💰 %s  |  🎒 %s\n", titleStr, goldStr, bagStr))
-	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n\n")
+
+	if m.ManualMode {
+		controls := "[Tab] Секция | [↑/↓] Выбор | [Enter] Сделка | [Пробел] Продать всё | [Esc] Дальше"
+		if m.Lang == LangEN {
+			controls = "[Tab] Section | [↑/↓] Select | [Enter] Transact | [Space] Sell All | [Esc] Next"
+		}
+		sb.WriteString(subtleStyle.Render(shortenItemName(controls, innerW)) + "\n")
+	} else {
+		sb.WriteString(renderAutoBanner(state.ActionSummary, innerW) + "\n")
+	}
+	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n")
+
+	availRows := max(3, viewH-6)
 
 	var leftLines []string
 	leftHeader := lipgloss.NewStyle().Bold(true).Render("📦 " + T(m.Lang, "ui.bag"))
@@ -40,6 +51,9 @@ func (m Model) renderMarketScreen(state MarketServiceState) string {
 		leftLines = append(leftLines, subtleStyle.Render("  ("+T(m.Lang, "ui.none")+")"))
 	} else {
 		for i, it := range m.Bag {
+			if len(leftLines) >= availRows {
+				break
+			}
 			val := it.Value * 2
 			marker := "  "
 			nameStyle := subtleStyle
@@ -47,7 +61,7 @@ func (m Model) renderMarketScreen(state MarketServiceState) string {
 				marker = accentStyle.Render("▶ ")
 				nameStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("255")).Bold(true)
 			}
-			name := shortenItemName(it.DisplayName(m.Lang), halfW-11)
+			name := shortenItemName(it.DisplayName(m.Lang), max(4, halfW-11))
 			leftLines = append(leftLines, fmt.Sprintf("%s%s +%dG", marker, nameStyle.Render(padRight(name, halfW-11)), val))
 		}
 	}
@@ -57,7 +71,9 @@ func (m Model) renderMarketScreen(state MarketServiceState) string {
 		sellAllMarker = accentStyle.Render("▶ ")
 		sellAllStyle = healStyle.Copy().Bold(true).Underline(true)
 	}
-	leftLines = append(leftLines, "", sellAllMarker+sellAllStyle.Render(fmt.Sprintf("[ %s ]", T(m.Lang, "ui.turn_in"))))
+	if len(leftLines) < availRows {
+		leftLines = append(leftLines, sellAllMarker+sellAllStyle.Render(fmt.Sprintf("[ %s ]", T(m.Lang, "ui.turn_in"))))
+	}
 
 	var rightLines []string
 	rightHeader := lipgloss.NewStyle().Bold(true).Render("🛒 " + T(m.Lang, "town.hub_title"))
@@ -70,6 +86,9 @@ func (m Model) renderMarketScreen(state MarketServiceState) string {
 		rightLines = append(rightLines, subtleStyle.Render("  ("+T(m.Lang, "ui.none")+")"))
 	} else {
 		for i, off := range state.Offers {
+			if len(rightLines) >= availRows {
+				break
+			}
 			marker := "  "
 			itemStyle := goldStyle
 			isChosen := (!m.ManualMode && state.Section == MarketSectionShop && state.ShopIdx == i)
@@ -89,9 +108,9 @@ func (m Model) renderMarketScreen(state MarketServiceState) string {
 			}
 			badge := ""
 			if isChosen {
-				badge = " " + lipgloss.NewStyle().Foreground(lipgloss.Color("46")).Bold(true).Render("✓ КУПЛЕНО")
+				badge = " " + lipgloss.NewStyle().Foreground(lipgloss.Color("46")).Bold(true).Render("✓")
 			}
-			name := shortenItemName(off.Item.DisplayName(m.Lang), max(6, halfW-20))
+			name := shortenItemName(off.Item.DisplayName(m.Lang), max(4, halfW-20))
 			rightLines = append(rightLines, fmt.Sprintf("%s%s (%s) %sG [%s]%s", marker, itemStyle.Render(name), heroName, goldStyle.Render(fmt.Sprintf("%d", off.Cost)), statDiffStr, badge))
 		}
 	}
@@ -108,32 +127,30 @@ func (m Model) renderMarketScreen(state MarketServiceState) string {
 		lipgloss.NewStyle().Width(halfW).Render(strings.Join(leftLines, "\n")),
 		" │ ",
 		lipgloss.NewStyle().Width(halfW).Render(strings.Join(rightLines, "\n")),
-	) + "\n\n")
+	))
 
-	if m.ManualMode {
-		controls := "[Tab] Секция | [↑/↓] Выбор | [Enter] Сделка | [Пробел] Продать всё | [Esc] Дальше"
-		if m.Lang == LangEN {
-			controls = "[Tab] Section | [↑/↓] Select | [Enter] Transact | [Space] Sell All | [Esc] Next"
-		}
-		sb.WriteString(subtleStyle.Render(controls))
-	} else {
-		sb.WriteString(renderAutoBanner(state.ActionSummary, innerW))
-	}
-
-	box := statsBoxStyle.Width(boxW).Render(sb.String())
-	return lipgloss.Place(m.TermWidth, m.TermHeight, lipgloss.Center, lipgloss.Center, box)
+	return padTownLines(sb.String(), viewW, viewH)
 }
 
 // 2. МАГИСТРАТ
-func (m Model) renderMagistrateScreen(state MagistrateServiceState) string {
-	boxW := max(44, m.TermWidth-4)
-	innerW := max(38, boxW-4)
+func (m Model) renderMagistrateScreen(state MagistrateServiceState, viewW, viewH int) string {
+	innerW := max(34, viewW)
 	var sb strings.Builder
 
 	titleStr := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true).Render("🏛 " + T(m.Lang, "town.magistrate"))
 	goldStr := goldStyle.Render(fmt.Sprintf("%dG", m.Gold))
 	sb.WriteString(fmt.Sprintf("%s  |  💰 %s\n", titleStr, goldStr))
-	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n\n")
+
+	if m.ManualMode {
+		controls := "[↑/↓] Выбор | [Enter] Инвестировать | [Esc] Дальше"
+		if m.Lang == LangEN {
+			controls = "[↑/↓] Select Project | [Enter] Invest | [Esc] Next"
+		}
+		sb.WriteString(subtleStyle.Render(shortenItemName(controls, innerW)) + "\n")
+	} else {
+		sb.WriteString(renderAutoBanner(state.ActionSummary, innerW) + "\n")
+	}
+	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n")
 
 	currentTier := militiaTierForInvestment(m.Legacy.TotalInvested)
 	militiaStatus := fmt.Sprintf("🎖 %s: %s (%dG)", T(m.Lang, "stats.militia_tier"), titleStyle.Render(T(m.Lang, currentTier.TitleKey)), m.Legacy.TotalInvested)
@@ -143,7 +160,12 @@ func (m Model) renderMagistrateScreen(state MagistrateServiceState) string {
 	sb.WriteString(militiaStatus + "\n\n")
 
 	sb.WriteString(lipgloss.NewStyle().Bold(true).Render("📜 "+T(m.Lang, "town.management")+":") + "\n")
+	availRows := max(2, viewH-8)
+	displayed := 0
 	for i, off := range state.Offers {
+		if displayed >= availRows {
+			break
+		}
 		marker := "  "
 		nameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
 		isChosen := (!m.ManualMode && state.Cursor == i && state.ActionSummary != "")
@@ -164,45 +186,51 @@ func (m Model) renderMagistrateScreen(state MagistrateServiceState) string {
 			badge = " " + lipgloss.NewStyle().Foreground(lipgloss.Color("46")).Bold(true).Render("✓ УЛУЧШЕНО")
 		}
 
+		cleanType := shortenItemName(typeLabel, 26)
+		cleanTarget := shortenItemName(targetName, 24)
+
 		var line string
 		if off.Target == MagistrateTreasuryGrant {
-			line = fmt.Sprintf("%s%s — %s (%s)%s", marker, nameStyle.Render(typeLabel), costStyle.Render(fmt.Sprintf("%dG", off.Cost)), subtleStyle.Render("+100G в Казну"), badge)
+			line = fmt.Sprintf("%s%s — %s (%s)%s", marker, nameStyle.Render(cleanType), costStyle.Render(fmt.Sprintf("%dG", off.Cost)), subtleStyle.Render("+100G в Казну"), badge)
 		} else {
-			line = fmt.Sprintf("%s%s «%s» (%s.%d) — %s%s", marker, nameStyle.Render(typeLabel), targetName, T(m.Lang, "ui.level_short"), off.Level, costStyle.Render(fmt.Sprintf("%dG", off.Cost)), badge)
+			line = fmt.Sprintf("%s%s «%s» (%s.%d) — %s%s", marker, nameStyle.Render(cleanType), cleanTarget, T(m.Lang, "ui.level_short"), off.Level, costStyle.Render(fmt.Sprintf("%dG", off.Cost)), badge)
 		}
 		sb.WriteString(line + "\n")
+		displayed++
 	}
 
-	sb.WriteString("\n" + subtleStyle.Render(strings.Repeat("─", innerW)) + "\n")
-	if m.ManualMode {
-		controls := "[↑/↓] Выбор улучшения | [Enter] Инвестировать | [Esc] Дальше"
-		if m.Lang == LangEN {
-			controls = "[↑/↓] Select Project | [Enter] Invest | [Esc] Next"
-		}
-		sb.WriteString(subtleStyle.Render(controls))
-	} else {
-		sb.WriteString(renderAutoBanner(state.ActionSummary, innerW))
-	}
-
-	box := statsBoxStyle.Width(boxW).Render(sb.String())
-	return lipgloss.Place(m.TermWidth, m.TermHeight, lipgloss.Center, lipgloss.Center, box)
+	return padTownLines(sb.String(), viewW, viewH)
 }
 
 // 3. ХРАМ
-func (m Model) renderChurchScreen(state ChurchServiceState) string {
-	boxW := max(44, m.TermWidth-4)
-	innerW := max(38, boxW-4)
+func (m Model) renderChurchScreen(state ChurchServiceState, viewW, viewH int) string {
+	innerW := max(34, viewW)
 	var sb strings.Builder
 
 	titleStr := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true).Render("⛪ " + T(m.Lang, m.TownEst.ChurchKey))
 	sb.WriteString(fmt.Sprintf("%s  |  💰 %s\n", titleStr, goldStyle.Render(fmt.Sprintf("%dG", m.Gold))))
-	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n\n")
+
+	if m.ManualMode {
+		controls := "[↑/↓] Выбор | [Enter] Исцелить/Очистить | [Esc] Дальше"
+		if m.Lang == LangEN {
+			controls = "[↑/↓] Select | [Enter] Heal/Cleanse | [Esc] Next"
+		}
+		sb.WriteString(subtleStyle.Render(shortenItemName(controls, innerW)) + "\n")
+	} else {
+		sb.WriteString(renderAutoBanner(state.ActionSummary, innerW) + "\n")
+	}
+	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n")
 
 	sb.WriteString(lipgloss.NewStyle().Bold(true).Render("✨ Омовение и исцеление:") + "\n")
+	availRows := max(2, viewH-7)
+	displayed := 0
 	if len(state.Offers) == 0 {
 		sb.WriteString(healStyle.Render("  Все соратники здоровы и полны сил!") + "\n")
 	} else {
 		for i, off := range state.Offers {
+			if displayed >= availRows {
+				break
+			}
 			marker := "  "
 			nameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
 			isChosen := (!m.ManualMode && state.Cursor == i && state.ActionSummary != "")
@@ -225,34 +253,34 @@ func (m Model) renderChurchScreen(state ChurchServiceState) string {
 			if isChosen {
 				badge = " " + lipgloss.NewStyle().Foreground(lipgloss.Color("46")).Bold(true).Render("✓ ИСЦЕЛЕНО")
 			}
-			sb.WriteString(fmt.Sprintf("%s%s: %s [%s] — %s%s\n", marker, actionLabel, nameStyle.Render(off.HeroName), subtleStyle.Render(off.Desc), costStr, badge))
+			cleanHero := shortenItemName(off.HeroName, 18)
+			cleanDesc := shortenItemName(off.Desc, 22)
+			sb.WriteString(fmt.Sprintf("%s%s: %s [%s] — %s%s\n", marker, actionLabel, nameStyle.Render(cleanHero), subtleStyle.Render(cleanDesc), costStr, badge))
+			displayed++
 		}
 	}
 
-	sb.WriteString("\n" + subtleStyle.Render(strings.Repeat("─", innerW)) + "\n")
-	if m.ManualMode {
-		controls := "[↑/↓] Выбор | [Enter] Исцелить/Очистить | [Esc] Дальше"
-		if m.Lang == LangEN {
-			controls = "[↑/↓] Select | [Enter] Heal/Cleanse | [Esc] Next"
-		}
-		sb.WriteString(subtleStyle.Render(controls))
-	} else {
-		sb.WriteString(renderAutoBanner(state.ActionSummary, innerW))
-	}
-
-	box := statsBoxStyle.Width(boxW).Render(sb.String())
-	return lipgloss.Place(m.TermWidth, m.TermHeight, lipgloss.Center, lipgloss.Center, box)
+	return padTownLines(sb.String(), viewW, viewH)
 }
 
 // 4. ТАВЕРНА
-func (m Model) renderTavernScreen(state TavernServiceState) string {
-	boxW := max(44, m.TermWidth-4)
-	innerW := max(38, boxW-4)
+func (m Model) renderTavernScreen(state TavernServiceState, viewW, viewH int) string {
+	innerW := max(34, viewW)
 	var sb strings.Builder
 
 	titleStr := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true).Render("🍻 " + T(m.Lang, m.TownEst.TavernKey))
 	sb.WriteString(fmt.Sprintf("%s  |  💰 %s\n", titleStr, goldStyle.Render(fmt.Sprintf("%dG", m.Gold))))
-	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n\n")
+
+	if m.ManualMode {
+		controls := "[↑/↓] Выбор | [Enter] Отдохнуть | [Esc] Дальше"
+		if m.Lang == LangEN {
+			controls = "[↑/↓] Select | [Enter] Rest | [Esc] Next"
+		}
+		sb.WriteString(subtleStyle.Render(shortenItemName(controls, innerW)) + "\n")
+	} else {
+		sb.WriteString(renderAutoBanner(state.ActionSummary, innerW) + "\n")
+	}
+	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n")
 
 	sb.WriteString(lipgloss.NewStyle().Bold(true).Render("🛏️ Варианты отдыха:") + "\n")
 	for i, off := range state.Offers {
@@ -272,43 +300,47 @@ func (m Model) renderTavernScreen(state TavernServiceState) string {
 		if isChosen {
 			badge = " " + lipgloss.NewStyle().Foreground(lipgloss.Color("46")).Bold(true).Render("✓ ОПЛАЧЕНО")
 		}
+		roomDesc := "Ночлег на сеновале у очага"
+		pctDesc := "(40% HP & MP)"
 		if off.IsLuxury {
-			sb.WriteString(fmt.Sprintf("%s%s — %s (100%% HP & MP)%s\n", marker, nameStyle.Render("Уютные комнаты на втором этаже"), costStr, badge))
-		} else {
-			sb.WriteString(fmt.Sprintf("%s%s — %s (40%% HP & MP)%s\n", marker, nameStyle.Render("Ночлег на сеновале у очага"), costStr, badge))
+			roomDesc = "Уютные комнаты на втором этаже"
+			pctDesc = "(100% HP & MP)"
 		}
+		sb.WriteString(fmt.Sprintf("%s%s — %s %s%s\n", marker, nameStyle.Render(roomDesc), costStr, pctDesc, badge))
 	}
 
-	sb.WriteString("\n" + subtleStyle.Render(strings.Repeat("─", innerW)) + "\n")
-	if m.ManualMode {
-		controls := "[↑/↓] Выбор | [Enter] Отдохнуть | [Esc] Дальше"
-		if m.Lang == LangEN {
-			controls = "[↑/↓] Select | [Enter] Rest | [Esc] Next"
-		}
-		sb.WriteString(subtleStyle.Render(controls))
-	} else {
-		sb.WriteString(renderAutoBanner(state.ActionSummary, innerW))
-	}
-
-	box := statsBoxStyle.Width(boxW).Render(sb.String())
-	return lipgloss.Place(m.TermWidth, m.TermHeight, lipgloss.Center, lipgloss.Center, box)
+	return padTownLines(sb.String(), viewW, viewH)
 }
 
 // 5. ГИЛЬДИЯ
-func (m Model) renderGuildScreen(state GuildServiceState) string {
-	boxW := max(44, m.TermWidth-4)
-	innerW := max(38, boxW-4)
+func (m Model) renderGuildScreen(state GuildServiceState, viewW, viewH int) string {
+	innerW := max(34, viewW)
 	var sb strings.Builder
 
 	titleStr := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true).Render("⚔ " + T(m.Lang, m.TownEst.GuildKey))
 	sb.WriteString(fmt.Sprintf("%s  |  💰 %s\n", titleStr, goldStyle.Render(fmt.Sprintf("%dG", m.Gold))))
-	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n\n")
+
+	if m.ManualMode {
+		controls := "[↑/↓] Выбор | [Enter] Нанять | [Esc] Дальше"
+		if m.Lang == LangEN {
+			controls = "[↑/↓] Select | [Enter] Recruit | [Esc] Next"
+		}
+		sb.WriteString(subtleStyle.Render(shortenItemName(controls, innerW)) + "\n")
+	} else {
+		sb.WriteString(renderAutoBanner(state.ActionSummary, innerW) + "\n")
+	}
+	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n")
 
 	sb.WriteString(lipgloss.NewStyle().Bold(true).Render("📜 Доукомплектование отряда:") + "\n")
+	availRows := max(2, viewH-7)
+	displayed := 0
 	if len(state.Offers) == 0 {
 		sb.WriteString(healStyle.Render("  Отряд укомплектован! Все 5 бойцов в строю.") + "\n")
 	} else {
 		for i, off := range state.Offers {
+			if displayed >= availRows {
+				break
+			}
 			marker := "  "
 			nameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
 			isChosen := (!m.ManualMode && state.Cursor == i && state.ActionSummary != "")
@@ -331,36 +363,38 @@ func (m Model) renderGuildScreen(state GuildServiceState) string {
 				badge = " " + lipgloss.NewStyle().Foreground(lipgloss.Color("46")).Bold(true).Render("✓ ПРИНЯТ В ОТРЯД")
 			}
 			sb.WriteString(fmt.Sprintf("%s%s (%s, слот %d) — %s%s\n", marker, nameStyle.Render(recType), clsName, off.SlotIdx+1, costStr, badge))
+			displayed++
 		}
 	}
 
-	sb.WriteString("\n" + subtleStyle.Render(strings.Repeat("─", innerW)) + "\n")
-	if m.ManualMode {
-		controls := "[↑/↓] Выбор | [Enter] Нанять | [Esc] Дальше"
-		if m.Lang == LangEN {
-			controls = "[↑/↓] Select | [Enter] Recruit | [Esc] Next"
-		}
-		sb.WriteString(subtleStyle.Render(controls))
-	} else {
-		sb.WriteString(renderAutoBanner(state.ActionSummary, innerW))
-	}
-
-	box := statsBoxStyle.Width(boxW).Render(sb.String())
-	return lipgloss.Place(m.TermWidth, m.TermHeight, lipgloss.Center, lipgloss.Center, box)
+	return padTownLines(sb.String(), viewW, viewH)
 }
 
 // 6. КУЗНИЦА И КОЖЕВНИК
-func (m Model) renderForgeScreen(title string, state ForgeServiceState, isTannery bool) string {
-	boxW := max(44, m.TermWidth-4)
-	innerW := max(38, boxW-4)
+func (m Model) renderForgeScreen(title string, state ForgeServiceState, isTannery bool, viewW, viewH int) string {
+	innerW := max(34, viewW)
 	var sb strings.Builder
 
 	titleStr := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true).Render(title)
 	sb.WriteString(fmt.Sprintf("%s  |  💰 %s\n", titleStr, goldStyle.Render(fmt.Sprintf("%dG", m.Gold))))
-	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n\n")
+
+	if m.ManualMode {
+		controls := "[↑/↓] Выбор | [Enter] Улучшить | [Esc] Дальше"
+		if m.Lang == LangEN {
+			controls = "[↑/↓] Select | [Enter] Forge | [Esc] Next"
+		}
+		sb.WriteString(subtleStyle.Render(shortenItemName(controls, innerW)) + "\n")
+	} else {
+		sb.WriteString(renderAutoBanner(state.ActionSummary, innerW) + "\n")
+	}
+	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n")
 
 	sb.WriteString(lipgloss.NewStyle().Bold(true).Render("⚒ Доступные улучшения:") + "\n")
+	availRows := max(2, viewH-7)
+	displayed := 0
 	rowIdx := 0
+
+	// 1. Пошив сумки
 	if isTannery && m.BagLevel < len(bagUpgrades)-1 {
 		nextBag := bagUpgrades[m.BagLevel+1]
 		marker := "  "
@@ -376,14 +410,20 @@ func (m Model) renderForgeScreen(title string, state ForgeServiceState, isTanner
 		if isChosen {
 			badge = " " + lipgloss.NewStyle().Foreground(lipgloss.Color("46")).Bold(true).Render("✓ СШИТО")
 		}
-		sb.WriteString(fmt.Sprintf("%s%s (%d слотов) — %s%s\n", marker, nameStyle.Render(T(m.Lang, nextBag.NameKey)), nextBag.Capacity, costStr, badge))
+		bagName := shortenItemName(T(m.Lang, nextBag.NameKey), 28)
+		sb.WriteString(fmt.Sprintf("%s%s (%d слотов) — %s%s\n", marker, nameStyle.Render(bagName), nextBag.Capacity, costStr, badge))
 		rowIdx++
+		displayed++
 	}
 
+	// 2. Список заточки и выделки экипировки
 	if len(state.Offers) == 0 && (!isTannery || m.BagLevel >= len(bagUpgrades)-1) {
 		sb.WriteString(subtleStyle.Render("  Нет подходящих предметов для заточки.") + "\n")
 	} else {
 		for i, off := range state.Offers {
+			if displayed >= availRows {
+				break
+			}
 			marker := "  "
 			nameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
 			targetIdx := rowIdx + i
@@ -402,40 +442,45 @@ func (m Model) renderForgeScreen(title string, state ForgeServiceState, isTanner
 			if isChosen {
 				badge = " " + lipgloss.NewStyle().Foreground(lipgloss.Color("46")).Bold(true).Render("✓ ЗАТОЧЕНО")
 			}
-			sb.WriteString(fmt.Sprintf("%s%s (%s +%d) [%s] — %s%s\n", marker, nameStyle.Render(off.ItemName), T(m.Lang, "slot."+string(off.Slot)), off.Level+1, heroName, costStr, badge))
+			slotName := T(m.Lang, "slot."+string(off.Slot))
+			cleanItem := shortenItemName(off.ItemName, max(10, innerW-42))
+			sb.WriteString(fmt.Sprintf("%s%s (%s +%d) [%s] — %s%s\n", marker, nameStyle.Render(cleanItem), slotName, off.Level+1, heroName, costStr, badge))
+			displayed++
 		}
 	}
 
-	sb.WriteString("\n" + subtleStyle.Render(strings.Repeat("─", innerW)) + "\n")
-	if m.ManualMode {
-		controls := "[↑/↓] Выбор | [Enter] Улучшить | [Esc] Дальше"
-		if m.Lang == LangEN {
-			controls = "[↑/↓] Select | [Enter] Forge | [Esc] Next"
-		}
-		sb.WriteString(subtleStyle.Render(controls))
-	} else {
-		sb.WriteString(renderAutoBanner(state.ActionSummary, innerW))
-	}
-
-	box := statsBoxStyle.Width(boxW).Render(sb.String())
-	return lipgloss.Place(m.TermWidth, m.TermHeight, lipgloss.Center, lipgloss.Center, box)
+	return padTownLines(sb.String(), viewW, viewH)
 }
 
 // 7. ЛАВКА АЛХИМИКА
-func (m Model) renderAlchemistScreen(state AlchemistServiceState) string {
-	boxW := max(44, m.TermWidth-4)
-	innerW := max(38, boxW-4)
+func (m Model) renderAlchemistScreen(state AlchemistServiceState, viewW, viewH int) string {
+	innerW := max(34, viewW)
 	var sb strings.Builder
 
 	titleStr := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true).Render("🧪 " + T(m.Lang, m.TownEst.AlchemistKey))
 	sb.WriteString(fmt.Sprintf("%s  |  💰 %s\n", titleStr, goldStyle.Render(fmt.Sprintf("%dG", m.Gold))))
-	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n\n")
 
-	sb.WriteString(lipgloss.NewStyle().Bold(true).Render("⚗️️ Мутации и зелья:") + "\n")
+	if m.ManualMode {
+		controls := "[↑/↓] Выбор | [Enter] Купить/Принять | [Esc] Выйти в поход"
+		if m.Lang == LangEN {
+			controls = "[↑/↓] Select | [Enter] Buy/Apply | [Esc] Depart"
+		}
+		sb.WriteString(subtleStyle.Render(shortenItemName(controls, innerW)) + "\n")
+	} else {
+		sb.WriteString(renderAutoBanner(state.ActionSummary, innerW) + "\n")
+	}
+	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n")
+
+	sb.WriteString(lipgloss.NewStyle().Bold(true).Render("⚗ Мутации и зелья:") + "\n")
+	availRows := max(2, viewH-7)
+	displayed := 0
 	if len(state.Offers) == 0 {
 		sb.WriteString(subtleStyle.Render("  Пояса полны, мутации недоступны.") + "\n")
 	} else {
 		for i, off := range state.Offers {
+			if displayed >= availRows {
+				break
+			}
 			marker := "  "
 			nameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
 			isChosen := (!m.ManualMode && state.Cursor == i && state.ActionSummary != "")
@@ -456,21 +501,11 @@ func (m Model) renderAlchemistScreen(state AlchemistServiceState) string {
 			if isChosen {
 				badge = " " + lipgloss.NewStyle().Foreground(lipgloss.Color("46")).Bold(true).Render("✓ ПРИНЯТО")
 			}
-			sb.WriteString(fmt.Sprintf("%s[%s] %s (%s) — %s%s\n", marker, cat, nameStyle.Render(off.ItemTitle), off.HeroName, costStr, badge))
+			cleanTitle := shortenItemName(off.ItemTitle, max(10, innerW-38))
+			sb.WriteString(fmt.Sprintf("%s[%s] %s (%s) — %s%s\n", marker, cat, nameStyle.Render(cleanTitle), off.HeroName, costStr, badge))
+			displayed++
 		}
 	}
 
-	sb.WriteString("\n" + subtleStyle.Render(strings.Repeat("─", innerW)) + "\n")
-	if m.ManualMode {
-		controls := "[↑/↓] Выбор | [Enter] Купить/Принять | [Esc] Выйти в поход"
-		if m.Lang == LangEN {
-			controls = "[↑/↓] Select | [Enter] Buy/Apply | [Esc] Depart"
-		}
-		sb.WriteString(subtleStyle.Render(controls))
-	} else {
-		sb.WriteString(renderAutoBanner(state.ActionSummary, innerW))
-	}
-
-	box := statsBoxStyle.Width(boxW).Render(sb.String())
-	return lipgloss.Place(m.TermWidth, m.TermHeight, lipgloss.Center, lipgloss.Center, box)
+	return padTownLines(sb.String(), viewW, viewH)
 }

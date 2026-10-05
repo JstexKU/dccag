@@ -5,11 +5,11 @@ import (
 )
 
 func (m *Model) calculateDungeonSize(floor int) (int, int) {
-	// Масштабные размеры карты: ширина 110..220, высота 45..90
-	w := 110 + (floor-1)*6
+	// Масштабные размеры карты: ширина увеличена в 2 раза (220..440), высота 45..90
+	w := 220 + (floor-1)*12
 	h := 45 + (floor-1)*3
-	if w > 220 {
-		w = 220
+	if w > 440 {
+		w = 440
 	}
 	if h > 90 {
 		h = 90
@@ -96,10 +96,19 @@ func (m *Model) initDungeonForFloor(floor int) {
 	// 1. Если этаж уже посещался — загружаем его сохранённое состояние
 	if saved, exists := m.VisitedFloors[floor]; exists && saved != nil {
 		m.restoreFloorState(saved)
-		// Если отряд входит снизу/сверху — ставим около входа/лестницы
+		// Если отряд возвращается на этаж — безопасно ставим его на свободный пол около выхода
 		if saved.ExitPos.X > 0 && saved.ExitPos.Y > 0 {
-			m.PartyPos = Point{saved.ExitPos.X + 1, saved.ExitPos.Y}
-			if m.PartyPos.X >= m.MapWidth || m.Grid[m.PartyPos.Y][m.PartyPos.X] == TileWall {
+			placed := false
+			dirs := []Point{{1, 0}, {0, 1}, {-1, 0}, {0, -1}}
+			for _, d := range dirs {
+				np := Point{saved.ExitPos.X + d.X, saved.ExitPos.Y + d.Y}
+				if np.X >= 0 && np.X < m.MapWidth && np.Y >= 0 && np.Y < m.MapHeight && m.Grid[np.Y][np.X] == TileFloor {
+					m.PartyPos = np
+					placed = true
+					break
+				}
+			}
+			if !placed {
 				m.PartyPos = saved.ExitPos
 			}
 		}
@@ -140,10 +149,10 @@ func (m *Model) generateDungeon() {
 	}
 	rooms := []Rect{}
 
-	// Число комнат масштабируется от площади карты (25..60+ комнат)
-	attempts := (m.MapWidth * m.MapHeight) / 38
-	if attempts < 25 {
-		attempts = 25
+	// Плотность комнат под увеличенный масштаб карты
+	attempts := (m.MapWidth * m.MapHeight) / 36
+	if attempts < 28 {
+		attempts = 28
 	}
 
 	overlaps := func(r1, r2 Rect) bool {
@@ -175,7 +184,7 @@ func (m *Model) generateDungeon() {
 
 		rooms = append(rooms, cand)
 
-		// Вырезаем комнату заданной формы
+		// Вырезаем комнату заданной геометрии
 		switch cand.Shape {
 		case 1: // Овальный грот
 			cx := float64(rx) + float64(rw)/2.0
@@ -201,7 +210,7 @@ func (m *Model) generateDungeon() {
 					}
 				}
 			}
-		default: // Прямоугольная комната
+		default: // Прямоугольный зал
 			for y := ry; y < ry+rh; y++ {
 				for x := rx; x < rx+rw; x++ {
 					m.Grid[y][x] = TileFloor
@@ -240,7 +249,7 @@ func (m *Model) generateDungeon() {
 		}
 	}
 
-	// 3. Построение связного графа с петлями и развилками (MST + дополнительные проходы)
+	// 3. Построение связного графа с петлями и развилками (MST + loopback)
 	type Edge struct {
 		u, v int
 		dist int
@@ -261,7 +270,6 @@ func (m *Model) generateDungeon() {
 		return allEdges[i].dist < allEdges[j].dist
 	})
 
-	// Union-Find (DSU) для гарантированной связности комнат
 	parent := make([]int, len(rooms))
 	for i := range parent {
 		parent[i] = i
@@ -290,7 +298,6 @@ func (m *Model) generateDungeon() {
 		}
 	}
 
-	// Добавляем 25% дополнительных путей для создания круговых маршрутов и развилок
 	extraLoops := len(rooms) / 4
 	addedLoops := 0
 	for _, e := range allEdges {
@@ -304,7 +311,8 @@ func (m *Model) generateDungeon() {
 				break
 			}
 		}
-		if !alreadyConnected && e.dist < 800 { // соединяем относительно близкие залы
+		// Порог поднят с 800 до 2500 с учётом удвоенной ширины карты
+		if !alreadyConnected && e.dist < 2500 {
 			connectedEdges = append(connectedEdges, e)
 			addedLoops++
 		}
@@ -338,43 +346,102 @@ func (m *Model) generateDungeon() {
 
 	relicSpawned := false
 
-	// 5. Заполнение комнат монстрами и объектами
+	// 5. Плотное и многослойное наполнение комнат (монстры, тайники, бочки, алтари)
 	for i := 1; i < len(rooms); i++ {
 		r := rooms[i]
-		isBoss := (m.Floor%10 == 0 && i == len(rooms)-1)
-		pos := Point{r.X + r.W/2, r.Y + r.H/2}
+		isBossRoom := (m.Floor%10 == 0 && i == len(rooms)-1)
+		center := Point{r.X + r.W/2, r.Y + r.H/2}
 
-		if isBoss {
-			m.Packs[pos] = spawnMonsterPack(true, m.Floor)
+		// А. Спавн монстров: в каждой комнате есть пак, в больших — шанс на второй
+		if isBossRoom {
+			m.Packs[center] = spawnMonsterPack(true, m.Floor)
 		} else {
-			// На большой карте монстры спавнятся не во всех комнатах (в ~60%), освобождая пути для разведки
-			if rng.Intn(100) < 65 {
-				m.Packs[pos] = spawnMonsterPack(false, m.Floor)
+			m.Packs[center] = spawnMonsterPack(false, m.Floor)
+
+			if (r.W >= 10 || r.H >= 7) && rng.Intn(100) < 45 {
+				secondPos := Point{r.X + 2, r.Y + r.H - 2}
+				if m.Grid[secondPos.Y][secondPos.X] == TileFloor && secondPos != center {
+					m.Packs[secondPos] = spawnMonsterPack(false, m.Floor)
+				}
+			}
+		}
+
+		// Б. Точки расстановки интерактивных объектов
+		spawnPoints := []Point{
+			{r.X + 1, r.Y + 1},
+			{r.X + r.W - 2, r.Y + 1},
+			{r.X + 1, r.H + r.Y - 2},
+			{r.X + r.W - 2, r.H + r.Y - 2},
+		}
+
+		// Реликвия для квеста или редкая находка
+		if !relicSpawned && (m.CurrentQuest.Type == QuestFindRelic || rng.Intn(14) == 0) {
+			p := spawnPoints[0]
+			if m.Grid[p.Y][p.X] == TileFloor {
+				m.Grid[p.Y][p.X] = TileRelic
+				relicSpawned = true
+				spawnPoints = spawnPoints[1:]
+			}
+		}
+
+		// Тематическая специализация зала
+		roomTheme := rng.Intn(12)
+
+		for idx, pt := range spawnPoints {
+			if pt.X <= 0 || pt.X >= m.MapWidth-1 || pt.Y <= 0 || pt.Y >= m.MapHeight-1 {
+				continue
+			}
+			if m.Grid[pt.Y][pt.X] != TileFloor || pt == center {
+				continue
 			}
 
-			eventRoll := rng.Intn(14)
-			cornerPos := Point{r.X + 1, r.Y + 1}
-			if cornerPos.X >= m.MapWidth-1 || cornerPos.Y >= m.MapHeight-1 || m.Grid[cornerPos.Y][cornerPos.X] == TileWall {
-				cornerPos = Point{r.X + r.W/2, r.Y + r.H/2 + 1}
-			}
+			switch roomTheme {
+			case 0, 1, 2, 3: // Сокровищница: связка сундуков и ловушек
+				if idx == 0 {
+					m.Grid[pt.Y][pt.X] = TileChest
+				} else if idx == 1 {
+					if rng.Intn(100) < 50 {
+						m.Grid[pt.Y][pt.X] = TileTrappedChest
+					} else {
+						m.Grid[pt.Y][pt.X] = TileChest
+					}
+				} else if idx == 2 && rng.Intn(100) < 45 {
+					m.Grid[pt.Y][pt.X] = TileBarrel
+				}
 
-			if cornerPos.Y < m.MapHeight && cornerPos.X < m.MapWidth && m.Grid[cornerPos.Y][cornerPos.X] == TileFloor {
+			case 4, 5: // Святилище: Фонтан или Алтарь + бочки со смолой
+				if idx == 0 {
+					if rng.Intn(100) < 60 {
+						m.Grid[pt.Y][pt.X] = TileFountain
+					} else {
+						m.Grid[pt.Y][pt.X] = TileAltar
+					}
+				} else if idx == 1 {
+					m.Grid[pt.Y][pt.X] = TileBarrel
+				} else if idx == 2 && rng.Intn(100) < 50 {
+					m.Grid[pt.Y][pt.X] = TileChest
+				}
+
+			case 6, 7: // Зал событий (?) + сундук
+				if idx == 0 {
+					m.Grid[pt.Y][pt.X] = TileEvent
+				} else if idx == 1 {
+					m.Grid[pt.Y][pt.X] = TileChest
+				} else if idx == 2 && rng.Intn(100) < 50 {
+					m.Grid[pt.Y][pt.X] = TileBarrel
+				}
+
+			default: // Боевой зал: регулярный сундук, ловушка или бочки
+				roll := rng.Intn(10)
 				switch {
-				case (!relicSpawned && m.CurrentQuest.Type == QuestFindRelic) || (eventRoll == 13 && !relicSpawned):
-					m.Grid[cornerPos.Y][cornerPos.X] = TileRelic
-					relicSpawned = true
-				case eventRoll == 0:
-					m.Grid[cornerPos.Y][cornerPos.X] = TileAltar
-				case eventRoll == 1:
-					m.Grid[cornerPos.Y][cornerPos.X] = TileFountain
-				case eventRoll == 2:
-					m.Grid[cornerPos.Y][cornerPos.X] = TileTrappedChest
-				case eventRoll == 3:
-					m.Grid[cornerPos.Y][cornerPos.X] = TileBarrel
-				case eventRoll == 4 || eventRoll == 5:
-					m.Grid[cornerPos.Y][cornerPos.X] = TileEvent
-				case eventRoll >= 7 && eventRoll <= 10:
-					m.Grid[cornerPos.Y][cornerPos.X] = TileChest
+				case roll <= 3:
+					m.Grid[pt.Y][pt.X] = TileChest
+				case roll == 4:
+					m.Grid[pt.Y][pt.X] = TileTrappedChest
+				case roll == 5 || roll == 6:
+					m.Grid[pt.Y][pt.X] = TileBarrel
+				case roll == 7:
+					m.Grid[pt.Y][pt.X] = TileEvent
 				}
 			}
 		}

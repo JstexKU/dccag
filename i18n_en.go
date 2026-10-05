@@ -116,6 +116,9 @@ var dictEN = map[string]string{
 	"bag.tier_4": "Travel Trunk",
 	"bag.tier_5": "Caravan Sack",
 	"bag.tier_6": "Bag of Illusions",
+	"bag.tier_7": "Dimensional Pouch",
+	"bag.tier_8": "Void Satchel",
+	"bag.tier_9": "Bottomless Astral Trunk",
 
 	// --- Potions ---
 	"potion.small.hp":      "Small HP Potion",

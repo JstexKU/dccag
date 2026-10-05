@@ -27,6 +27,28 @@ func townDisplayModeFor(width, height int) townDisplayMode {
 }
 
 func (m Model) renderTownHub(viewW, viewH int) string {
+	// Если отряд внутри конкретной фазы обслуживания, рендерим карточку заведения прямо в рамке квартала
+	switch m.TownPhase {
+	case TownPhaseSellLoot:
+		return m.renderMarketScreen(m.MarketState, viewW, viewH)
+	case TownPhaseMagistrate:
+		return m.renderMagistrateScreen(m.MagistrateState, viewW, viewH)
+	case TownPhaseChurch:
+		return m.renderChurchScreen(m.ChurchState, viewW, viewH)
+	case TownPhaseTavern:
+		return m.renderTavernScreen(m.TavernState, viewW, viewH)
+	case TownPhaseGuild:
+		return m.renderGuildScreen(m.GuildState, viewW, viewH)
+	case TownPhaseSmithy:
+		title := "⚒ " + T(m.Lang, m.TownEst.SmithyKey)
+		return m.renderForgeScreen(title, m.SmithyState, false, viewW, viewH)
+	case TownPhaseTannery:
+		title := "🎒 " + T(m.Lang, m.TownEst.TanneryKey)
+		return m.renderForgeScreen(title, m.TanneryState, true, viewW, viewH)
+	case TownPhaseAlchemist:
+		return m.renderAlchemistScreen(m.AlchemistState, viewW, viewH)
+	}
+
 	mode := townDisplayModeFor(viewW, viewH)
 	switch mode {
 	case townDisplayWide:
@@ -52,7 +74,7 @@ func (m Model) townActions() []townAction {
 		{TownPhaseChurch, "⛪", T(m.Lang, m.TownEst.ChurchKey), m.Legacy.ChurchLevel},
 		{TownPhaseTavern, "🍻", T(m.Lang, m.TownEst.TavernKey), m.Legacy.TavernLevel},
 		{TownPhaseGuild, "⚔", T(m.Lang, m.TownEst.GuildKey), 0},
-		{TownPhaseSmithy, "⚒️️", T(m.Lang, m.TownEst.SmithyKey), m.Legacy.SmithyLevel},
+		{TownPhaseSmithy, "⚒", T(m.Lang, m.TownEst.SmithyKey), m.Legacy.SmithyLevel},
 		{TownPhaseTannery, "🎒", T(m.Lang, m.TownEst.TanneryKey), m.Legacy.TanneryLevel},
 		{TownPhaseAlchemist, "🧪", T(m.Lang, m.TownEst.AlchemistKey), 0},
 	}

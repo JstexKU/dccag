@@ -42,7 +42,7 @@ func (m Model) renderRightContentLines(innerRightW, maxLines int) []string {
 		lines = append(lines, shortenItemName(fmt.Sprintf("⚒ %s: %s.%d", T(m.Lang, m.TownEst.SmithyKey), T(m.Lang, "ui.level_short"), m.Legacy.SmithyLevel), innerRightW))
 		lines = append(lines, shortenItemName(fmt.Sprintf("🎒 %s: %s.%d", T(m.Lang, m.TownEst.TanneryKey), T(m.Lang, "ui.level_short"), m.Legacy.TanneryLevel), innerRightW))
 		lines = append(lines, shortenItemName(fmt.Sprintf("🏛️ %s: %s.%d", T(m.Lang, m.TownEst.ChurchKey), T(m.Lang, "ui.level_short"), m.Legacy.ChurchLevel), innerRightW))
-		lines = append(lines, shortenItemName(fmt.Sprintf("🍻 %s: %s.%d", T(m.Lang, m.TownEst.TavernKey), T(m.Lang, "ui.level_short"), m.Legacy.TanneryLevel), innerRightW))
+		lines = append(lines, shortenItemName(fmt.Sprintf("🍻 %s: %s.%d", T(m.Lang, m.TownEst.TavernKey), T(m.Lang, "ui.level_short"), m.Legacy.TavernLevel), innerRightW))
 		lines = append(lines, shortenItemName(fmt.Sprintf("%s: %d/%d", T(m.Lang, "ui.bag"), len(m.Bag), m.currentBagCapacity()), innerRightW))
 	} else {
 		lines = append(lines, accentStyle.Render(shortenItemName(T(m.Lang, "ui.scouting")+":", innerRightW)))
@@ -111,30 +111,6 @@ func (m Model) View() string {
 		return m.renderCreatorScreen()
 	}
 
-	// Если отряд находится в городе — отображаем карточку заведения
-	if m.InTown {
-		switch m.TownPhase {
-		case TownPhaseSellLoot:
-			return m.renderMarketScreen(m.MarketState)
-		case TownPhaseMagistrate:
-			return m.renderMagistrateScreen(m.MagistrateState)
-		case TownPhaseChurch:
-			return m.renderChurchScreen(m.ChurchState)
-		case TownPhaseTavern:
-			return m.renderTavernScreen(m.TavernState)
-		case TownPhaseGuild:
-			return m.renderGuildScreen(m.GuildState)
-		case TownPhaseSmithy:
-			title := "⚒ " + T(m.Lang, m.TownEst.SmithyKey)
-			return m.renderForgeScreen(title, m.SmithyState, false)
-		case TownPhaseTannery:
-			title := "🎒 " + T(m.Lang, m.TownEst.TanneryKey)
-			return m.renderForgeScreen(title, m.TanneryState, true)
-		case TownPhaseAlchemist:
-			return m.renderAlchemistScreen(m.AlchemistState)
-		}
-	}
-
 	termW := max(38, m.TermWidth)
 	termH := max(22, m.TermHeight)
 
@@ -149,10 +125,7 @@ func (m Model) View() string {
 		output = m.renderPortrait(termW, termH)
 	}
 
-	// 1. Убираем любые CRLF-артефакты Windows
 	cleanOutput := strings.ReplaceAll(output, "\r\n", "\n")
-
-	// 2. Гарантируем строгую фиксацию строк по высоте окна терминала
 	return truncateLines(cleanOutput, termH)
 }
 

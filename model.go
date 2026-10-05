@@ -46,6 +46,7 @@ type Model struct {
 	Packs            map[Point]*MonsterPack
 	VisitedFloors    map[int]*FloorState // Кэш посещённых этажей подземелья
 	PartyPos         Point
+	CameraPos        Point // Плавная позиция центра камеры (устранение тряски экрана)
 	PathHistory      []Point
 	LoopDetectCount  int
 	Party            []*Hero
@@ -131,7 +132,7 @@ func initialModelWith(legacy TownLegacy, bp *HeroBlueprint) Model {
 		Logs:             []string{},
 		AutoMode:         true,
 		SpeedMs:          260,
-		TownDelayMs:      2200,
+		TownDelayMs:      500,
 		StatsScroll:      0,
 		LogScroll:        0,
 		CodexTab:         0,
@@ -151,6 +152,7 @@ func initialModelWith(legacy TownLegacy, bp *HeroBlueprint) Model {
 	m.relocalizeStart()
 	m.Stats.TotalGoldEarned = 50 + legacy.TreasuryGold
 	m.initDungeonForFloor(1)
+	m.CameraPos = m.PartyPos
 	return m
 }
 

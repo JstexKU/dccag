@@ -229,4 +229,7 @@ var bagUpgrades = []BagUpgrade{
 	{Level: 4, NameKey: "bag.tier_4", Capacity: 16, Cost: 750},
 	{Level: 5, NameKey: "bag.tier_5", Capacity: 20, Cost: 1400},
 	{Level: 6, NameKey: "bag.tier_6", Capacity: 25, Cost: 2600},
+	{Level: 7, NameKey: "bag.tier_7", Capacity: 30, Cost: 4800},
+	{Level: 8, NameKey: "bag.tier_8", Capacity: 40, Cost: 8500},
+	{Level: 9, NameKey: "bag.tier_9", Capacity: 50, Cost: 15000},
 }

@@ -107,7 +107,7 @@ func (m *Model) ExecuteMarketSellAll() int {
 		m.Gold += soldGold
 		m.Stats.TotalGoldEarned += soldGold
 		m.addLog(goldStyle.Render(T(m.Lang, "town.log.market_sold", soldGold)))
-		m.logTownAction("⚖️", T(m.Lang, "town.market"), T(m.Lang, "town.log.market_history", soldGold))
+		m.logTownAction("⚖", T(m.Lang, "town.market"), T(m.Lang, "town.log.market_history", soldGold))
 	}
 	m.Bag = []EquipItem{}
 
@@ -285,7 +285,7 @@ func (m *Model) ExecuteMagistrateInvest(offer MagistrateOffer) bool {
 	}
 
 	m.addLog(titleStyle.Render(T(m.Lang, "town.log.magistrate_tax", offer.Cost, bldName, newLevel)))
-	m.logTownAction("🏛️️", T(m.Lang, "town.magistrate"), T(m.Lang, "town.log.magistrate_hist", offer.Cost, bldName, newLevel))
+	m.logTownAction("🏛", T(m.Lang, "town.magistrate"), T(m.Lang, "town.log.magistrate_hist", offer.Cost, bldName, newLevel))
 
 	if newTier := militiaTierForInvestment(m.Legacy.TotalInvested); newTier.TitleKey != prevTier.TitleKey {
 		tierName := T(m.Lang, newTier.TitleKey)
@@ -494,14 +494,17 @@ func (m *Model) GenerateGuildOffers() []GuildRecruitOffer {
 	var offers []GuildRecruitOffer
 	recruitCost := max(45, 60+(m.Floor*25)-(m.Legacy.ChurchLevel*8))
 
+	// Определяем классы, занятые живыми и дееспособными героями
+	usedClasses := make(map[HeroClass]bool)
+	for _, ally := range m.Party {
+		if !ally.IsDead && !ally.IsDowned && !ally.LostInAbyss {
+			usedClasses[ally.Class] = true
+		}
+	}
+
 	for i, h := range m.Party {
-		if (h.IsDead || h.IsDowned) && !(h.IsLeader && !h.IsDead) {
-			usedClasses := make(map[HeroClass]bool)
-			for _, ally := range m.Party {
-				if !ally.IsDead && !ally.IsDowned {
-					usedClasses[ally.Class] = true
-				}
-			}
+		// Вакансия: боец окончательно погиб, либо ранен и не является лидером
+		if h.IsDead || h.LostInAbyss || (h.IsDowned && !h.IsLeader) {
 			var availableClasses []HeroClass
 			for _, c := range AllClasses {
 				if !usedClasses[c] {
