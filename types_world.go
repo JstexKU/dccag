@@ -23,6 +23,18 @@ type Point struct {
 	X, Y int
 }
 
+// FloorState хранит сохранённое состояние конкретного этажа подземелья
+type FloorState struct {
+	Floor     int
+	Width     int
+	Height    int
+	Grid      [][]Tile
+	Explored  [][]bool
+	Packs     map[Point]*MonsterPack
+	ExitPos   Point
+	StairsPos Point
+}
+
 type BiomeType string
 
 const (

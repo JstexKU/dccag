@@ -52,6 +52,7 @@ func (m *Model) step() {
 	if m.evaluateRetreat() != RetreatNone &&
 		m.Grid[m.PartyPos.Y][m.PartyPos.X] == TileExit &&
 		m.Stats.TotalSteps > 0 {
+		m.saveCurrentFloorState()
 		m.InTown = true
 		m.TownPhase = TownPhaseSellLoot
 		m.TownDialog = T(m.Lang, "town.log.enter_gate")
@@ -86,7 +87,7 @@ func (m *Model) step() {
 	// 6. Поиск следующего шага
 	var next Point
 
-	if m.LoopDetectCount >= 3 {
+	if m.LoopDetectCount >= 5 {
 		targetTile := TileStairs
 		if m.evaluateRetreat() != RetreatNone {
 			targetTile = TileExit
@@ -95,6 +96,7 @@ func (m *Model) step() {
 		if found {
 			next = forcedStep
 		} else {
+			m.saveCurrentFloorState()
 			m.Floor++
 			m.Stats.FloorsCleared++
 			m.checkQuestProgress(QuestReachFloor, "", m.Floor)
@@ -121,17 +123,18 @@ func (m *Model) step() {
 		}
 	}
 
-	if isOscillating || visitCount >= 2 || next == m.PartyPos {
+	if isOscillating || visitCount >= 3 || next == m.PartyPos {
 		m.LoopDetectCount++
-	} else if m.LoopDetectCount > 0 && m.LoopDetectCount < 3 {
+	} else if m.LoopDetectCount > 0 && m.LoopDetectCount < 5 {
 		m.LoopDetectCount--
 	}
 
-	if m.LoopDetectCount == 3 {
+	if m.LoopDetectCount == 5 {
 		m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.collision_break")))
 	}
 
-	if m.LoopDetectCount >= 6 {
+	if m.LoopDetectCount >= 10 {
+		m.saveCurrentFloorState()
 		m.Floor++
 		m.Stats.FloorsCleared++
 		m.checkQuestProgress(QuestReachFloor, "", m.Floor)
@@ -143,7 +146,7 @@ func (m *Model) step() {
 	}
 
 	m.PathHistory = append(m.PathHistory, next)
-	if len(m.PathHistory) > 12 {
+	if len(m.PathHistory) > 36 {
 		m.PathHistory = m.PathHistory[1:]
 	}
 
@@ -157,6 +160,7 @@ func (m *Model) moveTo(next Point) {
 	}
 
 	if next == m.PartyPos {
+		m.saveCurrentFloorState()
 		m.Floor++
 		m.Stats.FloorsCleared++
 		m.checkQuestProgress(QuestReachFloor, "", m.Floor)
@@ -229,6 +233,7 @@ func (m *Model) moveTo(next Point) {
 		m.handleEventTile(next)
 
 	case TileStairs:
+		m.saveCurrentFloorState()
 		m.Floor++
 		m.Stats.FloorsCleared++
 		m.checkQuestProgress(QuestReachFloor, "", m.Floor)

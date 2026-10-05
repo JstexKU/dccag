@@ -145,3 +145,79 @@ func TestTacticsScreenRoundTrip(t *testing.T) {
 		t.Fatal("Esc должна возвращать в игру и перезапускать тики")
 	}
 }
+
+// TestFloorStatePersistenceAndRestoration проверяет сохранение изменений на этаже при повторном входе.
+func TestFloorStatePersistenceAndRestoration(t *testing.T) {
+	seedRNG(101)
+	m := initialModel()
+	m.State = StatePlaying
+
+	// 1. Модифицируем 1-й этаж: открываем сундук, убираем пак монстров, отмечаем разведанную область
+	var chestPt Point
+	chestFound := false
+	for y := 0; y < m.MapHeight; y++ {
+		for x := 0; x < m.MapWidth; x++ {
+			if m.Grid[y][x] == TileChest {
+				chestPt = Point{x, y}
+				chestFound = true
+				break
+			}
+		}
+		if chestFound {
+			break
+		}
+	}
+	if chestFound {
+		m.Grid[chestPt.Y][chestPt.X] = TileFloor // симулируем вскрытие сундука
+	}
+
+	initialPackCount := len(m.Packs)
+	for pt := range m.Packs {
+		delete(m.Packs, pt) // симулируем уничтожение одного пака
+		break
+	}
+	m.Explored[10][10] = true
+
+	// Сохраняем состояние этажа 1
+	m.saveCurrentFloorState()
+
+	// 2. Переходим на этаж 2
+	m.Floor = 2
+	m.initDungeonForFloor(2)
+	if m.Floor != 2 || m.VisitedFloors[1] == nil {
+		t.Fatal("этаж 2 должен инициализироваться, а этаж 1 оставаться в памяти")
+	}
+
+	// 3. Возвращаемся обратно на этаж 1
+	m.Floor = 1
+	m.initDungeonForFloor(1)
+
+	if chestFound && m.Grid[chestPt.Y][chestPt.X] != TileFloor {
+		t.Fatal("открытый сундук не должен восстанавливаться при возврате на этаж")
+	}
+	if len(m.Packs) != initialPackCount-1 {
+		t.Fatalf("уничтоженные монстры не должны возрождаться: паков %d, ожидалось %d", len(m.Packs), initialPackCount-1)
+	}
+	if !m.Explored[10][10] {
+		t.Fatal("разведанные участки карты должны сохраняться")
+	}
+}
+
+// TestDungeonConnectivityAndScale проверяет масштаб карты и доступность лестницы через BFS.
+func TestDungeonConnectivityAndScale(t *testing.T) {
+	for seed := int64(200); seed <= 205; seed++ {
+		seedRNG(seed)
+		m := initialModel()
+		m.initDungeonForFloor(5) // проверяем глубокий этаж
+
+		if m.MapWidth < 110 || m.MapHeight < 45 {
+			t.Fatalf("seed %d: масштаб карты недостаточен (%dx%d)", seed, m.MapWidth, m.MapHeight)
+		}
+
+		// Ищем лестницу спуска (TileStairs) с помощью BFS
+		_, found := m.findEmergencyStep(TileStairs)
+		if !found {
+			t.Fatalf("seed %d: лестница спуска недостижима из точки спавна отряда", seed)
+		}
+	}
+}

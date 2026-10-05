@@ -86,7 +86,7 @@ func (m *Model) stepTown() {
 			}
 			bldName := T(m.Lang, targetBld.Key)
 			m.addLog(titleStyle.Render(T(m.Lang, "town.log.magistrate_tax", investAmt, bldName, targetBld.Level+1)))
-			m.logTownAction("🏛️", T(m.Lang, "town.magistrate"), T(m.Lang, "town.log.magistrate_hist", investAmt, bldName, targetBld.Level+1))
+			m.logTownAction("🏛️️", T(m.Lang, "town.magistrate"), T(m.Lang, "town.log.magistrate_hist", investAmt, bldName, targetBld.Level+1))
 
 			m.MagistrateState.Cursor = targetBld.Idx
 			m.MagistrateState.ActionSummary = fmt.Sprintf("Инвестировано %dG в «%s» (Ур.%d)", investAmt, bldName, targetBld.Level+1)

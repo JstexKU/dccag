@@ -54,7 +54,7 @@ func (m *Model) evaluateHealingUrgency() HealingUrgency {
 		hpPct := float64(h.HP) / float64(h.MaxHP)
 		mpPct := 0.0
 		if h.MaxMP > 0 {
-			mpPct = float64(h.MP) / float64(h.MaxMP)
+			mpPct = float64(h.MP) / float64(h.MaxHP)
 		}
 
 		if hpPct <= 0.25 || h.Stress >= 160 {
@@ -88,12 +88,17 @@ func (m *Model) evaluateHealingUrgency() HealingUrgency {
 	}
 }
 
+// distanceToNearest оценивает расстояние только до известных (разведанных) клеток
 func (m *Model) distanceToNearest(cond func(Point, Tile) bool) (int, bool) {
 	if cond(m.PartyPos, m.Grid[m.PartyPos.Y][m.PartyPos.X]) {
 		return 0, true
 	}
-	visited := make(map[Point]bool)
-	visited[m.PartyPos] = true
+
+	totalCells := m.MapWidth * m.MapHeight
+	visited := make([]bool, totalCells)
+	startIdx := m.PartyPos.Y*m.MapWidth + m.PartyPos.X
+	visited[startIdx] = true
+
 	type entry struct {
 		p    Point
 		dist int
@@ -105,21 +110,24 @@ func (m *Model) distanceToNearest(cond func(Point, Tile) bool) (int, bool) {
 		curr := queue[0]
 		queue = queue[1:]
 		for _, d := range dirs {
-			next := Point{curr.p.X + d.X, curr.p.Y + d.Y}
-			if next.X < 0 || next.X >= m.MapWidth || next.Y < 0 || next.Y >= m.MapHeight {
+			nx := curr.p.X + d.X
+			ny := curr.p.Y + d.Y
+			if nx < 0 || nx >= m.MapWidth || ny < 0 || ny >= m.MapHeight {
 				continue
 			}
-			if visited[next] {
+			idx := ny*m.MapWidth + nx
+			if visited[idx] {
 				continue
 			}
-			if m.Grid[next.Y][next.X] == TileWall {
+			if m.Grid[ny][nx] == TileWall {
 				continue
 			}
-			if cond(next, m.Grid[next.Y][next.X]) {
+			// Проверяем условие только если клетка уже открыта на карте
+			if m.Explored[ny][nx] && cond(Point{nx, ny}, m.Grid[ny][nx]) {
 				return curr.dist + 1, true
 			}
-			visited[next] = true
-			queue = append(queue, entry{next, curr.dist + 1})
+			visited[idx] = true
+			queue = append(queue, entry{Point{nx, ny}, curr.dist + 1})
 		}
 	}
 	return 0, false
@@ -139,9 +147,9 @@ func (m *Model) shouldSeekFountain(urgency HealingUrgency) bool {
 	case HealingCritical:
 		return true
 	case HealingUrgent:
-		return dist <= 15
+		return dist <= 25
 	case HealingOptional:
-		return dist <= 6
+		return dist <= 10
 	}
 	return false
 }
@@ -152,8 +160,11 @@ func (m *Model) isMonsterNearby() bool {
 			if x < 0 || x >= m.MapWidth || y < 0 || y >= m.MapHeight {
 				continue
 			}
-			if _, hasPack := m.Packs[Point{x, y}]; hasPack {
-				return true
+			// Считаем опасными только видимых монстров
+			if m.Explored[y][x] {
+				if _, hasPack := m.Packs[Point{x, y}]; hasPack {
+					return true
+				}
 			}
 		}
 	}
@@ -173,10 +184,16 @@ func (m *Model) hasUndergearedHeroes() bool {
 }
 
 func (m *Model) findEmergencyStep(targetTile Tile) (Point, bool) {
+	totalCells := m.MapWidth * m.MapHeight
+	visited := make([]bool, totalCells)
+	cameFrom := make([]int, totalCells)
+	for i := range cameFrom {
+		cameFrom[i] = -1
+	}
+
+	startIdx := m.PartyPos.Y*m.MapWidth + m.PartyPos.X
+	visited[startIdx] = true
 	queue := []Point{m.PartyPos}
-	visited := make(map[Point]bool)
-	cameFrom := make(map[Point]Point)
-	visited[m.PartyPos] = true
 	dirs := []Point{{0, -1}, {0, 1}, {-1, 0}, {1, 0}}
 
 	for len(queue) > 0 {
@@ -184,20 +201,22 @@ func (m *Model) findEmergencyStep(targetTile Tile) (Point, bool) {
 		queue = queue[1:]
 
 		if curr != m.PartyPos && m.Grid[curr.Y][curr.X] == targetTile {
-			step := curr
-			for cameFrom[step] != m.PartyPos {
-				step = cameFrom[step]
+			currIdx := curr.Y*m.MapWidth + curr.X
+			for cameFrom[currIdx] != startIdx && cameFrom[currIdx] != -1 {
+				currIdx = cameFrom[currIdx]
 			}
-			return step, true
+			return Point{X: currIdx % m.MapWidth, Y: currIdx / m.MapWidth}, true
 		}
 
 		for _, d := range dirs {
-			np := Point{curr.X + d.X, curr.Y + d.Y}
-			if np.X >= 0 && np.X < m.MapWidth && np.Y >= 0 && np.Y < m.MapHeight {
-				if !visited[np] && m.Grid[np.Y][np.X] != TileWall {
-					visited[np] = true
-					cameFrom[np] = curr
-					queue = append(queue, np)
+			nx := curr.X + d.X
+			ny := curr.Y + d.Y
+			if nx >= 0 && nx < m.MapWidth && ny >= 0 && ny < m.MapHeight {
+				nIdx := ny*m.MapWidth + nx
+				if !visited[nIdx] && m.Grid[ny][nx] != TileWall {
+					visited[nIdx] = true
+					cameFrom[nIdx] = curr.Y*m.MapWidth + curr.X
+					queue = append(queue, Point{nx, ny})
 				}
 			}
 		}
@@ -214,11 +233,18 @@ func (m *Model) findNextStep() Point {
 	bagFull := len(m.Bag) >= m.currentBagCapacity()
 	needsGear := m.hasUndergearedHeroes()
 
+	totalCells := m.MapWidth * m.MapHeight
+
 	findPath := func(avoidMonsters bool, targetCondition func(Point, Tile) bool) (Point, bool) {
+		visited := make([]bool, totalCells)
+		cameFrom := make([]int, totalCells)
+		for i := range cameFrom {
+			cameFrom[i] = -1
+		}
+
+		startIdx := m.PartyPos.Y*m.MapWidth + m.PartyPos.X
+		visited[startIdx] = true
 		queue := []Point{m.PartyPos}
-		visited := make(map[Point]bool)
-		cameFrom := make(map[Point]Point)
-		visited[m.PartyPos] = true
 		dirs := []Point{{0, -1}, {0, 1}, {-1, 0}, {1, 0}}
 
 		for len(queue) > 0 {
@@ -226,28 +252,32 @@ func (m *Model) findNextStep() Point {
 			queue = queue[1:]
 
 			if curr != m.PartyPos && targetCondition(curr, m.Grid[curr.Y][curr.X]) {
-				step := curr
-				for cameFrom[step] != m.PartyPos {
-					step = cameFrom[step]
+				currIdx := curr.Y*m.MapWidth + curr.X
+				for cameFrom[currIdx] != startIdx && cameFrom[currIdx] != -1 {
+					currIdx = cameFrom[currIdx]
 				}
-				return step, true
+				return Point{X: currIdx % m.MapWidth, Y: currIdx / m.MapWidth}, true
 			}
 
 			for _, d := range dirs {
-				next := Point{curr.X + d.X, curr.Y + d.Y}
-				if next.X >= 0 && next.X < m.MapWidth && next.Y >= 0 && next.Y < m.MapHeight {
-					if !visited[next] && m.Grid[next.Y][next.X] != TileWall {
-						if m.Tactics.SkipTraps && m.Grid[next.Y][next.X] == TileTrappedChest && m.CurrentQuest.Type != QuestOpenChests {
+				nx := curr.X + d.X
+				ny := curr.Y + d.Y
+				if nx >= 0 && nx < m.MapWidth && ny >= 0 && ny < m.MapHeight {
+					nIdx := ny*m.MapWidth + nx
+					if !visited[nIdx] && m.Grid[ny][nx] != TileWall {
+						// Ловушки обходятся, только если разведаны
+						if m.Tactics.SkipTraps && m.Explored[ny][nx] && m.Grid[ny][nx] == TileTrappedChest && m.CurrentQuest.Type != QuestOpenChests {
 							continue
 						}
-						if avoidMonsters {
-							if _, hasMob := m.Packs[next]; hasMob {
+						// Монстров обходим, только если они разведаны
+						if avoidMonsters && m.Explored[ny][nx] {
+							if _, hasMob := m.Packs[Point{nx, ny}]; hasMob {
 								continue
 							}
 						}
-						visited[next] = true
-						cameFrom[next] = curr
-						queue = append(queue, next)
+						visited[nIdx] = true
+						cameFrom[nIdx] = curr.Y*m.MapWidth + curr.X
+						queue = append(queue, Point{nx, ny})
 					}
 				}
 			}
@@ -255,32 +285,38 @@ func (m *Model) findNextStep() Point {
 		return m.PartyPos, false
 	}
 
+	// 1. Отступление к выходу (выход ищется только если он разведан на карте)
 	if retreat && !forceDeeper {
 		step, found := findPath(true, func(p Point, t Tile) bool {
-			return t == TileExit
+			return m.Explored[p.Y][p.X] && t == TileExit
 		})
 		if found {
 			return step
 		}
 		step, found = findPath(false, func(p Point, t Tile) bool {
-			return t == TileExit
+			return m.Explored[p.Y][p.X] && t == TileExit
 		})
 		if found {
 			return step
 		}
 	}
 
+	// 2. Поиск источника исцеления (только среди открытых фонтанов)
 	if seekingFountain {
 		step, found := findPath(true, func(p Point, t Tile) bool {
-			return t == TileFountain
+			return m.Explored[p.Y][p.X] && t == TileFountain
 		})
 		if found {
 			return step
 		}
 	}
 
+	// 3. Поиск открытого снаряжения при его дефиците
 	if needsGear && !bagFull {
 		step, found := findPath(true, func(p Point, t Tile) bool {
+			if !m.Explored[p.Y][p.X] {
+				return false
+			}
 			return t == TileChest || t == TileTrappedChest || t == TileRelic || t == TileEvent
 		})
 		if found {
@@ -290,7 +326,13 @@ func (m *Model) findNextStep() Point {
 
 	isExplorationQuest := m.CurrentQuest.Type == QuestReachFloor && !m.CurrentQuest.Completed
 
-	isTarget := func(p Point, t Tile) bool {
+	// 4. Поиск открытых целей на карте (ЧЕСТНАЯ ПРОВЕРКА m.Explored)
+	isKnownTarget := func(p Point, t Tile) bool {
+		// Автопилот не видит сквозь туман войны
+		if !m.Explored[p.Y][p.X] {
+			return false
+		}
+
 		_, hasPack := m.Packs[p]
 		if hasPack {
 			if needsGear {
@@ -338,14 +380,36 @@ func (m *Model) findNextStep() Point {
 	}
 
 	if needsGear {
-		step, found := findPath(true, isTarget)
-		if found {
+		if step, found := findPath(true, isKnownTarget); found {
 			return step
 		}
 	}
+	if step, found := findPath(false, isKnownTarget); found {
+		return step
+	}
 
-	step, found := findPath(false, isTarget)
-	if found {
+	// 5. РЕЖИМ ИССЛЕДОВАТЕЛЯ (Frontier Exploration):
+	// Если известных целей нет — идём к ближайшей открытой клетке, граничащей с неразведанной тьмой
+	isFrontier := func(p Point, t Tile) bool {
+		if !m.Explored[p.Y][p.X] || t == TileWall {
+			return false
+		}
+		dirs := []Point{{0, -1}, {0, 1}, {-1, 0}, {1, 0}}
+		for _, d := range dirs {
+			nx, ny := p.X+d.X, p.Y+d.Y
+			if nx >= 0 && nx < m.MapWidth && ny >= 0 && ny < m.MapHeight {
+				if !m.Explored[ny][nx] && m.Grid[ny][nx] != TileWall {
+					return true // Клетка граничит с неизведанным проходом
+				}
+			}
+		}
+		return false
+	}
+
+	if step, found := findPath(true, isFrontier); found {
+		return step
+	}
+	if step, found := findPath(false, isFrontier); found {
 		return step
 	}
 

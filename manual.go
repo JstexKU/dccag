@@ -259,6 +259,7 @@ func (m *Model) manualLeave() {
 		m.addLog(subtleStyle.Render(T(m.Lang, "ctl.not_on_exit")))
 		return
 	}
+	m.saveCurrentFloorState()
 	m.InTown = true
 	m.TownPhase = TownPhaseSellLoot
 	m.TownDialog = T(m.Lang, "town.log.enter_gate")

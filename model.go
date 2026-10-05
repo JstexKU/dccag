@@ -44,6 +44,7 @@ type Model struct {
 	Grid             [][]Tile
 	Explored         [][]bool
 	Packs            map[Point]*MonsterPack
+	VisitedFloors    map[int]*FloorState // Кэш посещённых этажей подземелья
 	PartyPos         Point
 	PathHistory      []Point
 	LoopDetectCount  int
@@ -140,6 +141,7 @@ func initialModelWith(legacy TownLegacy, bp *HeroBlueprint) Model {
 		Legacy:           legacy,
 		Stats:            newStats(),
 		Packs:            make(map[Point]*MonsterPack),
+		VisitedFloors:    make(map[int]*FloorState),
 		TermWidth:        120,
 		TermHeight:       36,
 		RunCounted:       false,
@@ -199,4 +201,3 @@ func resetGameStatic(m Model) (Model, tea.Cmd) {
 func (m Model) resetGame() (Model, tea.Cmd) {
 	return resetGameStatic(m)
 }
-
