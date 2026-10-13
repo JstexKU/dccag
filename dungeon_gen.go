@@ -348,8 +348,10 @@ func (m *Model) generateDungeon() {
 	m.Grid[stairsPos.Y][stairsPos.X] = TileStairs
 
 	relicSpawned := false
+	loreSpawned := false
+	biome := getBiome(m.Floor)
 
-	// 5. Плотное и многослойное наполнение комнат (монстры, тайники, бочки, алтари)
+	// 5. Плотное и многослойное наполнение комнат (монстры, тайники, бочки, алтари, фолианты)
 	for i := 1; i < len(rooms); i++ {
 		r := rooms[i]
 		isBossRoom := (m.Floor%10 == 0 && i == len(rooms)-1)
@@ -387,8 +389,24 @@ func (m *Model) generateDungeon() {
 			}
 		}
 
+		// Книжная полка / пюпитр с фолиантом (TileLore)
+		loreChance := 35
+		if biome.Name == BiomeArchives {
+			loreChance = 90
+		}
+		if (!loreSpawned && rng.Intn(100) < loreChance) || (biome.Name == BiomeArchives && rng.Intn(100) < 40) {
+			if len(spawnPoints) > 0 {
+				p := spawnPoints[0]
+				if m.Grid[p.Y][p.X] == TileFloor {
+					m.Grid[p.Y][p.X] = TileLore
+					loreSpawned = true
+					spawnPoints = spawnPoints[1:]
+				}
+			}
+		}
+
 		// Тематическая специализация зала
-		roomTheme := rng.Intn(12)
+		roomTheme := rng.Intn(14)
 
 		for idx, pt := range spawnPoints {
 			if pt.X <= 0 || pt.X >= m.MapWidth-1 || pt.Y <= 0 || pt.Y >= m.MapHeight-1 {
@@ -434,8 +452,18 @@ func (m *Model) generateDungeon() {
 					m.Grid[pt.Y][pt.X] = TileBarrel
 				}
 
-			default: // Боевой зал: регулярный сундук, ловушка или бочки
-				roll := rng.Intn(10)
+			case 8, 9: // Зал летописей и архивов: книжные полки и сундуки
+				if idx == 0 {
+					m.Grid[pt.Y][pt.X] = TileLore
+					loreSpawned = true
+				} else if idx == 1 {
+					m.Grid[pt.Y][pt.X] = TileChest
+				} else if idx == 2 && rng.Intn(100) < 45 {
+					m.Grid[pt.Y][pt.X] = TileBarrel
+				}
+
+			default: // Боевой зал: регулярный сундук, ловушка, бочки или фолиант
+				roll := rng.Intn(11)
 				switch {
 				case roll <= 3:
 					m.Grid[pt.Y][pt.X] = TileChest
@@ -445,6 +473,9 @@ func (m *Model) generateDungeon() {
 					m.Grid[pt.Y][pt.X] = TileBarrel
 				case roll == 7:
 					m.Grid[pt.Y][pt.X] = TileEvent
+				case roll == 8:
+					m.Grid[pt.Y][pt.X] = TileLore
+					loreSpawned = true
 				}
 			}
 		}

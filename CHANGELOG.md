@@ -27,6 +27,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - The unit suffix `G` (gold), the `HP`/`MP`/`ST` values and the product name stay identical in both languages, but they now live in the dictionaries (`ui.hp_short`, `menu.title`, ...) and can be localized there.
 [Unreleased]
 
+
+## [3.3.2]
+
+### 📜 Expanded Contract System (19 Quest Types)
+* Added 12 new Guild contract types:
+  * **Exploration:** "Trap Disarmer" (disarming traps), "Fountain Grace", "Abyss Cartography" (90%+ explored), "Gold Rush", "Secret Paths", "Full Clearance".
+  * **Combat Challenges:** "Lord Slayer" (biome bosses), "Mutant Hunt" (affixed monsters), "Firestorm Havoc" (tar barrel detonations), "Flawless Vanguard" (victories without knockdowns), "Precision Strikes" (critical hits), "Unyielding Bulwark" (blocks and defensive stances).
+* **Smart Filtering:** Contracts dynamically adjust to current dungeon depth, boss floors, and active biome mechanics.
+
+### ⚖️ Market UI Improvements
+* Implemented a dynamic sliding **Viewport** for backpack inventory: long item lists no longer overflow or break the shop card.
+* Cursor focus automatically tracks the selected item in both manual mode (`↑`/`↓`, `PgUp`/`PgDown`) and during autopilot transaction previews.
+* Adaptive scroll indicators (`▲ N more above...` / `▼ N more below...`) tailored to terminal window height.
+
+### 🌐 Localization
+
 ## [3.3.1]
 
 Added

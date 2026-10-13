@@ -175,3 +175,91 @@ func (m *Model) handleRelicTile() {
 		m.addLog(goldStyle.Render(T(m.Lang, "dungeon.log.relic_salvaged")))
 	}
 }
+
+func (m *Model) handleLoreTile() {
+	if m.Legacy.UnlockedLore == nil {
+		m.Legacy.UnlockedLore = NewUnlockedLoreStore()
+	}
+
+	biome := getBiome(m.Floor)
+
+	// 1. Поиск неизученных томов текущего биома и общий пул неизученных
+	var poolUnseenBiome []LoreVolume
+	var poolUnseenAny []LoreVolume
+
+	for _, v := range AllLoreVolumes {
+		if !m.Legacy.UnlockedLore.IsUnlocked(v.ID) {
+			if v.BiomeOrigin == biome.Name {
+				poolUnseenBiome = append(poolUnseenBiome, v)
+			}
+			poolUnseenAny = append(poolUnseenAny, v)
+		}
+	}
+
+	var chosen LoreVolume
+	if len(poolUnseenBiome) > 0 {
+		chosen = poolUnseenBiome[rng.Intn(len(poolUnseenBiome))]
+	} else if len(poolUnseenAny) > 0 {
+		chosen = poolUnseenAny[rng.Intn(len(poolUnseenAny))]
+	} else if len(AllLoreVolumes) > 0 {
+		// Если вся литература уже изучена — перечитываем случайный фолиант
+		chosen = AllLoreVolumes[rng.Intn(len(AllLoreVolumes))]
+	} else {
+		return
+	}
+
+	isNew := m.Legacy.UnlockedLore.Unlock(chosen.ID)
+	m.Stats.LoreFound++
+
+	// 2. Вывод в журнал событий
+	titleText := T(m.Lang, chosen.TitleKey)
+	if isNew {
+		m.addLog(titleStyle.Render(T(m.Lang, "dungeon.log.lore_discovered", titleText)))
+	} else {
+		m.addLog(accentStyle.Render(T(m.Lang, "dungeon.log.lore_reread", titleText)))
+	}
+	m.addLog(subtleStyle.Render("\"" + T(m.Lang, chosen.ExcerptKey) + "\""))
+
+	// 3. Активация бонуса найденного свитка/книги
+	switch chosen.Bonus.Type {
+	case LoreBonusPartyExp:
+		expAmt := chosen.Bonus.Value
+		if expAmt <= 0 {
+			expAmt = 60
+		}
+		m.distributePartyExp(expAmt)
+
+	case LoreBonusStressHeal:
+		healAmt := chosen.Bonus.Value
+		if healAmt <= 0 {
+			healAmt = 20
+		}
+		for _, h := range m.Party {
+			if !h.IsDead && !h.IsDowned {
+				h.Stress = max(0, h.Stress-healAmt)
+				if h.Stress < 60 {
+					h.Affliction = AfflictionNone
+				}
+			}
+		}
+
+	case LoreBonusClassPerk:
+		m.distributePartyExp(50)
+		for _, h := range m.Party {
+			if !h.IsDead && h.Class == chosen.Bonus.TargetClass {
+				h.Stress = max(0, h.Stress-15)
+			}
+		}
+
+	case LoreBonusRacePerk:
+		m.distributePartyExp(50)
+		for _, h := range m.Party {
+			if !h.IsDead && h.Race == chosen.Bonus.TargetRace {
+				h.Stress = max(0, h.Stress-15)
+			}
+		}
+
+	case LoreBonusBaneDmg:
+		m.distributePartyExp(40)
+	}
+}

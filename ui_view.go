@@ -104,6 +104,9 @@ func (m Model) View() string {
 	if m.State == StateArmory {
 		return m.renderArmoryScreen()
 	}
+	if m.State == StateLibrary {
+		return m.renderLibraryScreen(m.TermWidth, m.TermHeight)
+	}
 	if m.State == StateTactics {
 		return m.renderTacticsScreen()
 	}

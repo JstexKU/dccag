@@ -64,6 +64,7 @@ func (m Model) renderMap(viewW, viewH int) string {
 	biome := getBiome(m.Floor)
 	customWall := lipgloss.NewStyle().Foreground(biome.WallColor).Render("#")
 	customFloor := lipgloss.NewStyle().Foreground(biome.FloorColor).Render(string(biome.FloorRune))
+	loreTileStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("220")).Bold(true)
 
 	startX, startY := m.updateCamera(viewW, viewH)
 
@@ -112,6 +113,8 @@ func (m Model) renderMap(viewW, viewH int) string {
 				sb.WriteString(trappedChestStyle.Render("T"))
 			case TileBarrel:
 				sb.WriteString(barrelStyle.Render("o"))
+			case TileLore:
+				sb.WriteString(loreTileStyle.Render("§"))
 			case TileEvent:
 				sb.WriteString(eventTileStyle.Render("?"))
 			case TileStairs:

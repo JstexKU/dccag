@@ -45,6 +45,9 @@ func (l TownLegacy) sanitized() TownLegacy {
 	l.TanneryLevel = clampInt(l.TanneryLevel, 0, 99)
 	l.ChurchLevel = clampInt(l.ChurchLevel, 0, 99)
 	l.TavernLevel = clampInt(l.TavernLevel, 0, 99)
+	if l.UnlockedLore == nil {
+		l.UnlockedLore = NewUnlockedLoreStore()
+	}
 	return l
 }
 
@@ -133,6 +136,16 @@ func legacyAfterRun(m Model) TownLegacy {
 	legacy := m.Legacy
 	legacy.TreasuryGold = saved
 	legacy.TotalInvested += saved
+
+	if legacy.UnlockedLore == nil {
+		legacy.UnlockedLore = NewUnlockedLoreStore()
+	} else {
+		cloned := NewUnlockedLoreStore()
+		for k, v := range legacy.UnlockedLore {
+			cloned[k] = v
+		}
+		legacy.UnlockedLore = cloned
+	}
 	return legacy
 }
 

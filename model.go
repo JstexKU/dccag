@@ -17,6 +17,7 @@ const (
 	StateInfoBook
 	StateTactics
 	StateCreator
+	StateLibrary
 )
 
 type TownPhase int
@@ -87,6 +88,7 @@ type Model struct {
 	SmithyState      ForgeServiceState
 	TanneryState     ForgeServiceState
 	AlchemistState   AlchemistServiceState
+	LibraryState     LibraryState
 
 	// Герой-лидер, созданный игроком (Blueprint == nil — отряд случайный), экран создания и меню.
 	Blueprint         *HeroBlueprint
@@ -125,6 +127,10 @@ func initialModelWithLegacy(legacy TownLegacy) Model {
 
 // initialModelWith создаёт модель новой экспедиции; с чертежом отряд ведёт созданный игроком лидер.
 func initialModelWith(legacy TownLegacy, bp *HeroBlueprint, companions ...HeroBlueprint) Model {
+	if legacy.UnlockedLore == nil {
+		legacy.UnlockedLore = NewUnlockedLoreStore()
+	}
+
 	heroes := buildStartingParty(legacy.SmithyLevel, bp, companions...)
 
 	activeRelic := generateRelic(1)
@@ -167,6 +173,7 @@ func initialModelWith(legacy TownLegacy, bp *HeroBlueprint, companions ...HeroBl
 		RunCounted:       false,
 		RestTurnsLeft:    0,
 		Tactics:          DefaultTactics(),
+		LibraryState:     LibraryState{},
 	}
 	m.relocalizeStart()
 	m.Stats.TotalGoldEarned = 50 + legacy.TreasuryGold
@@ -182,7 +189,14 @@ func (m *Model) relocalizeStart() {
 }
 
 func initialModel() Model {
-	return initialModelWithLegacy(TownLegacy{TreasuryGold: 0, SmithyLevel: 0, TanneryLevel: 0, ChurchLevel: 0, TavernLevel: 0})
+	return initialModelWithLegacy(TownLegacy{
+		TreasuryGold: 0,
+		SmithyLevel:  0,
+		TanneryLevel: 0,
+		ChurchLevel:  0,
+		TavernLevel:  0,
+		UnlockedLore: NewUnlockedLoreStore(),
+	})
 }
 
 func (m Model) Init() tea.Cmd {
@@ -203,6 +217,9 @@ func resetGameStatic(m Model) (Model, tea.Cmd) {
 
 	// Налог с добычи уходит в казну столицы и сохраняется на диск.
 	newLegacy := legacyAfterRun(m)
+	if newLegacy.UnlockedLore == nil {
+		newLegacy.UnlockedLore = m.Legacy.UnlockedLore
+	}
 	persistState(m.Lang, newLegacy, m.Tactics, m.Blueprint, m.Companions...)
 
 	fresh := initialModelWith(newLegacy, m.Blueprint, m.Companions...)

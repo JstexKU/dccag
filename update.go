@@ -10,11 +10,11 @@ import (
 var ruToEnKey = map[rune]rune{
 	'й': 'q', 'ц': 'w', 'у': 'e', 'к': 'r', 'е': 't', 'н': 'y', 'г': 'u', 'ш': 'i', 'щ': 'o', 'з': 'p', 'х': '[', 'ъ': ']',
 	'ф': 'a', 'ы': 's', 'в': 'd', 'а': 'f', 'п': 'g', 'р': 'h', 'о': 'j', 'л': 'k', 'д': 'l', 'ж': ';', 'э': '\'',
-	'я': 'z', 'ч': 'x', 'с': 'c', 'м': 'v', 'і': 's', 'т': 'n', 'ь': 'm', 'б': ',', 'ю': '.', 'ё': '`',
+	'я': 'z', 'ч': 'x', 'с': 'c', 'м': 'v', 'и': 'b', 'і': 's', 'т': 'n', 'ь': 'm', 'б': ',', 'ю': '.', 'ё': '`',
 	'ў': ']', '’': '\'',
 	'Й': 'q', 'Ц': 'w', 'У': 'e', 'К': 'r', 'Е': 't', 'Н': 'y', 'Г': 'u', 'Ш': 'i', 'Щ': 'o', 'З': 'p', 'Х': '[', 'Ъ': ']',
 	'Ф': 'a', 'Ы': 's', 'В': 'd', 'А': 'f', 'П': 'g', 'Р': 'h', 'О': 'j', 'Л': 'k', 'Д': 'l', 'Ж': ';', 'Э': '\'',
-	'Я': 'z', 'Ч': 'x', 'С': 'c', 'М': 'v', 'І': 's', 'Т': 'n', 'Ь': 'm', 'Б': ',', 'Ю': '.', 'Ё': '`',
+	'Я': 'z', 'Ч': 'x', 'С': 'c', 'М': 'v', 'И': 'b', 'І': 's', 'Т': 'n', 'Ь': 'm', 'Б': ',', 'Ю': '.', 'Ё': '`',
 	'Ў': ']',
 }
 
@@ -105,6 +105,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Экран тактики перехватывает свои клавиши раньше общей обработки.
 		if m.State == StateTactics {
 			if cmd, handled := m.handleTacticsKey(key); handled {
+				return m, cmd
+			}
+		}
+
+		// Экран библиотеки литературы перехватывает свои клавиши раньше общей обработки.
+		if m.State == StateLibrary {
+			if cmd, handled := m.handleLibraryKey(key); handled {
 				return m, cmd
 			}
 		}
@@ -246,6 +253,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmd := m.restartTicks(m.SpeedMs)
 				return m, cmd
 			}
+		case "b":
+			if m.State == StatePlaying {
+				m.State = StateLibrary
+				m.LibraryState.Cursor = 0
+				m.LibraryState.ScrollOffset = 0
+				m.LibraryState.TextScrollY = 0
+				m.LibraryState.ViewingDetails = false
+			} else if m.State == StateLibrary {
+				m.State = StatePlaying
+				cmd := m.restartTicks(m.SpeedMs)
+				return m, cmd
+			}
 		case "t":
 			if m.State == StatePlaying {
 				m.State = StateTactics
@@ -256,7 +275,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, cmd
 			}
 		case "esc":
-			if m.State == StateArmory || m.State == StateStatsManual || m.State == StateInfoBook {
+			if m.State == StateArmory || m.State == StateStatsManual || m.State == StateInfoBook || m.State == StateLibrary {
 				m.State = StatePlaying
 				cmd := m.restartTicks(m.SpeedMs)
 				return m, cmd
@@ -339,4 +358,104 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 	return m, nil
+}
+
+func (m *Model) handleLibraryKey(key string) (tea.Cmd, bool) {
+	st := &m.LibraryState
+	volumes := GetVolumesByCategory(st.ActiveCategory)
+
+	switch key {
+	case "b", "esc":
+		if st.ViewingDetails {
+			st.ViewingDetails = false
+			st.TextScrollY = 0
+			return nil, true
+		}
+		m.State = StatePlaying
+		cmd := m.restartTicks(m.SpeedMs)
+		return cmd, true
+
+	case "tab":
+		st.ActiveCategory = (st.ActiveCategory + 1) % 6
+		st.Cursor = 0
+		st.ScrollOffset = 0
+		st.TextScrollY = 0
+		st.ViewingDetails = false
+		return nil, true
+
+	case "shift+tab":
+		st.ActiveCategory = (st.ActiveCategory + 5) % 6
+		st.Cursor = 0
+		st.ScrollOffset = 0
+		st.TextScrollY = 0
+		st.ViewingDetails = false
+		return nil, true
+
+	case "1", "2", "3", "4", "5", "6":
+		catIdx, _ := strconv.Atoi(key)
+		st.ActiveCategory = LoreCategory(catIdx - 1)
+		st.Cursor = 0
+		st.ScrollOffset = 0
+		st.TextScrollY = 0
+		st.ViewingDetails = false
+		return nil, true
+
+	case "enter", "right":
+		if len(volumes) > 0 {
+			st.ViewingDetails = !st.ViewingDetails
+			st.TextScrollY = 0
+		}
+		return nil, true
+
+	case "left":
+		if st.ViewingDetails {
+			st.ViewingDetails = false
+			st.TextScrollY = 0
+			return nil, true
+		}
+
+	case "up", "k":
+		if st.ViewingDetails {
+			if st.TextScrollY > 0 {
+				st.TextScrollY--
+			}
+		} else if len(volumes) > 0 {
+			st.Cursor = (st.Cursor + len(volumes) - 1) % len(volumes)
+			st.AdjustScroll(len(volumes), 12)
+			st.TextScrollY = 0
+		}
+		return nil, true
+
+	case "down", "j":
+		if st.ViewingDetails {
+			st.TextScrollY++
+		} else if len(volumes) > 0 {
+			st.Cursor = (st.Cursor + 1) % len(volumes)
+			st.AdjustScroll(len(volumes), 12)
+			st.TextScrollY = 0
+		}
+		return nil, true
+
+	case "pgup":
+		if st.ViewingDetails {
+			st.TextScrollY = max(0, st.TextScrollY-6)
+		} else if len(volumes) > 0 {
+			st.Cursor = max(0, st.Cursor-5)
+			st.AdjustScroll(len(volumes), 12)
+			st.TextScrollY = 0
+		}
+		return nil, true
+
+	case "pgdown":
+		if st.ViewingDetails {
+			st.TextScrollY += 6
+		} else if len(volumes) > 0 {
+			st.Cursor = min(len(volumes)-1, st.Cursor+5)
+			st.AdjustScroll(len(volumes), 12)
+			st.TextScrollY = 0
+		}
+		return nil, true
+	}
+
+	return nil, false
 }

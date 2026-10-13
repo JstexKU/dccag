@@ -3,6 +3,9 @@ package main
 // --- Расы и их свойства ---
 type RaceType string
 
+// Псевдоним для совместимости с кодексом и системой литературы
+type HeroRace = RaceType
+
 const (
 	RaceHuman     RaceType = "human"
 	RaceElf       RaceType = "elf"

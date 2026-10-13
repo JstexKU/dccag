@@ -259,6 +259,10 @@ func (m *Model) moveTo(next Point) {
 		m.checkQuestProgress(QuestPyromania, "", 1)
 		m.Grid[next.Y][next.X] = TileFloor
 
+	case TileLore:
+		m.handleLoreTile()
+		m.Grid[next.Y][next.X] = TileFloor
+
 	case TileEvent:
 		m.Grid[next.Y][next.X] = TileFloor
 		m.handleEventTile(next)

@@ -6,6 +6,26 @@ import (
 	"testing"
 )
 
+func equalTownLegacy(a, b TownLegacy) bool {
+	if a.TreasuryGold != b.TreasuryGold ||
+		a.TotalInvested != b.TotalInvested ||
+		a.SmithyLevel != b.SmithyLevel ||
+		a.TanneryLevel != b.TanneryLevel ||
+		a.ChurchLevel != b.ChurchLevel ||
+		a.TavernLevel != b.TavernLevel {
+		return false
+	}
+	if len(a.UnlockedLore) != len(b.UnlockedLore) {
+		return false
+	}
+	for k, v := range a.UnlockedLore {
+		if b.UnlockedLore[k] != v {
+			return false
+		}
+	}
+	return true
+}
+
 func useTempSave(t *testing.T) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "dccag", "save.json")
@@ -29,8 +49,8 @@ func TestSaveRoundTrip(t *testing.T) {
 	if !ok {
 		t.Fatal("сохранение не прочиталось")
 	}
-	if got.Legacy != legacy {
-		t.Errorf("наследие изменилось: %+v != %+v", got.Legacy, legacy)
+	if !equalTownLegacy(got.Legacy, legacy) {
+		t.Fatalf("наследие изменилось: %+v", got.Legacy)
 	}
 	if got.Tactics != tc {
 		t.Errorf("тактика изменилась: %+v != %+v", got.Tactics, tc)
@@ -57,8 +77,8 @@ func TestSaveOverwrite(t *testing.T) {
 	if !ok {
 		t.Fatal("повторно сохранённый файл не прочитался")
 	}
-	if got.Legacy != second {
-		t.Errorf("сохранение не было заменено: %+v != %+v", got.Legacy, second)
+	if !equalTownLegacy(got.Legacy, second) {
+		t.Fatalf("наследие не перезаписалось: %+v", got.Legacy)
 	}
 	if got.Lang != LangEN {
 		t.Errorf("язык не был заменён: %q", got.Lang)

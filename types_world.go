@@ -17,6 +17,7 @@ const (
 	TileBarrel       Tile = 'o'
 	TileRelic        Tile = '*'
 	TileEvent        Tile = '?'
+	TileLore         Tile = '§' // Книжная полка / пюпитр со свитком
 )
 
 type Point struct {
@@ -107,6 +108,7 @@ type RunStats struct {
 	UpgradesForged  int
 	BarrelsBlown    int
 	EventsSeen      int
+	LoreFound       int // Количество найденных рукописей и фолиантов
 	MonsterKills    map[MonsterType]int
 	TotalSteps      int
 	FallenHeroes    []FallenHeroRecord
@@ -125,7 +127,8 @@ type TownLegacy struct {
 	TanneryLevel  int
 	ChurchLevel   int
 	TavernLevel   int
-	TotalInvested int // Кумулятивные вложения в столицу за все прогоны — мета-прогрессия ополчения
+	TotalInvested int               // Кумулятивные вложения в столицу за все прогоны — мета-прогрессия ополчения
+	UnlockedLore  UnlockedLoreStore // Перманентная коллекция открытых фолиантов
 }
 
 type TownBudget struct {
