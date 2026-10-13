@@ -17,7 +17,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Seven playable races** are now supported: Human, Elf, Beastman, Olongr, Dwarf, Demonkin and Dragonkin, with racial traits and class synergies.
 - **Belarusian localization** joins Russian and English, with language switching through `L`.
 
-### Changed
 - **All player-visible text now comes from the dictionaries.** About 180 hardcoded Russian and English strings were moved into the localization dictionaries (`i18n_ru.go`, `i18n_en.go` and `i18n_be.go`): the whole main menu (full, medium and compact variants), the cards of every Capital building (headers, badges, hints, offer rows, the autopilot banner), the autopilot's town summaries, the town hub status line, the Codex tab names, tier labels and the dragon HP formula, the town signs, the armory and hero card labels (`HP`, `MP`, `ST`, `Atk`, `Def`), and the Church offer descriptions.
 - `TVerb` now takes a key: `TVerb(lang, gender, "reach")` reads `verb.reach.m` / `verb.reach.f` from the dictionary. The 27 call sites carried their Russian and English words inline; they now use 22 dictionary verbs.
 - Gold spending categories in the telemetry report are stable language-neutral identifiers (`spend.gear`, `spend.forge`, ...) instead of Russian phrases; the readable names live in the dictionaries under the same keys. **The keys of `GoldSpentBreakdown` in `dccag_report.json` changed accordingly.**
