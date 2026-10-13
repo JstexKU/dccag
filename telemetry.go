@@ -75,3 +75,18 @@ func saveDebugReportToFile() {
 		fmt.Println("\n[DEBUG] Telemetry report saved to: dccag_report.json")
 	}
 }
+
+// Категории трат золота в отчёте телеметрии. Значения — стабильные идентификаторы,
+// не зависящие от языка; читаемые названия лежат в словарях под теми же ключами.
+const (
+	spendGear       = "spend.gear"
+	spendMagistrate = "spend.magistrate"
+	spendChurch     = "spend.church"
+	spendTavernInn  = "spend.tavern_inn"
+	spendTavernBarn = "spend.tavern_barn"
+	spendRecruit    = "spend.recruit"
+	spendForge      = "spend.forge"
+	spendTannery    = "spend.tannery"
+	spendBags       = "spend.bags"
+	spendAlchemy    = "spend.alchemy"
+)

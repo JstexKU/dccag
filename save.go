@@ -16,6 +16,9 @@ type SaveData struct {
 	Legacy  TownLegacy     `json:"legacy"`
 	Tactics Tactics        `json:"tactics"`
 	Hero    *HeroBlueprint `json:"hero,omitempty"`
+
+	// Спутники лидера, созданные игроком (до четырёх). Без лидера не используются.
+	Companions []HeroBlueprint `json:"companions,omitempty"`
 }
 
 var (
@@ -65,6 +68,9 @@ func loadSave() (SaveData, bool) {
 	if sd.Tactics == (Tactics{}) {
 		sd.Tactics = DefaultTactics()
 	}
+	if sd.Tactics.TrainingGap == 0 {
+		sd.Tactics.TrainingGap = DefaultTactics().TrainingGap // сохранения до 3.3 не знали про тренировку
+	}
 	sd.Tactics = sd.Tactics.Clamped()
 	sd.Legacy = sd.Legacy.sanitized()
 	if sd.Lang != LangEN && sd.Lang != LangRU {
@@ -78,6 +84,7 @@ func loadSave() (SaveData, bool) {
 			sd.Hero = nil
 		}
 	}
+	sd.Companions = sanitizeCompanions(sd.Hero, sd.Companions)
 	return sd, true
 }
 
@@ -103,11 +110,11 @@ func writeSave(sd SaveData) error {
 }
 
 // persistState сохраняет состояние, если сохранения включены. Ошибки записи не должны ронять игру.
-func persistState(lang Language, legacy TownLegacy, t Tactics, hero *HeroBlueprint) {
+func persistState(lang Language, legacy TownLegacy, t Tactics, hero *HeroBlueprint, companions ...HeroBlueprint) {
 	if !saveEnabled {
 		return
 	}
-	_ = writeSave(SaveData{Lang: lang, Legacy: legacy, Tactics: t, Hero: hero})
+	_ = writeSave(SaveData{Lang: lang, Legacy: legacy, Tactics: t, Hero: hero, Companions: sanitizeCompanions(hero, companions)})
 }
 
 // legacyAfterRun считает наследие, которое достанется следующему забегу:
@@ -118,4 +125,21 @@ func legacyAfterRun(m Model) TownLegacy {
 	legacy.TreasuryGold = saved
 	legacy.TotalInvested += saved
 	return legacy
+}
+
+// sanitizeCompanions оставляет только пригодных спутников (не больше четырёх) и только
+// при наличии лидера: без него отряд всё равно собирается случайно.
+func sanitizeCompanions(leader *HeroBlueprint, list []HeroBlueprint) []HeroBlueprint {
+	if leader == nil || len(list) == 0 {
+		return nil
+	}
+	var out []HeroBlueprint
+	for _, c := range list {
+		c = c.Sanitized()
+		if !c.Valid() || len(out) >= partySize-1 {
+			continue
+		}
+		out = append(out, c)
+	}
+	return out
 }

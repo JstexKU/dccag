@@ -89,6 +89,9 @@ func (m *Model) restoreFloorState(st *FloorState) {
 }
 
 func (m *Model) initDungeonForFloor(floor int) {
+	if floor > m.MaxFloor {
+		m.MaxFloor = floor // самый глубокий достигнутый этаж
+	}
 	if m.VisitedFloors == nil {
 		m.VisitedFloors = make(map[int]*FloorState)
 	}

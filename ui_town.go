@@ -47,6 +47,10 @@ func (m Model) renderTownHub(viewW, viewH int) string {
 		return m.renderForgeScreen(title, m.TanneryState, true, viewW, viewH)
 	case TownPhaseAlchemist:
 		return m.renderAlchemistScreen(m.AlchemistState, viewW, viewH)
+	case TownPhaseDepart:
+		if m.TownVisit {
+			return m.renderGateScreen(viewW, viewH)
+		}
 	}
 
 	mode := townDisplayModeFor(viewW, viewH)
@@ -127,7 +131,7 @@ func (m Model) renderTownHubWide(viewW, viewH int) string {
 	var sb strings.Builder
 	sb.WriteString(header.Render(padRightTruncate(T(m.Lang, "town.hub_title"), viewW)) + "\n")
 	sb.WriteString(subtleStyle.Render(padRightTruncate(
-		fmt.Sprintf("BAG %d/%d   |   SMITHY %d   TANNERY %d   CHURCH %d   TAVERN %d",
+		T(m.Lang, "town.hub_status",
 			len(m.Bag), m.currentBagCapacity(),
 			m.Legacy.SmithyLevel, m.Legacy.TanneryLevel,
 			m.Legacy.ChurchLevel, m.Legacy.TavernLevel), viewW,

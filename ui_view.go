@@ -419,9 +419,6 @@ func (m Model) renderControls(width int) string {
 		}
 		return subtleStyle.Render(shortenItemName(text, width))
 	}
-	controlsText := "[Space] Пауза | [F] Побег | [M] Ручной | [T] Тактика | [E] Арсенал | [I] Кодекс | [S] Слава | [+/-] Скор. | [L] Язык | [Q] Выход"
-	if m.Lang == LangEN {
-		controlsText = "[Space] Pause | [F] Flee | [M] Manual | [T] Tactics | [E] Armory | [I] Codex | [S] Glory | [+/-] Speed | [L] Lang | [Q] Quit"
-	}
+	controlsText := T(m.Lang, "ui.controls_main")
 	return subtleStyle.Render(shortenItemName(controlsText, width))
 }

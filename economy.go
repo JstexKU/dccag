@@ -221,7 +221,7 @@ func (m *Model) buyMissingOrBetterGear() {
 				cost := 35 + (m.Floor * 15)
 				if m.Gold >= cost {
 					m.Gold -= cost
-					globalDebugReport.GoldSpentBreakdown["Покупка снаряжения"] += cost
+					globalDebugReport.GoldSpentBreakdown[spendGear] += cost
 
 					newItem := generateItemForClassSlot(h.Class, slot, m.Floor)
 					h.SetItemInSlot(slot, &newItem)
@@ -242,7 +242,7 @@ func (m *Model) buyMissingOrBetterGear() {
 				shopOffer := generateItemForClassSlot(h.Class, slot, m.Floor+1)
 				if shopOffer.TotalStat() > currItem.TotalStat()+3 && m.Gold >= shopOffer.Value {
 					m.Gold -= shopOffer.Value
-					globalDebugReport.GoldSpentBreakdown["Покупка снаряжения"] += shopOffer.Value
+					globalDebugReport.GoldSpentBreakdown[spendGear] += shopOffer.Value
 
 					if len(m.Bag) < m.currentBagCapacity() {
 						m.Bag = append(m.Bag, *currItem)

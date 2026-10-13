@@ -98,7 +98,7 @@ func renderDownedHeroCard(h *Hero, textWidth int, mode CardMode, lang Language) 
 	infoLine := fmt.Sprintf("[%s | %s %d]", h.RaceName(lang), h.ShortClass(lang), h.Level)
 	sb.WriteString(subtleStyle.Render(padRightTruncate(infoLine, textWidth)) + "\n")
 	sb.WriteString(goldStyle.Render(padRightTruncate(fmt.Sprintf("[%s]", T(lang, "ui.downed")), textWidth)) + "\n")
-	sb.WriteString(dangerStyle.Render(padRightTruncate(fmt.Sprintf("HP: 0/%d", h.MaxHP), textWidth)) + "\n")
+	sb.WriteString(dangerStyle.Render(padRightTruncate(fmt.Sprintf("%s: 0/%d", T(lang, "ui.hp_short"), h.MaxHP), textWidth)) + "\n")
 	sb.WriteString(subtleStyle.Render(padRightTruncate(fmt.Sprintf("[%s]", T(lang, "ui.awaiting_evac")), textWidth)))
 
 	return sb.String()
@@ -116,17 +116,17 @@ func renderWideHeroCard(h *Hero, textWidth int, m Model) string {
 	}
 
 	hpBar := renderBar(h.HP, h.MaxHP, barLen, lipgloss.Color("82"), lipgloss.Color("238"))
-	sb.WriteString(padRightTruncate(fmt.Sprintf("HP%s%d/%d", hpBar, h.HP, h.MaxHP), textWidth) + "\n")
+	sb.WriteString(padRightTruncate(fmt.Sprintf("%s%s%d/%d", T(m.Lang, "ui.hp_short"), hpBar, h.HP, h.MaxHP), textWidth) + "\n")
 
 	mpBar := renderBar(h.MP, h.MaxMP, barLen, lipgloss.Color("39"), lipgloss.Color("238"))
-	sb.WriteString(padRightTruncate(fmt.Sprintf("MP%s%d/%d", mpBar, h.MP, h.MaxMP), textWidth) + "\n")
+	sb.WriteString(padRightTruncate(fmt.Sprintf("%s%s%d/%d", T(m.Lang, "ui.mp_short"), mpBar, h.MP, h.MaxMP), textWidth) + "\n")
 
 	stressColor := lipgloss.Color("135")
 	if h.Stress >= 140 {
 		stressColor = lipgloss.Color("196")
 	}
 	stBar := renderBar(h.Stress, 200, barLen, stressColor, lipgloss.Color("238"))
-	sb.WriteString(padRightTruncate(fmt.Sprintf("ST%s%d/200", stBar, h.Stress), textWidth) + "\n")
+	sb.WriteString(padRightTruncate(fmt.Sprintf("%s%s%d/200", T(m.Lang, "ui.stress_short"), stBar, h.Stress), textWidth) + "\n")
 
 	sb.WriteString(renderBeltAndStats(h, textWidth, m) + "\n")
 
@@ -150,17 +150,17 @@ func renderMediumHeroCard(h *Hero, textWidth int, m Model) string {
 	}
 
 	hpBar := renderBar(h.HP, h.MaxHP, barLen, lipgloss.Color("82"), lipgloss.Color("238"))
-	sb.WriteString(padRightTruncate(fmt.Sprintf("HP%s%d", hpBar, h.HP), textWidth) + "\n")
+	sb.WriteString(padRightTruncate(fmt.Sprintf("%s%s%d", T(m.Lang, "ui.hp_short"), hpBar, h.HP), textWidth) + "\n")
 
 	mpBar := renderBar(h.MP, h.MaxMP, barLen, lipgloss.Color("39"), lipgloss.Color("238"))
-	sb.WriteString(padRightTruncate(fmt.Sprintf("MP%s%d", mpBar, h.MP), textWidth) + "\n")
+	sb.WriteString(padRightTruncate(fmt.Sprintf("%s%s%d", T(m.Lang, "ui.mp_short"), mpBar, h.MP), textWidth) + "\n")
 
 	stressColor := lipgloss.Color("135")
 	if h.Stress >= 140 {
 		stressColor = lipgloss.Color("196")
 	}
 	stBar := renderBar(h.Stress, 200, barLen, stressColor, lipgloss.Color("238"))
-	sb.WriteString(padRightTruncate(fmt.Sprintf("ST%s%d", stBar, h.Stress), textWidth) + "\n")
+	sb.WriteString(padRightTruncate(fmt.Sprintf("%s%s%d", T(m.Lang, "ui.stress_short"), stBar, h.Stress), textWidth) + "\n")
 
 	sb.WriteString(renderBeltAndStats(h, textWidth, m) + "\n")
 

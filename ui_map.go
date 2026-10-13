@@ -54,6 +54,9 @@ func (m Model) renderMap(viewW, viewH int) string {
 	if viewW <= 0 || viewH <= 0 {
 		return ""
 	}
+	if m.InTown && m.Town != nil && m.TownWalking {
+		return m.renderTownMap(viewW, viewH)
+	}
 	if m.InTown {
 		return m.renderTownHub(viewW, viewH)
 	}

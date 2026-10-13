@@ -154,6 +154,7 @@ const (
 	RetreatTooFewAlive                      // Живых бойцов осталось мало
 	RetreatLowHP                            // Суммарное HP отряда низкое
 	RetreatNoResources                      // Нет зелий и высокий стресс
+	RetreatTrainingDone                     // Тренировка закончена
 )
 
 // --- Healing Urgency: срочность поиска источника ---

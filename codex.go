@@ -34,11 +34,15 @@ const (
 	codexTabCount = 7
 )
 
+// codexTabIDs — идентификаторы вкладок Кодекса; названия лежат в словарях (codex.tab.<id>).
+var codexTabIDs = []string{"world", "classes", "bestiary", "affixes", "crafts", "alchemy", "titles"}
+
 func codexTabNames(lang Language) []string {
-	if lang == LangEN {
-		return []string{"World", "Classes", "Bestiary", "Affixes", "Crafts", "Alchemy", "Titles"}
+	names := make([]string, len(codexTabIDs))
+	for i, id := range codexTabIDs {
+		names[i] = T(lang, "codex.tab."+id)
 	}
-	return []string{"Мир", "Классы", "Бестиарий", "Аффиксы", "Ремёсла", "Алхимия", "Титулы"}
+	return names
 }
 
 // ============================================================
@@ -236,7 +240,7 @@ func (m Model) renderCodexTabBestiary() string {
 	sb.WriteString(fmtBoss(T(m.Lang, "mob.boss_leviathan"), 115, 20, 7, 10, ""))
 	sb.WriteString(fmtBoss(T(m.Lang, "mob.boss_dragon"), 300, 30, 10, 12,
 		fireStyle.Render(T(m.Lang, "codex.mob_dragon_breath"))+
-			" "+codexHpStyle.Render("(300+Lvl*20)")))
+			" "+codexHpStyle.Render(T(m.Lang, "codex.dragon_hp_formula"))))
 	sb.WriteString("\n")
 
 	sb.WriteString(codexNoteStyle.Render(T(m.Lang, "codex.bestiary_note")) + "\n")
@@ -293,10 +297,10 @@ func (m Model) renderCodexTabCrafts() string {
 	for _, w := range weapons {
 		sb.WriteString(fmt.Sprintf(" • %-12s: %s %s %s %s %s %s %s %s %s %s %s (%s)\n",
 			T(m.Lang, w.clsNameKey),
-			codexTierStyle.Render("Т1"), T(m.Lang, w.itemPrefix+".1"), codexArrow,
-			codexTierStyle.Render("Т2"), T(m.Lang, w.itemPrefix+".2"), codexArrow,
-			codexTierStyle.Render("Т3"), T(m.Lang, w.itemPrefix+".3"), codexArrow,
-			codexTierStyle.Render("Т4"), T(m.Lang, w.itemPrefix+".4"),
+			codexTierStyle.Render(T(m.Lang, "codex.tier", 1)), T(m.Lang, w.itemPrefix+".1"), codexArrow,
+			codexTierStyle.Render(T(m.Lang, "codex.tier", 2)), T(m.Lang, w.itemPrefix+".2"), codexArrow,
+			codexTierStyle.Render(T(m.Lang, "codex.tier", 3)), T(m.Lang, w.itemPrefix+".3"), codexArrow,
+			codexTierStyle.Render(T(m.Lang, "codex.tier", 4)), T(m.Lang, w.itemPrefix+".4"),
 			w.statLabel))
 	}
 	sb.WriteString("\n")
@@ -324,26 +328,26 @@ func (m Model) renderCodexTabCrafts() string {
 
 		sb.WriteString(fmt.Sprintf("     %s %s %s %s %s %s %s %s %s %s %s %s (%s)\n",
 			codexSubStyle.Render(T(m.Lang, "slot.chest")),
-			codexTierStyle.Render("Т1"), T(m.Lang, a.itemPrefix+".chest.1"), codexArrow,
-			codexTierStyle.Render("Т2"), T(m.Lang, a.itemPrefix+".chest.2"), codexArrow,
-			codexTierStyle.Render("Т3"), T(m.Lang, a.itemPrefix+".chest.3"), codexArrow,
-			codexTierStyle.Render("Т4"), T(m.Lang, a.itemPrefix+".chest.4"),
+			codexTierStyle.Render(T(m.Lang, "codex.tier", 1)), T(m.Lang, a.itemPrefix+".chest.1"), codexArrow,
+			codexTierStyle.Render(T(m.Lang, "codex.tier", 2)), T(m.Lang, a.itemPrefix+".chest.2"), codexArrow,
+			codexTierStyle.Render(T(m.Lang, "codex.tier", 3)), T(m.Lang, a.itemPrefix+".chest.3"), codexArrow,
+			codexTierStyle.Render(T(m.Lang, "codex.tier", 4)), T(m.Lang, a.itemPrefix+".chest.4"),
 			a.statLabel))
 
 		sb.WriteString(fmt.Sprintf("     %s  %s %s %s %s %s %s %s %s %s %s %s (%s)\n",
 			codexSubStyle.Render(T(m.Lang, "slot.head")),
-			codexTierStyle.Render("Т1"), T(m.Lang, a.itemPrefix+".head.1"), codexArrow,
-			codexTierStyle.Render("Т2"), T(m.Lang, a.itemPrefix+".head.2"), codexArrow,
-			codexTierStyle.Render("Т3"), T(m.Lang, a.itemPrefix+".head.3"), codexArrow,
-			codexTierStyle.Render("Т4"), T(m.Lang, a.itemPrefix+".head.4"),
+			codexTierStyle.Render(T(m.Lang, "codex.tier", 1)), T(m.Lang, a.itemPrefix+".head.1"), codexArrow,
+			codexTierStyle.Render(T(m.Lang, "codex.tier", 2)), T(m.Lang, a.itemPrefix+".head.2"), codexArrow,
+			codexTierStyle.Render(T(m.Lang, "codex.tier", 3)), T(m.Lang, a.itemPrefix+".head.3"), codexArrow,
+			codexTierStyle.Render(T(m.Lang, "codex.tier", 4)), T(m.Lang, a.itemPrefix+".head.4"),
 			a.statLabel))
 
 		sb.WriteString(fmt.Sprintf("     %s  %s %s %s %s %s %s %s %s %s %s %s (%s)\n",
 			codexSubStyle.Render(T(m.Lang, "slot.legs")),
-			codexTierStyle.Render("Т1"), T(m.Lang, a.itemPrefix+".legs.1"), codexArrow,
-			codexTierStyle.Render("Т2"), T(m.Lang, a.itemPrefix+".legs.2"), codexArrow,
-			codexTierStyle.Render("Т3"), T(m.Lang, a.itemPrefix+".legs.3"), codexArrow,
-			codexTierStyle.Render("Т4"), T(m.Lang, a.itemPrefix+".legs.4"),
+			codexTierStyle.Render(T(m.Lang, "codex.tier", 1)), T(m.Lang, a.itemPrefix+".legs.1"), codexArrow,
+			codexTierStyle.Render(T(m.Lang, "codex.tier", 2)), T(m.Lang, a.itemPrefix+".legs.2"), codexArrow,
+			codexTierStyle.Render(T(m.Lang, "codex.tier", 3)), T(m.Lang, a.itemPrefix+".legs.3"), codexArrow,
+			codexTierStyle.Render(T(m.Lang, "codex.tier", 4)), T(m.Lang, a.itemPrefix+".legs.4"),
 			a.statLabel))
 	}
 

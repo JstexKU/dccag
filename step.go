@@ -16,7 +16,7 @@ func (m *Model) step() {
 
 	// 0. Город — отдельный поток, шаги подземелья не считаются
 	if m.InTown {
-		m.stepTown()
+		m.stepTownMap()
 		return
 	}
 
@@ -49,29 +49,36 @@ func (m *Model) step() {
 	}
 
 	// 3. Проверка retreat: если отряд на выходе и причина есть — уходим в город
-	if m.evaluateRetreat() != RetreatNone &&
+	if reason := m.evaluateRetreat(); reason != RetreatNone &&
 		m.Grid[m.PartyPos.Y][m.PartyPos.X] == TileExit &&
 		m.Stats.TotalSteps > 0 {
-		m.saveCurrentFloorState()
-		m.InTown = true
-		m.TownPhase = TownPhaseSellLoot
-		m.TownDialog = T(m.Lang, "town.log.enter_gate")
-		m.PathHistory = []Point{}
-		m.LoopDetectCount = 0
+		m.enterTown(reason)
 		return
 	}
 
-	// 4. Возможный старт нового привала
-	urgency := m.evaluateHealingUrgency()
-	restInterval := 50
-	if urgency == HealingCritical {
-		restInterval = 25
+	// 4. Привал только при реальной необходимости (ранения, мана, стресс)
+	needsRest := false
+	for _, h := range m.Party {
+		if h.IsDead || h.IsDowned {
+			continue
+		}
+		hpPct := float64(h.HP) / float64(h.MaxHP)
+		mpPct := 1.0
+		if h.MaxMP > 0 {
+			mpPct = float64(h.MP) / float64(h.MaxMP)
+		}
+		if hpPct <= 0.65 || mpPct <= 0.40 || h.Stress >= 45 {
+			needsRest = true
+			break
+		}
 	}
-	if m.Stats.TotalSteps%restInterval == 0 &&
+
+	if needsRest &&
+		m.Stats.TotalSteps%30 == 0 &&
 		m.evaluateRetreat() == RetreatNone &&
 		!m.isMonsterNearby() {
 
-		m.RestTurnsLeft = rng.Intn(6) + 5 // 5..10 шагов
+		m.RestTurnsLeft = rng.Intn(5) + 4 // 4..8 шагов
 		biome := getBiome(m.Floor)
 		variant := rng.Intn(4) + 1
 		key := fmt.Sprintf("dungeon.log.rest.%s.%d", biome.Name, variant)
@@ -89,13 +96,17 @@ func (m *Model) step() {
 
 	if m.LoopDetectCount >= 5 {
 		targetTile := TileStairs
-		if m.evaluateRetreat() != RetreatNone {
+		if m.evaluateRetreat() != RetreatNone || (m.Training && !m.ManualMode) {
 			targetTile = TileExit
 		}
 		forcedStep, found := m.findEmergencyStep(targetTile)
 		if found {
 			next = forcedStep
 		} else {
+			if m.Training && !m.ManualMode {
+				m.enterTown(RetreatTrainingDone)
+				return
+			}
 			m.saveCurrentFloorState()
 			m.Floor++
 			m.Stats.FloorsCleared++
@@ -134,6 +145,10 @@ func (m *Model) step() {
 	}
 
 	if m.LoopDetectCount >= 10 {
+		if m.Training && !m.ManualMode {
+			m.enterTown(RetreatTrainingDone)
+			return
+		}
 		m.saveCurrentFloorState()
 		m.Floor++
 		m.Stats.FloorsCleared++
@@ -160,6 +175,10 @@ func (m *Model) moveTo(next Point) {
 	}
 
 	if next == m.PartyPos {
+		if m.Training && !m.ManualMode {
+			m.enterTown(RetreatTrainingDone)
+			return
+		}
 		m.saveCurrentFloorState()
 		m.Floor++
 		m.Stats.FloorsCleared++
@@ -233,6 +252,9 @@ func (m *Model) moveTo(next Point) {
 		m.handleEventTile(next)
 
 	case TileStairs:
+		if m.Training && !m.ManualMode {
+			break
+		}
 		m.saveCurrentFloorState()
 		m.Floor++
 		m.Stats.FloorsCleared++

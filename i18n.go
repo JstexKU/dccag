@@ -35,14 +35,14 @@ func T(lang Language, key string, args ...any) string {
 	return val
 }
 
-func TVerb(lang Language, gender Gender, maleRU, femaleRU, eng string) string {
-	if lang == LangEN {
-		return eng
-	}
+// TVerb возвращает глагол в нужном роде по ключу: verb.<ключ>.m (мужской) и verb.<ключ>.f
+// (женский). В английском словаре оба варианта совпадают.
+func TVerb(lang Language, gender Gender, key string) string {
+	suffix := "m"
 	if gender == GenderFemale {
-		return femaleRU
+		suffix = "f"
 	}
-	return maleRU
+	return T(lang, "verb."+key+"."+suffix)
 }
 
 func TranslateEnum(lang Language, prefix string, val string) string {

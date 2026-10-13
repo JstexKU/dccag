@@ -13,7 +13,8 @@ import (
 // ============================================================
 
 const (
-	rowName = iota
+	rowSlot = iota // выбор героя: 1 — лидер, 2–5 — спутники
+	rowName
 	rowGender
 	rowRace
 	rowClass
@@ -25,11 +26,14 @@ const (
 
 const menuCountdownStart = 20
 
-// CreatorState — состояние экрана создания героя.
+// CreatorState — состояние экрана создания отряда.
 type CreatorState struct {
-	Draft HeroBlueprint // редактируемый чертёж
+	Draft HeroBlueprint // редактируемый чертёж выбранного героя (Slots[Slot] обновляется при смене слота)
 	Row   int           // выбранная строка
 	Err   string        // ключ словаря с текстом ошибки (пусто — ошибки нет)
+
+	Slot  int                      // выбранный герой: 0 — лидер, 1–4 — спутники
+	Slots [partySize]HeroBlueprint // чертежи всех героев; слот без имени остаётся случайным
 }
 
 func cycle[E comparable](list []E, cur E, dir int) E {
@@ -43,15 +47,50 @@ func cycle[E comparable](list []E, cur E, dir int) E {
 	return list[(idx+dir+len(list))%len(list)]
 }
 
-// openCreator открывает экран; существующий герой подставляется для правки.
+// openCreator открывает экран; созданные ранее герои подставляются для правки.
 func (m *Model) openCreator() {
-	draft := defaultBlueprint()
-	if m.Blueprint != nil {
-		draft = *m.Blueprint
+	var slots [partySize]HeroBlueprint
+	for i := range slots {
+		slots[i] = defaultBlueprint()
 	}
-	m.Creator = CreatorState{Draft: draft}
+	if m.Blueprint != nil {
+		slots[0] = *m.Blueprint
+		for i, c := range m.Companions {
+			if i+1 < partySize {
+				slots[i+1] = c
+			}
+		}
+	}
+	m.Creator = CreatorState{Draft: slots[0], Row: rowName, Slots: slots}
 	m.State = StateCreator
 	m.MenuGen++ // отложенный тик меню устарел и не должен сработать
+}
+
+// syncDraft записывает редактируемого героя в его слот.
+func (m *Model) syncDraft() {
+	c := &m.Creator
+	if c.Slot >= 0 && c.Slot < partySize {
+		c.Slots[c.Slot] = c.Draft
+	}
+}
+
+// switchSlot переключается на другого героя; значение по кругу.
+func (m *Model) switchSlot(to int) {
+	c := &m.Creator
+	m.syncDraft()
+	c.Slot = (to%partySize + partySize) % partySize
+	c.Draft = c.Slots[c.Slot]
+}
+
+// filledSlots возвращает чертежи героев, у которых есть пригодное имя, и индексы их слотов.
+func (c CreatorState) filledSlots() []int {
+	var out []int
+	for i, bp := range c.Slots {
+		if bp.Sanitized().Valid() {
+			out = append(out, i)
+		}
+	}
+	return out
 }
 
 // closeCreator возвращает в главное меню и заново запускает его таймер.
@@ -63,24 +102,44 @@ func (m *Model) closeCreator() tea.Cmd {
 }
 
 func (m *Model) confirmCreator() tea.Cmd {
-	bp := m.Creator.Draft.Sanitized()
-	if !bp.Valid() {
-		m.Creator.Err = "creator.err.name"
-		m.Creator.Row = rowName
+	m.syncDraft()
+	c := &m.Creator
+	filled := c.filledSlots()
+
+	leaderOK := c.Slots[0].Sanitized().Valid()
+	if !leaderOK {
+		// Лидер обязателен. Если заполнены только спутники, подсказываем, чего не хватает.
+		c.Err = "creator.err.name"
+		if len(filled) > 0 {
+			c.Err = "creator.err.leader"
+		}
+		m.switchSlot(0)
+		c.Row = rowName
 		return nil
 	}
-	m.Blueprint = &bp
-	m.Party = buildStartingParty(m.Legacy.SmithyLevel, m.Blueprint)
-	persistState(m.Lang, m.Legacy, m.Tactics, m.Blueprint)
+
+	leader := c.Slots[0].Sanitized()
+	var companions []HeroBlueprint
+	for _, i := range filled {
+		if i > 0 {
+			companions = append(companions, c.Slots[i].Sanitized())
+		}
+	}
+
+	m.Blueprint = &leader
+	m.Companions = companions
+	m.Party = buildStartingParty(m.Legacy.SmithyLevel, m.Blueprint, m.Companions...)
+	persistState(m.Lang, m.Legacy, m.Tactics, m.Blueprint, m.Companions...)
 	return m.closeCreator()
 }
 
-// removeHero убирает сохранённого героя: следующие забеги снова идут со случайным отрядом.
+// removeHero убирает сохранённый отряд: следующие забеги снова идут со случайным составом.
 func (m *Model) removeHero() {
 	if m.Blueprint == nil {
 		return
 	}
 	m.Blueprint = nil
+	m.Companions = nil
 	m.Party = buildStartingParty(m.Legacy.SmithyLevel, nil)
 	persistState(m.Lang, m.Legacy, m.Tactics, nil)
 }
@@ -115,6 +174,8 @@ func (m *Model) creatorAdjust(dir int) {
 	c := &m.Creator
 	d := &c.Draft
 	switch {
+	case c.Row == rowSlot:
+		m.switchSlot(c.Slot + dir)
 	case c.Row == rowGender:
 		d.Gender = 1 - d.Gender
 	case c.Row == rowRace:
@@ -122,7 +183,9 @@ func (m *Model) creatorAdjust(dir int) {
 	case c.Row == rowClass:
 		d.Class = cycle(AllClasses, d.Class, dir)
 	case c.Row == rowCalling:
-		d.Calling = cycle(AllCallings, d.Calling, dir)
+		if c.Slot == 0 { // призвание есть только у лидера
+			d.Calling = cycle(AllCallings, d.Calling, dir)
+		}
 	case c.Row >= rowStatFirst && c.Row < rowConfirm:
 		d.AdjustPoint(c.Row-rowStatFirst, dir)
 	}
@@ -183,7 +246,24 @@ func (m *Model) handleCreatorKey(msg tea.KeyMsg) tea.Cmd {
 	case "esc":
 		return m.closeCreator()
 	case "ctrl+r":
-		c.Draft = randomBlueprint(m.Lang)
+		bp := randomBlueprint(m.Lang)
+		if c.Slot != 0 {
+			bp.Calling = c.Draft.Calling
+		}
+		c.Draft = bp
+		return nil
+	case "ctrl+t": // случайный отряд целиком
+		m.Creator.Slots = randomPartyBlueprints(m.Lang)
+		c.Draft = c.Slots[c.Slot]
+		return nil
+	case "pgdown", "ctrl+n":
+		m.switchSlot(c.Slot + 1)
+		return nil
+	case "pgup", "ctrl+p":
+		m.switchSlot(c.Slot - 1)
+		return nil
+	case "delete", "ctrl+d": // очистить героя в этом слоте
+		c.Draft = defaultBlueprint()
 		return nil
 	case "ctrl+l":
 		if m.Lang == LangRU {
@@ -259,6 +339,9 @@ func (m Model) menuHeroLine() string {
 		return ""
 	}
 	bp := *m.Blueprint
+	if n := len(m.Companions); n > 0 {
+		return healStyle.Render(T(m.Lang, "menu.party_set", bp.Name, m.raceLabel(bp.Race), m.classLabel(bp.Class), m.callingLabel(bp.Calling), n))
+	}
 	return healStyle.Render(T(m.Lang, "menu.hero_set", bp.Name, m.raceLabel(bp.Race), m.classLabel(bp.Class), m.callingLabel(bp.Calling)))
 }
 
@@ -305,6 +388,35 @@ func (m Model) renderCreatorScreen() string {
 	if c.Row == rowName {
 		cursor = "_"
 	}
+	filledCount := 0
+	var slotParts []string
+	for i := 0; i < partySize; i++ {
+		bp := c.Slots[i]
+		if i == c.Slot {
+			bp = d
+		}
+		label := fmt.Sprintf("%d", i+1)
+		if i == 0 {
+			label += "★"
+		}
+		name := "—"
+		if bp.Sanitized().Valid() {
+			name = shortenItemName(cleanName(bp.Name), 8)
+			filledCount++
+		}
+		cell := label + " " + name
+		switch {
+		case i == c.Slot:
+			cell = accentStyle.Render("[" + cell + "]")
+		case name == "—":
+			cell = subtleStyle.Render(cell)
+		default:
+			cell = healStyle.Render(cell)
+		}
+		slotParts = append(slotParts, cell)
+	}
+	row(rowSlot, T(m.Lang, "creator.field.slot"), "◀ "+strings.Join(slotParts, " ")+" ▶")
+
 	nameBox := fmt.Sprintf("[ %-*s ]", creatorNameMax+1, d.Name+cursor)
 	row(rowName, T(m.Lang, "creator.field.name"), nameBox)
 	row(rowGender, T(m.Lang, "creator.field.gender"), arrows(m.genderLabel(d.Gender)))
@@ -312,8 +424,12 @@ func (m Model) renderCreatorScreen() string {
 		arrows(m.raceLabel(d.Race))+"  "+subtleStyle.Render(T(m.Lang, "creator.race."+string(d.Race))))
 	row(rowClass, T(m.Lang, "creator.field.class"),
 		arrows(m.classLabel(d.Class))+"  "+subtleStyle.Render(T(m.Lang, prev.SkillKey)))
-	row(rowCalling, T(m.Lang, "creator.field.calling"),
-		arrows(m.callingLabel(d.Calling))+"  "+subtleStyle.Render(T(m.Lang, "calling."+string(d.Calling)+".desc", callingValue(d.Calling))))
+	if c.Slot == 0 {
+		row(rowCalling, T(m.Lang, "creator.field.calling"),
+			arrows(m.callingLabel(d.Calling))+"  "+subtleStyle.Render(T(m.Lang, "calling."+string(d.Calling)+".desc", callingValue(d.Calling))))
+	} else {
+		row(rowCalling, T(m.Lang, "creator.field.calling"), subtleStyle.Render("— "+T(m.Lang, "creator.calling_leader_only")))
+	}
 
 	pointsLine := T(m.Lang, "creator.points", d.PointsLeft(), creatorPoints)
 	if d.PointsLeft() > 0 {
@@ -353,7 +469,8 @@ func (m Model) renderCreatorScreen() string {
 	if prev.Role.CanHeal {
 		role += ", " + T(m.Lang, "creator.flag.heal")
 	}
-	sb.WriteString(gap + T(m.Lang, "creator.skill", T(m.Lang, prev.SkillKey), prev.SkillCost) + "\n")
+	sb.WriteString(gap + T(m.Lang, "creator.party_count", filledCount, partySize) + "\n")
+	sb.WriteString(T(m.Lang, "creator.skill", T(m.Lang, prev.SkillKey), prev.SkillCost) + "\n")
 	sb.WriteString(role + "\n")
 
 	if !tight {

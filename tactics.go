@@ -18,9 +18,13 @@ type Tactics struct {
 	SkipTraps       bool `json:"skip_traps"`        // не вскрывать сундуки-ловушки
 	SkipAltars      bool `json:"skip_altars"`       // не использовать кровавые алтари
 	GambleEvents    bool `json:"gamble_events"`     // принимать рискованные сделки в событиях
+
+	// Тренировка новичков (v3.3): слабый отряд идёт качаться на пройденные этажи.
+	DisableTraining bool `json:"disable_training"` // не отправлять новичков на пройденные этажи
+	TrainingGap     int  `json:"training_gap"`     // боец «слаб», если его уровень ниже рекомендуемого на N и больше
 }
 
-const tacticsCount = 7
+const tacticsCount = 9
 
 // DefaultTactics возвращает настройки «как в оригинале».
 func DefaultTactics() Tactics {
@@ -32,6 +36,8 @@ func DefaultTactics() Tactics {
 		SkipTraps:       false,
 		SkipAltars:      false,
 		GambleEvents:    true,
+		DisableTraining: false,
+		TrainingGap:     2,
 	}
 }
 
@@ -51,6 +57,8 @@ var tacticRanges = [tacticsCount]tacticRange{
 	{min: 0, max: 1, step: 1, isBool: true, labelKey: "tactics.skip_traps", descKey: "tactics.skip_traps.desc"},
 	{min: 0, max: 1, step: 1, isBool: true, labelKey: "tactics.skip_altars", descKey: "tactics.skip_altars.desc"},
 	{min: 0, max: 1, step: 1, isBool: true, labelKey: "tactics.gamble", descKey: "tactics.gamble.desc"},
+	{min: 0, max: 1, step: 1, isBool: true, labelKey: "tactics.training", descKey: "tactics.training.desc"},
+	{min: 1, max: 6, step: 1, labelKey: "tactics.train_gap", descKey: "tactics.train_gap.desc"},
 }
 
 func boolToInt(b bool) int {
@@ -87,6 +95,10 @@ func (t Tactics) value(i int) int {
 		return boolToInt(t.SkipAltars)
 	case 6:
 		return boolToInt(t.GambleEvents)
+	case 7:
+		return boolToInt(!t.DisableTraining) // «ВКЛ» = тренировка разрешена
+	case 8:
+		return t.TrainingGap
 	}
 	return 0
 }
@@ -113,6 +125,10 @@ func (t *Tactics) setValue(i, v int) {
 		t.SkipAltars = v == 1
 	case 6:
 		t.GambleEvents = v == 1
+	case 7:
+		t.DisableTraining = v == 0
+	case 8:
+		t.TrainingGap = v
 	}
 }
 

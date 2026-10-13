@@ -113,7 +113,7 @@ func (m *Model) checkAndAwardTitle(h *Hero) {
 
 	if newTitleKey != "" {
 		h.TitleKey = newTitleKey
-		verb := TVerb(m.Lang, h.Gender, "заслужил", "заслужила", "earned")
+		verb := TVerb(m.Lang, h.Gender, "earn")
 		m.addLog(titleStyle.Render(T(m.Lang, "dungeon.log.title_awarded", h.DisplayName(m.Lang), verb, T(m.Lang, newTitleKey))))
 	}
 }

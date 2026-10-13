@@ -35,8 +35,7 @@ func (m *Model) forceRetreatToTown(reason RetreatReason) {
 	m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.emergency_retreat", goldPenalty)))
 
 	m.Combat = nil
-	m.InTown = true
-	m.TownPhase = TownPhaseSellLoot
+	m.enterTown(reason)
 	m.TownDialog = T(m.Lang, "combat.log.emergency_retreat_dialog")
 }
 
@@ -155,8 +154,7 @@ func (m *Model) attemptFlee() {
 		}
 
 		m.Combat = nil
-		m.InTown = true
-		m.TownPhase = TownPhaseSellLoot
+		m.enterTown(RetreatLowHP)
 		m.TownDialog = T(m.Lang, "combat.log.retreat_dialog")
 		m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.retreat_town")))
 	} else {
@@ -181,7 +179,7 @@ func (m *Model) attemptFlee() {
 					h.IsCharged = false
 					h.IsAura = false
 					h.CauseOfDeath = T(m.Lang, "combat.log.death_flee")
-					verb := TVerb(m.Lang, h.Gender, "рухнул без сознания", "рухнула без сознания", "fell unconscious")
+					verb := TVerb(m.Lang, h.Gender, "fell_unconscious")
 					m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.hero_downed", h.DisplayName(m.Lang), verb, T(m.Lang, "combat.log.flee_pursuit"))))
 					m.onLeaderDowned(h)
 				}

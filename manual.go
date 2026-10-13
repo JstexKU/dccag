@@ -180,16 +180,16 @@ func (m *Model) drinkPotion(user, target *Hero, idx int) {
 	switch p.Type {
 	case PotionHP:
 		target.HP = min(target.MaxHP, target.HP+p.Power)
-		verb := TVerb(m.Lang, target.Gender, "выпил", "выпила", "drank")
+		verb := TVerb(m.Lang, target.Gender, "drink")
 		m.addLog(potionStyle.Render(T(m.Lang, "dungeon.log.potion_hp", tName, verb, pName, p.Power)))
 	case PotionMP:
 		target.MP = min(target.MaxMP, target.MP+p.Power)
-		verb := TVerb(m.Lang, target.Gender, "выпил", "выпила", "drank")
+		verb := TVerb(m.Lang, target.Gender, "drink")
 		m.addLog(potionStyle.Render(T(m.Lang, "dungeon.log.potion_mp", tName, verb, pName, p.Power)))
 	case PotionStress:
 		target.Stress = max(0, target.Stress-p.Power)
 		target.Affliction = AfflictionNone
-		verb := TVerb(m.Lang, target.Gender, "принял", "приняла", "took")
+		verb := TVerb(m.Lang, target.Gender, "take")
 		m.addLog(potionStyle.Render(T(m.Lang, "dungeon.log.potion_stress", tName, verb, pName, p.Power)))
 	}
 }
@@ -259,12 +259,7 @@ func (m *Model) manualLeave() {
 		m.addLog(subtleStyle.Render(T(m.Lang, "ctl.not_on_exit")))
 		return
 	}
-	m.saveCurrentFloorState()
-	m.InTown = true
-	m.TownPhase = TownPhaseSellLoot
-	m.TownDialog = T(m.Lang, "town.log.enter_gate")
-	m.PathHistory = []Point{}
-	m.LoopDetectCount = 0
+	m.enterTown(RetreatNone)
 }
 
 // toggleManual включает или выключает ручной режим и перезапускает тики.
@@ -286,10 +281,7 @@ func (m *Model) toggleManual() tea.Cmd {
 		m.addLog(accentStyle.Render(T(m.Lang, "ctl.mode_auto")))
 	}
 	m.AutoMode = true
-	delay := m.SpeedMs
-	if m.InTown {
-		delay = m.TownDelayMs
-	}
+	delay := m.tickDelay()
 	return m.restartTicks(delay)
 }
 
@@ -394,6 +386,9 @@ func (m *Model) handleManualKey(key string) (tea.Cmd, bool) {
 // manualControlsText возвращает подсказку по клавишам для нижней строки.
 // Второе значение true — игра ждёт действия игрока (подсказка выделяется).
 func (m Model) manualControlsText() (string, bool) {
+	if m.ManualMode && m.InTown && m.TownWalking {
+		return T(m.Lang, "ctl.bar.town_walk"), false
+	}
 	if !m.manualDungeon() {
 		return "", false
 	}

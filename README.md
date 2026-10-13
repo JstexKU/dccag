@@ -13,6 +13,9 @@ A grim tactical text-based dungeon crawler featuring autonomous squad mechanics 
 **DCCAG** is an autonomous console roguelike. Each expedition you get a party of 5 heroes picked at random from **10 classes** (Tank, Warrior, Rogue, Mage, Cleric, Paladin, Ranger, Monk, Bard, Warlock) and 4 races (Human, Elf, Beastman, Olongr). The party explores infinite procedural floors, fights monster packs, manages stress and psychological afflictions, trades in the Capital and crafts gear, all inside a terminal UI. You can set its **tactics** and watch, take **manual control**, or create **your own leader hero** who leads the party.
 
 ### ✨ Key Features
+* **A Town You Walk Through**: the Capital is a map with nine buildings drawn with roofs, signs and doors: the Market, Magistrate, Church, Tavern, Guild, Forge, Tannery, Alchemist and the Dungeon Gate in the middle of the square. The autopilot walks the party from building to building (skipping the ones with nothing to do), opens the building's card at the door, finishes its business, steps back out onto the street and walks on to the next one. In manual mode you walk the streets with the arrow keys and step on a door to enter (`Esc` leaves).
+* **Two Ways Into the Dungeon** (the Gate card): **1. Continue the descent** to the deepest floor reached, or **2. Pick a cleared floor**: it fills up again with small packs of monsters that suit that floor, so recruits can level up without dying on the deep floors. The autopilot chooses by itself: it trains when two or more fighters lag behind the recommended level, or one lags and the previous trips ended in retreats without progress. Training ends when the weak fighters catch up or the floor is cleared; on training floors the autopilot never takes the stairs down. Both switches live in the tactics screen.
+* **A Fully Custom Party**: the editor (`C` in the main menu) works on five slots (`PgUp`/`PgDn`): slot 1 is the leader, slots 2-5 are companions; empty slots are filled with random fighters of classes not yet taken. `Ctrl+T` rolls a whole random party, `Del` clears a slot.
 * **Your Own Leader Hero** (`C` in the main menu): choose a name, gender, race, class and a *calling*, and spend 6 free points on health, mana, attack, defense and speed. The preview shows the final stats before you commit. The hero is saved to `save.json` and leads every new expedition (`★` on the card); the other four heroes are random and never share the leader's class. The leader is never left behind in the Abyss, the Church revives them for free and the Guild never replaces them, but their fall terrifies the party. Callings: *Inspirer* (allies take 15% less stress), *Strategist* (+10% gold), *Mentor* (+10% experience for the party). `Ctrl+R` in the editor rolls a random hero; `X` in the menu (pressed twice) removes the hero.
 * **Manual Control** (`M`): Take direct command of the expedition. Move through the labyrinth with arrow keys, make camp (`C`), exit voluntarily (`X`), command heroes during combat (`A` strike, `Space` skill, `D` guard, `P` potions), and select enemy focus targets (←/→). Toggle seamlessly between autopilot and manual control at any time.
 * **Autopilot Tactics** (`T`): Fine-tune squad thresholds for emergency retreat, combat flee, potion drinking, and decision rules for trapped chests, blood altars, and room events.
@@ -31,7 +34,8 @@ A grim tactical text-based dungeon crawler featuring autonomous squad mechanics 
 
 | Key | Action |
 | :--- | :--- |
-| **`C`** | *Main menu:* create or edit your leader hero (`X` twice removes it) |
+| **`C`** | *Main menu:* create or edit your party (`PgUp`/`PgDn` switch heroes, `Ctrl+T` random party, `Del` clear a hero, `X` twice in the menu removes the party) |
+| **`←↑↓→`** | *Manual, in the Capital:* walk the streets; a building's door opens its card, `Esc` leaves it |
 | **`Space`** / **`Enter`** | Pause / resume autopilot (or start the game from the menu) |
 | **`N`** | One step while paused |
 | **`M`** | Toggle manual control / autopilot |
@@ -109,6 +113,9 @@ go test ./...
 gofmt -l .        # should print nothing
 ```
 
+**Translations.** Everything the player sees lives in `i18n_ru.go` and `i18n_en.go` and is fetched with `T(lang, key, args...)`; gendered verbs with `TVerb(lang, gender, key)` (`verb.<key>.m` / `verb.<key>.f`). Do not write text or language branches in the code: `i18n_hardcode_test.go` fails on Cyrillic literals, on `if lang == LangEN` branches, and on missing verb or sign keys.
+
+
 Tests cover dictionary parity (RU/EN keys and format arguments), the autopilot tactics, saving and loading, room events, tick-chain handling and a headless seeded simulation.
 
 ### 📂 Project Structure
@@ -138,7 +145,7 @@ Tests cover dictionary parity (RU/EN keys and format arguments), the autopilot t
 * `biomes.go`: biome configuration.
 
 **Leader hero**
-* `hero_blueprint.go`: hero blueprint, point allocation, stat preview, starting party assembly.
+* `hero_blueprint.go`: hero blueprint, point allocation, stat preview, starting party assembly (leader, custom companions, random fill).
 * `creator.go`: the creation screen, its input handling and the main-menu hero lines.
 * `leader.go`: leader rules (rescue, Church, Guild, shock on fall).
 
@@ -156,6 +163,10 @@ Tests cover dictionary parity (RU/EN keys and format arguments), the autopilot t
 
 **Town**
 * `town.go`: the town visit pipeline (`stepTown`).
+* `town_map.go`, `town_map_render.go`: the generated town map (streets, decorated buildings, signs) and its drawing.
+* `town_walk.go`: walking through the town, entering and leaving buildings, skipping idle ones, autopilot route.
+* `gate.go`: the Dungeon Gate card with the two entrances and the departure.
+* `training.go`: training floors: weak fighters, the departure plan, repopulation with small packs.
 * `economy.go`: establishments, budget, potion and mutation prices, market.
 * `militia.go`: Guild militia tiers.
 

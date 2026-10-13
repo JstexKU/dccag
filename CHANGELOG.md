@@ -5,6 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- **All player-visible text now comes from the dictionaries.** About 180 hardcoded Russian and English strings were moved to `i18n_ru.go` and `i18n_en.go` (159 new keys per language): the whole main menu (full, medium and compact variants), the cards of every Capital building (headers, badges, hints, offer rows, the autopilot banner), the autopilot's town summaries, the town hub status line, the Codex tab names, tier labels and the dragon HP formula, the town signs, the armory and hero card labels (`HP`, `MP`, `ST`, `Atk`, `Def`), and the Church offer descriptions.
+- `TVerb` now takes a key: `TVerb(lang, gender, "reach")` reads `verb.reach.m` / `verb.reach.f` from the dictionary. The 27 call sites carried their Russian and English words inline; they now use 22 dictionary verbs.
+- Gold spending categories in the telemetry report are stable language-neutral identifiers (`spend.gear`, `spend.forge`, ...) instead of Russian phrases; the readable names live in the dictionaries under the same keys. **The keys of `GoldSpentBreakdown` in `dccag_report.json` changed accordingly.**
+- `renderAutoBanner` became a method of `Model` so that it can translate its tag and idle text.
+- The Capital's autopilot summaries (sold, invested, stabilized, hired, sharpened, ...) existed only in Russian; they now have English text.
+
+### Fixed
+- The medium and compact main menu showed English buttons (`[Q] Quit`, `[L] Language`) to Russian players; the town hub status line (`BAG ... SMITHY ...`) and the Codex tier labels (`Т1`..`Т4`, Cyrillic in English too) did not follow the language.
+- Church offers printed the raw affliction identifier (`paranoid`); the translated name is used now. The Guild summary printed the raw class identifier (`tank`) the same way.
+- The armory used the English `Atk`/`Def` in the Russian interface instead of the dictionary words.
+
+### Added
+- Tests that keep the code free of hardcoded text (`i18n_hardcode_test.go`): no Cyrillic literals outside the dictionaries, no inline language branches, every `TVerb` key exists for both genders in both languages, sign texts fit the signboards, the menu and every Capital card contain no foreign-language leftovers, and the autopilot's town history and log are fully English in the English interface.
+
+### Not changed on purpose
+- Command-line help and startup errors in `main.go`, the telemetry console message, and the key hints inside the bars (`[Enter]`, `[Esc]`, ...) stay as they are: they are developer-facing or name physical keys.
+- The unit suffix `G` (gold), the `HP`/`MP`/`ST` values and the product name stay identical in both languages, but they now live in the dictionaries (`ui.hp_short`, `menu.title`, ...) and can be localized there.
+
+## [3.3.0]
+
+### Added
+- **The Capital as a map.** A generated 90×41 town with nine buildings (Market, Magistrate, Church, Tavern, Guild, Forge, Tannery, Alchemist and the Dungeon Gate in the middle), cobbled streets, a stone wall, trees, flowers and fountains. Buildings have coloured roofs with an emblem, windows, a door and two signboards; the signs show the building's name and its level (or the deepest floor at the Gate) in the player's language, and the autopilot's current destination is highlighted. The town is mirrored randomly and the buildings shift a little, so every run looks different. Only streets are walkable.
+- **Autopilot walks the town** in the order of the old pipeline. At a door the party enters, the building's card appears for a moment, the building does its work, the result stays on the card for one more tick, and the party steps out into the street and walks on. Buildings with nothing to do are skipped (a healthy party with no gold visits only the Market and the Gate); the Market and the Gate are always visited. Walking is faster than the work inside buildings.
+- **Manual walking**: arrow keys move through the streets, stepping on a door opens the building's card, `Esc` goes back out (at the Gate, `Esc` first returns from the floor list). Old building handlers that used to advance to the next building now simply send the party out into the street.
+- **Two entrances to the dungeon** (Gate card): *Continue the descent* (to the deepest floor reached) and *Pick a cleared floor* — the chosen floor is restored and refilled with small packs (up to 2 monsters, no mini-bosses) of the floor's own level, spaced apart and kept away from the entrance. A floor's list shows its biome, recommended level, living packs and explored percent.
+- **Autopilot training logic**: recommended level of a floor is about `floor/2`. A fighter is *weak* when he lags behind the deepest floor's recommended level by the configured gap (default 2). The autopilot trains when two or more fighters are weak, or one is weak and the previous two trips ended in a retreat without progress (new *failure streak* counter); the floor is chosen from the weakest fighter's level. On a training floor the autopilot never takes the stairs and heads for the exit once the weak fighters have caught up or the floor is cleared (new retreat reason *training done*).
+- **Tactics**: two new rows — *Send recruits to train* (on/off) and *Weak when behind by N levels* (1–6). Saves from earlier versions get the defaults.
+- **A fully custom party.** The editor has five slots (`PgUp`/`PgDn`, or the first row). Slot 1 is the leader, slots 2–5 are companions without a calling. Slots without a name are filled with random fighters of classes not yet in the party. `Ctrl+T` rolls a random party, `Del` clears a slot. The save format has an optional `companions` list; the whole party survives restarts.
+- Tests for the town map generator and rendering, walking and visits, skipping rules, the Gate card, the departure plan, repopulation, training runs, the new tactics rows and the custom party.
+
+### Changed
+- Every way back into town (exit tile, emergency retreat, flight, manual leave) now goes through `enterTown`, which also saves the floor. Before, emergency retreats and flights did not, so the explored state of that floor was lost.
+- `MaxFloor` (deepest floor reached) is tracked separately from `Floor`; the town economy and recruits keep using the progress floor even after a training trip.
+- `Esc` hints on the building cards now say *Leave* instead of *Next*.
+
+### Fixed
+- The Tavern's barn no longer lowers the health and mana of fighters who are already above 40%.
+
 ## [3.2.0]
 
 ### Added

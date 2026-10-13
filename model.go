@@ -90,6 +90,22 @@ type Model struct {
 
 	// Герой-лидер, созданный игроком (Blueprint == nil — отряд случайный), экран создания и меню.
 	Blueprint         *HeroBlueprint
+	Companions        []HeroBlueprint // созданные игроком спутники лидера (слоты 2–5)
+
+	// Город-карта и вход в подземелье (v3.3).
+	Town              *TownMap
+	TownPos           Point            // где отряд на карте города
+	TownWalking       bool             // отряд идёт по улицам (иначе показана карточка заведения)
+	TownVisit         bool             // идёт визит, начатый на карте
+	TownDwell         int              // тики паузы внутри заведения: карточка успевает показаться
+	TownLeaving       bool             // заведение закончено, после паузы отряд выходит
+	TownNextPhase     TownPhase        // куда отряд идёт после выхода
+	GateState         GateServiceState // карточка Врат подземелья
+	MaxFloor          int              // самый глубокий достигнутый этаж
+	Training          bool             // отряд на тренировочном этаже
+	TripStartMaxFloor int              // MaxFloor на момент выхода из города
+	FailStreak        int              // вылазок подряд, закончившихся отступлением без продвижения
+
 	Creator           CreatorState
 	MenuGen           int  // поколение таймера меню: устаревшие тики игнорируются
 	MenuConfirmRemove bool // в меню нажат X: ждём подтверждения удаления героя
@@ -108,8 +124,8 @@ func initialModelWithLegacy(legacy TownLegacy) Model {
 }
 
 // initialModelWith создаёт модель новой экспедиции; с чертежом отряд ведёт созданный игроком лидер.
-func initialModelWith(legacy TownLegacy, bp *HeroBlueprint) Model {
-	heroes := buildStartingParty(legacy.SmithyLevel, bp)
+func initialModelWith(legacy TownLegacy, bp *HeroBlueprint, companions ...HeroBlueprint) Model {
+	heroes := buildStartingParty(legacy.SmithyLevel, bp, companions...)
 
 	activeRelic := generateRelic(1)
 
@@ -118,6 +134,9 @@ func initialModelWith(legacy TownLegacy, bp *HeroBlueprint) Model {
 		State:            StateMenu,
 		MenuCountdown:    menuCountdownStart,
 		Blueprint:        bp,
+		Companions:       sanitizeCompanions(bp, companions),
+		Town:             generateTown(),
+		MaxFloor:         1,
 		Party:            heroes,
 		Bag:              []EquipItem{},
 		BagLevel:         0,
@@ -184,9 +203,9 @@ func resetGameStatic(m Model) (Model, tea.Cmd) {
 
 	// Налог с добычи уходит в казну столицы и сохраняется на диск.
 	newLegacy := legacyAfterRun(m)
-	persistState(m.Lang, newLegacy, m.Tactics, m.Blueprint)
+	persistState(m.Lang, newLegacy, m.Tactics, m.Blueprint, m.Companions...)
 
-	fresh := initialModelWith(newLegacy, m.Blueprint)
+	fresh := initialModelWith(newLegacy, m.Blueprint, m.Companions...)
 	fresh.MenuGen = m.MenuGen + 1
 	fresh.Lang = m.Lang
 	fresh.Tactics = m.Tactics

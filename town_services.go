@@ -135,7 +135,7 @@ func (m *Model) ExecuteMarketBuy(offer MarketOffer) bool {
 	}
 
 	m.Gold -= offer.Cost
-	globalDebugReport.GoldSpentBreakdown["Покупка снаряжения"] += offer.Cost
+	globalDebugReport.GoldSpentBreakdown[spendGear] += offer.Cost
 
 	currItem := h.GetItemInSlot(offer.Slot)
 	boughtItem := offer.Item
@@ -253,7 +253,7 @@ func (m *Model) ExecuteMagistrateInvest(offer MagistrateOffer) bool {
 	}
 
 	m.Gold -= offer.Cost
-	globalDebugReport.GoldSpentBreakdown["Инвестиции в Магистрат"] += offer.Cost
+	globalDebugReport.GoldSpentBreakdown[spendMagistrate] += offer.Cost
 
 	prevTier := militiaTierForInvestment(m.Legacy.TotalInvested)
 	m.Legacy.TotalInvested += offer.Cost
@@ -353,9 +353,9 @@ func (m *Model) GenerateChurchOffers() []ChurchOffer {
 			})
 		} else if h.Stress > 20 || h.Affliction != AfflictionNone {
 			cost := baseCost / 3
-			desc := fmt.Sprintf("Stress: %d", h.Stress)
+			desc := T(m.Lang, "church.desc.stress", h.Stress)
 			if h.Affliction != AfflictionNone {
-				desc = fmt.Sprintf("Stress: %d (%s)", h.Stress, h.Affliction)
+				desc = T(m.Lang, "church.desc.stress_affliction", h.Stress, T(m.Lang, "affliction."+string(h.Affliction)))
 			}
 			offers = append(offers, ChurchOffer{
 				Type:      ChurchActionCleanse,
@@ -385,7 +385,7 @@ func (m *Model) ExecuteChurchAction(offer ChurchOffer) bool {
 			m.addLog(fountStyle.Render(T(m.Lang, "leader.church_free", churchName, h.DisplayName(m.Lang))))
 		} else {
 			m.Gold -= offer.Cost
-			globalDebugReport.GoldSpentBreakdown["Храм (стабилизация/очищение)"] += offer.Cost
+			globalDebugReport.GoldSpentBreakdown[spendChurch] += offer.Cost
 		}
 		h.IsDowned = false
 		h.HP = h.MaxHP / 2
@@ -404,7 +404,7 @@ func (m *Model) ExecuteChurchAction(offer ChurchOffer) bool {
 			return false
 		}
 		m.Gold -= offer.Cost
-		globalDebugReport.GoldSpentBreakdown["Храм (стабилизация/очищение)"] += offer.Cost
+		globalDebugReport.GoldSpentBreakdown[spendChurch] += offer.Cost
 		h.Stress = max(0, h.Stress-60)
 		h.Affliction = AfflictionNone
 		m.addLog(fountStyle.Render(T(m.Lang, "town.log.church_liturgy", churchName, offer.Cost, 0)))
@@ -448,7 +448,7 @@ func (m *Model) ExecuteTavernRest(offer TavernOffer) bool {
 	m.Gold -= offer.Cost
 
 	if offer.IsLuxury {
-		globalDebugReport.GoldSpentBreakdown["Таверна (ночлег)"] += offer.Cost
+		globalDebugReport.GoldSpentBreakdown[spendTavernInn] += offer.Cost
 		for _, h := range m.Party {
 			if !h.IsDead && !h.IsDowned {
 				h.HP = h.MaxHP
@@ -458,11 +458,12 @@ func (m *Model) ExecuteTavernRest(offer TavernOffer) bool {
 		m.addLog(healStyle.Render(T(m.Lang, "town.log.tavern_rest", tavernName, offer.Cost)))
 		m.logTownAction("🍻", tavernName, T(m.Lang, "town.log.tavern_hist", offer.Cost))
 	} else {
-		globalDebugReport.GoldSpentBreakdown["Таверна (сарай)"] += offer.Cost
+		globalDebugReport.GoldSpentBreakdown[spendTavernBarn] += offer.Cost
 		for _, h := range m.Party {
 			if !h.IsDead && !h.IsDowned {
-				h.HP = max(1, int(float64(h.MaxHP)*0.40))
-				h.MP = int(float64(h.MaxMP) * 0.40)
+				// Сарай даёт хоть какой-то отдых, но не отнимает силы у тех, кто уже в порядке.
+				h.HP = max(h.HP, max(1, int(float64(h.MaxHP)*0.40)))
+				h.MP = max(h.MP, int(float64(h.MaxMP)*0.40))
 			}
 		}
 		m.addLog(dangerStyle.Render(T(m.Lang, "town.log.tavern_barn")))
@@ -546,7 +547,7 @@ func (m *Model) ExecuteGuildRecruit(offer GuildRecruitOffer) bool {
 
 	if offer.IsVeteran {
 		m.Gold -= offer.Cost
-		globalDebugReport.GoldSpentBreakdown["Найм ветеранов"] += offer.Cost
+		globalDebugReport.GoldSpentBreakdown[spendRecruit] += offer.Cost
 		m.Party[offer.SlotIdx] = createHero(offer.Class, m.Floor, m.Legacy.SmithyLevel)
 		newHero := m.Party[offer.SlotIdx]
 		m.addLog(healStyle.Render(T(m.Lang, "town.log.guild_veteran",
@@ -647,7 +648,7 @@ func (m *Model) ExecuteSmithyUpgrade(offer UpgradeOffer) bool {
 	it.UpgradeLevel++
 	h.SetItemInSlot(offer.Slot, it)
 	m.Stats.UpgradesForged++
-	globalDebugReport.GoldSpentBreakdown["Кузница (заточки)"] += offer.Cost
+	globalDebugReport.GoldSpentBreakdown[spendForge] += offer.Cost
 
 	smithyName := T(m.Lang, m.TownEst.SmithyKey)
 	m.addLog(goldStyle.Render(T(m.Lang, "town.log.smithy_done", smithyName, 1, offer.Cost)))
@@ -717,7 +718,7 @@ func (m *Model) ExecuteTanneryUpgrade(offer UpgradeOffer) bool {
 	it.UpgradeLevel++
 	h.SetItemInSlot(offer.Slot, it)
 	m.Stats.UpgradesForged++
-	globalDebugReport.GoldSpentBreakdown["Кожевник (выделка и сумки)"] += offer.Cost
+	globalDebugReport.GoldSpentBreakdown[spendTannery] += offer.Cost
 
 	tanneryName := T(m.Lang, m.TownEst.TanneryKey)
 	m.addLog(goldStyle.Render(T(m.Lang, "town.log.tannery_done", tanneryName, 1)))
@@ -737,7 +738,7 @@ func (m *Model) ExecuteBagUpgrade() bool {
 
 	m.Gold -= nextBag.Cost
 	m.BagLevel++
-	globalDebugReport.GoldSpentBreakdown["Улучшение сумок"] += nextBag.Cost
+	globalDebugReport.GoldSpentBreakdown[spendBags] += nextBag.Cost
 
 	tanneryName := T(m.Lang, m.TownEst.TanneryKey)
 	bagName := T(m.Lang, nextBag.NameKey)
@@ -836,10 +837,10 @@ func (m *Model) ExecuteAlchemistOffer(offer AlchemistOffer) bool {
 	}
 	h := m.Party[offer.HeroIdx]
 	m.Gold -= offer.Cost
-	globalDebugReport.GoldSpentBreakdown["Алхимия и зелья"] += offer.Cost
+	globalDebugReport.GoldSpentBreakdown[spendAlchemy] += offer.Cost
 
 	if offer.Type == AlchemistActionMutation {
-		verbApplied := TVerb(m.Lang, h.Gender, "принял", "приняла", "took")
+		verbApplied := TVerb(m.Lang, h.Gender, "take")
 		hName := h.DisplayName(m.Lang)
 
 		switch offer.MutType {

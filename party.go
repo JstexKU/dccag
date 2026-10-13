@@ -71,8 +71,8 @@ func (m *Model) addStress(h *Hero, amt int) {
 			h.Affliction = AfflictionVirtuous
 			h.Stress = 0
 			h.HP = h.MaxHP
-			verb1 := TVerb(m.Lang, h.Gender, "превозмог", "превозмогла", "conquered")
-			verb2 := TVerb(m.Lang, h.Gender, "обрел", "обрела", "gained")
+			verb1 := TVerb(m.Lang, h.Gender, "conquer")
+			verb2 := TVerb(m.Lang, h.Gender, "gain")
 			m.addLog(healStyle.Render(T(m.Lang, "dungeon.log.virtue", h.FullName(m.Lang), verb1, verb2)))
 			for _, ally := range m.Party {
 				if !ally.IsDead && !ally.IsDowned {
@@ -82,7 +82,7 @@ func (m *Model) addStress(h *Hero, amt int) {
 		} else {
 			affs := []AfflictionType{AfflictionParanoid, AfflictionSelfish, AfflictionManiac}
 			h.Affliction = affs[rng.Intn(len(affs))]
-			verb := TVerb(m.Lang, h.Gender, "сломлен", "сломлена", "broken")
+			verb := TVerb(m.Lang, h.Gender, "broken")
 			affName := T(m.Lang, "affliction."+string(h.Affliction))
 			m.addLog(stressStyle.Render(T(m.Lang, "dungeon.log.affliction", h.FullName(m.Lang), verb, affName)))
 		}
@@ -111,7 +111,7 @@ func (m *Model) addStress(h *Hero, amt int) {
 
 		h.HP = 1
 		h.Stress = 160
-		verb := TVerb(m.Lang, h.Gender, "схватился", "схватилась", "clutched")
+		verb := TVerb(m.Lang, h.Gender, "clutch")
 		m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.heart_attack", h.FullName(m.Lang), verb)))
 		for _, ally := range m.Party {
 			if !ally.IsDead && !ally.IsDowned && ally != h {
@@ -155,7 +155,7 @@ func (m *Model) checkAndDrinkPotions(h *Hero) {
 		}
 
 		if shouldDrink {
-			verb := TVerb(m.Lang, h.Gender, "выпил", "выпила", "drank")
+			verb := TVerb(m.Lang, h.Gender, "drink")
 			pName := getPotionName(*p, m.Lang)
 			hName := h.DisplayName(m.Lang)
 			switch p.Type {
@@ -168,7 +168,7 @@ func (m *Model) checkAndDrinkPotions(h *Hero) {
 			case PotionStress:
 				h.Stress = max(0, h.Stress-p.Power)
 				h.Affliction = AfflictionNone
-				verbStress := TVerb(m.Lang, h.Gender, "принял", "приняла", "took")
+				verbStress := TVerb(m.Lang, h.Gender, "take")
 				m.addLog(potionStyle.Render(T(m.Lang, "dungeon.log.potion_stress", hName, verbStress, pName, p.Power)))
 			}
 		} else {
@@ -365,7 +365,7 @@ func (m *Model) distributePartyExp(expAmt int) {
 		}
 
 		if h.GainExp(actualExp) {
-			verb := TVerb(m.Lang, h.Gender, "достиг", "достигла", "reached")
+			verb := TVerb(m.Lang, h.Gender, "reach")
 			m.addLog(healStyle.Render(T(m.Lang, "dungeon.log.lvl_up", h.DisplayName(m.Lang), verb, h.Level)))
 		}
 	}
@@ -407,7 +407,7 @@ func (m *Model) equipOrBag(item EquipItem) {
 		}
 		newItem := item
 		bestHero.SetItemInSlot(newItem.Slot, &newItem)
-		verb := TVerb(m.Lang, bestHero.Gender, "сменил", "сменила", "equipped")
+		verb := TVerb(m.Lang, bestHero.Gender, "equip")
 		slotName := T(m.Lang, "slot."+string(item.Slot))
 		m.addLog(healStyle.Render(T(m.Lang, "dungeon.log.equip_swap",
 			bestHero.DisplayName(m.Lang), verb, slotName, newItem.DisplayName(m.Lang), newItem.TotalStat())))

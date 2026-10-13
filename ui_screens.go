@@ -8,24 +8,15 @@ import (
 )
 
 func (m Model) renderMenuModeToggle() string {
-	modeLabel := "⚙️ Автоигра"
-	if m.Lang == LangEN {
-		modeLabel = "⚙️ Auto-play"
-	}
+	modeLabel := T(m.Lang, "menu.mode.auto")
 	modeStyle := subtleStyle
 
 	if m.ManualMode {
-		modeLabel = "🎮 Ручное управление"
-		if m.Lang == LangEN {
-			modeLabel = "🎮 Manual control"
-		}
+		modeLabel = T(m.Lang, "menu.mode.manual")
 		modeStyle = accentStyle.Copy().Bold(true)
 	}
 
-	prefix := "[M] Режим:"
-	if m.Lang == LangEN {
-		prefix = "[M] Mode:"
-	}
+	prefix := T(m.Lang, "menu.mode.prefix")
 	return fmt.Sprintf("%s %s", prefix, modeStyle.Render(modeLabel))
 }
 
@@ -61,36 +52,20 @@ func (m Model) renderMenuScreen() string {
 			`  [═══════════════]           /════════\  |___|       [═══════════════]  `,
 		}
 		sb.WriteString(townArtStyle.Render(strings.Join(castleLines, "\n")) + "\n")
-		sb.WriteString(lipgloss.NewStyle().Align(lipgloss.Center).Render(titleStyle.Render("       Dungeon Crawler Console Auto Game (dccag) "+displayVersion())) + "\n\n")
+		sb.WriteString(lipgloss.NewStyle().Align(lipgloss.Center).Render(titleStyle.Render("       "+T(m.Lang, "menu.title")+" "+displayVersion())) + "\n\n")
 
-		var textBlock string
-		if m.Lang == LangEN {
-			textBlock = "Welcome to the grim tactical dungeon crawler!\n" +
-				"Guide your autonomous squad through INFINITE floors and ruthless biomes.\n\n" +
-				questStyle.Render("SYSTEM FEATURES:") + "\n" +
-				" • Bilingual Engine (RU / EN) switched on the fly with [L].\n" +
-				" • 10 Unique Classes across 4 Diverse Races with innate perks.\n" +
-				" • Dynamic establishments: «" + T(m.Lang, m.TownEst.TavernKey) + "», «" + T(m.Lang, m.TownEst.SmithyKey) + "».\n" +
-				" • Strategic evacuation: rescue veteran bodies equal to survivors count.\n\n" +
-				dangerStyle.Render(fmt.Sprintf("⏳ Expedition autostarts in: %d sec...\n\n", m.MenuCountdown)) +
-				healStyle.Render("[Space] or [Enter] — Embark immediately") + "\n" +
-				m.renderMenuModeToggle() + "\n" +
-				accentStyle.Render("[L] — Switch language (RU / EN)") + "   " + m.menuHeroKeys() + "\n" +
-				subtleStyle.Render("[+/-] — Speed  |  [Q] — Quit")
-		} else {
-			textBlock = "Добро пожаловать в мрачный тактический подземельный рогалик!\n" +
-				"Ваша задача — провести отряд сквозь БЕСКОНЕЧНЫЕ этажи опаснейших биомов.\n\n" +
-				questStyle.Render("ОСОБЕННОСТИ СИСТЕМЫ:") + "\n" +
-				" • Двуязычный движок (RU / EN) с переключением на лету клавишей [L].\n" +
-				" • 10 специализированных классов и 4 расы со своими врождёнными дарами.\n" +
-				" • Колоритные заведения: «" + T(m.Lang, m.TownEst.TavernKey) + "», «" + T(m.Lang, m.TownEst.SmithyKey) + "».\n" +
-				" • Эвакуация при побеге: вынос тел ценных ветеранов по числу выживших.\n\n" +
-				dangerStyle.Render(fmt.Sprintf("⏳ Автоматический старт экспедиции через: %d сек...\n\n", m.MenuCountdown)) +
-				healStyle.Render("[Пробел] или [Enter] — Начать экспедицию немедленно") + "\n" +
-				m.renderMenuModeToggle() + "\n" +
-				accentStyle.Render("[L] — Сменить язык (RU / EN)") + "   " + m.menuHeroKeys() + "\n" +
-				subtleStyle.Render("[+/-] — Скор.  |  [Q] — Выход")
-		}
+		textBlock := T(m.Lang, "menu.welcome") + "\n" +
+			T(m.Lang, "menu.goal") + "\n\n" +
+			questStyle.Render(T(m.Lang, "menu.features")) + "\n" +
+			" • " + T(m.Lang, "menu.feature.lang") + "\n" +
+			" • " + T(m.Lang, "menu.feature.classes") + "\n" +
+			" • " + T(m.Lang, "menu.feature.places", T(m.Lang, m.TownEst.TavernKey), T(m.Lang, m.TownEst.SmithyKey)) + "\n" +
+			" • " + T(m.Lang, "menu.feature.evac") + "\n\n" +
+			dangerStyle.Render(T(m.Lang, "menu.autostart", m.MenuCountdown)+"\n\n") +
+			healStyle.Render(T(m.Lang, "menu.start_now")) + "\n" +
+			m.renderMenuModeToggle() + "\n" +
+			accentStyle.Render(T(m.Lang, "menu.switch_lang")) + "   " + m.menuHeroKeys() + "\n" +
+			subtleStyle.Render(T(m.Lang, "menu.speed_quit"))
 		sb.WriteString(lipgloss.NewStyle().Align(lipgloss.Left).Render(textBlock))
 		if line := m.menuHeroLine(); line != "" {
 			sb.WriteString("\n" + line)
@@ -115,20 +90,16 @@ func (m Model) renderMenuScreen() string {
 		}
 		sb.WriteString(townArtStyle.Render(strings.Join(logoLines, "\n")) + "\n\n")
 
-		timerStr := dangerStyle.Render(fmt.Sprintf("⏳ %d sec...", m.MenuCountdown))
-		startBtn := healStyle.Render("[Space / Enter] Start Expedition")
-		if m.Lang == LangRU {
-			timerStr = dangerStyle.Render(fmt.Sprintf("⏳ Старт через: %d сек...", m.MenuCountdown))
-			startBtn = healStyle.Render("[Пробел / Enter] Начать экспедицию")
-		}
+		timerStr := dangerStyle.Render(T(m.Lang, "menu.timer.medium", m.MenuCountdown))
+		startBtn := healStyle.Render(T(m.Lang, "menu.start.medium"))
 
 		sb.WriteString(startBtn + "    " + timerStr + "\n")
 		sb.WriteString(m.renderMenuModeToggle() + "\n\n")
 		if line := m.menuHeroLine(); line != "" {
 			sb.WriteString(line + "\n")
 		}
-		sb.WriteString(accentStyle.Render("[L] Language (RU / EN)") + "  " + m.menuHeroKeys() + "\n")
-		sb.WriteString(subtleStyle.Render("[Q] Quit"))
+		sb.WriteString(accentStyle.Render(T(m.Lang, "menu.lang.medium")) + "  " + m.menuHeroKeys() + "\n")
+		sb.WriteString(subtleStyle.Render("[Q] " + T(m.Lang, "ui.quit")))
 
 		box := menuBoxStyle.Render(sb.String())
 		return lipgloss.Place(termW, termH, lipgloss.Center, lipgloss.Center, box)
@@ -138,18 +109,12 @@ func (m Model) renderMenuScreen() string {
 		innerW := max(34, termW-6)
 
 		headerTitle := "⚔ DCCAG " + displayVersion() + " ⚔"
-		tagline := "Tactical Auto Dungeon Crawler"
-		if m.Lang == LangRU {
-			tagline = "Автономный тактический рогалик"
-		}
+		tagline := T(m.Lang, "menu.tagline")
 
 		sb.WriteString(titleStyle.Render(padRightTruncate(headerTitle, innerW)) + "\n")
 		sb.WriteString(subtleStyle.Render(padRightTruncate(tagline, innerW)) + "\n\n")
 
-		timerStr := dangerStyle.Render(fmt.Sprintf("⏳ %d sec", m.MenuCountdown))
-		if m.Lang == LangRU {
-			timerStr = dangerStyle.Render(fmt.Sprintf("⏳ Автостарт: %d сек", m.MenuCountdown))
-		}
+		timerStr := dangerStyle.Render(T(m.Lang, "menu.timer.compact", m.MenuCountdown))
 		sb.WriteString(timerStr + "\n")
 		sb.WriteString(m.renderMenuModeToggle() + "\n\n")
 		if line := m.menuHeroLine(); line != "" {
@@ -157,15 +122,9 @@ func (m Model) renderMenuScreen() string {
 		}
 		sb.WriteString(m.menuHeroKeys() + "\n")
 
-		if m.Lang == LangEN {
-			sb.WriteString(healStyle.Render("[Space] Start") + "\n")
-			sb.WriteString(accentStyle.Render("[L] Language (EN/RU)") + "\n")
-			sb.WriteString(subtleStyle.Render("[Q] Quit"))
-		} else {
-			sb.WriteString(healStyle.Render("[Пробел] Начать") + "\n")
-			sb.WriteString(accentStyle.Render("[L] Язык (RU/EN)") + "\n")
-			sb.WriteString(subtleStyle.Render("[Q] Выход"))
-		}
+		sb.WriteString(healStyle.Render(T(m.Lang, "menu.start.compact")) + "\n")
+		sb.WriteString(accentStyle.Render(T(m.Lang, "menu.lang.compact")) + "\n")
+		sb.WriteString(subtleStyle.Render("[Q] " + T(m.Lang, "ui.quit")))
 
 		box := menuBoxStyle.Width(innerW).Render(sb.String())
 		return lipgloss.Place(termW, termH, lipgloss.Center, lipgloss.Center, box)
@@ -223,10 +182,10 @@ func (m Model) renderStatsScreen(title string, titleColor lipgloss.Color) string
 			rawName := shortenItemName(h.FullName(m.Lang), nameColWidth)
 			paddedName := padRight(rawName, nameColWidth)
 			raceStr := h.RaceName(m.Lang)
-			sb.WriteString(fmt.Sprintf(" • %s (%s %s %d) [%s] (Atk:%2d Def:%2d)\n",
+			sb.WriteString(fmt.Sprintf(" • %s (%s %s %d) [%s] (%s:%2d %s:%2d)\n",
 				paddedName,
 				raceStr, h.ShortClass(m.Lang), h.Level, healStyle.Render(T(m.Lang, "ui.alive")),
-				h.TotalAtk(), h.TotalDef()))
+				T(m.Lang, "ui.atk_short"), h.TotalAtk(), T(m.Lang, "ui.def_short"), h.TotalDef()))
 		}
 	}
 	sb.WriteString("\n")
@@ -278,7 +237,7 @@ func (m Model) renderStatsScreen(title string, titleColor lipgloss.Color) string
 		sb.WriteString("\n" + countdownStr + "\n")
 	}
 
-	sb.WriteString(subtleStyle.Render("\n[↑/↓/PgUp/PgDn] " + T(m.Lang, "ui.scroll") + " | [R] " + T(m.Lang, "ui.btn_restart") + " | [S] " + T(m.Lang, "ui.btn_back") + " | [L] Lang | [Q] " + T(m.Lang, "ui.quit")))
+	sb.WriteString(subtleStyle.Render("\n[↑/↓/PgUp/PgDn] " + T(m.Lang, "ui.scroll") + " | [R] " + T(m.Lang, "ui.btn_restart") + " | [S] " + T(m.Lang, "ui.btn_back") + " | [L] " + T(m.Lang, "ui.lang_short") + " | [Q] " + T(m.Lang, "ui.quit")))
 
 	lines := strings.Split(sb.String(), "\n")
 	maxVisibleLines := max(8, m.TermHeight-4)
@@ -342,7 +301,7 @@ func (m Model) renderArmoryScreen() string {
 		sb.WriteString("\n")
 	}
 
-	sb.WriteString(subtleStyle.Render("[↑/↓/PgUp/PgDn] " + T(m.Lang, "ui.scroll") + " | [E/Esc] " + T(m.Lang, "ui.btn_back") + " | [L] Lang | [Q] " + T(m.Lang, "ui.quit")))
+	sb.WriteString(subtleStyle.Render("[↑/↓/PgUp/PgDn] " + T(m.Lang, "ui.scroll") + " | [E/Esc] " + T(m.Lang, "ui.btn_back") + " | [L] " + T(m.Lang, "ui.lang_short") + " | [Q] " + T(m.Lang, "ui.quit")))
 
 	lines := strings.Split(sb.String(), "\n")
 	maxVisibleLines := max(8, m.TermHeight-4)

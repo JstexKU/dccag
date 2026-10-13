@@ -49,10 +49,10 @@ func (m *Model) handleAltar() {
 			target.HP = 0
 			target.CauseOfDeath = T(m.Lang, "dungeon.death.altar")
 			m.hazardDeath(target)
-			verb := TVerb(m.Lang, target.Gender, "пал", "пала", "fell")
+			verb := TVerb(m.Lang, target.Gender, "fall")
 			m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.altar_death", hName, verb)))
 		} else {
-			verb := TVerb(m.Lang, target.Gender, "пожертвовал", "пожертвовала", "sacrificed")
+			verb := TVerb(m.Lang, target.Gender, "sacrifice")
 			m.addLog(altarStyle.Render(T(m.Lang, "dungeon.log.altar_success", hName, verb, bloodCost)))
 		}
 	}

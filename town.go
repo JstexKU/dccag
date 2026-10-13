@@ -1,13 +1,11 @@
 package main
 
-import (
-	"fmt"
-)
-
 func (m *Model) stepTown() {
 	switch m.TownPhase {
 	case TownPhaseSellLoot:
-		m.initMarketScreen()
+		if len(m.MarketState.Offers) == 0 && len(m.Bag) > 0 && m.MarketState.ActionSummary == "" {
+			m.initMarketScreen()
+		}
 		if m.ManualMode {
 			return
 		}
@@ -23,7 +21,7 @@ func (m *Model) stepTown() {
 			m.MarketState.ChosenIdx = lastIdx
 
 			m.ExecuteMarketSellLoot(lastIdx)
-			m.MarketState.ActionSummary = fmt.Sprintf("Продано: %s (+%dG)", item.DisplayName(m.Lang), price)
+			m.MarketState.ActionSummary = T(m.Lang, "town.sum.market_sold", item.DisplayName(m.Lang), price)
 			return
 		}
 
@@ -37,11 +35,13 @@ func (m *Model) stepTown() {
 			}
 		}
 
-		m.MarketState.ActionSummary = "Рюкзак пуст. Снаряжение отряда в порядке."
+		m.MarketState.ActionSummary = T(m.Lang, "town.sum.market_empty")
 		m.TownPhase = TownPhaseMagistrate
 
 	case TownPhaseMagistrate:
-		m.initMagistrateScreen()
+		if len(m.MagistrateState.Offers) == 0 && m.MagistrateState.ActionSummary == "" {
+			m.initMagistrateScreen()
+		}
 		if m.ManualMode {
 			return
 		}
@@ -49,7 +49,6 @@ func (m *Model) stepTown() {
 		budget := AllocateBudget(m.Gold).Treasury
 		offers := m.MagistrateState.Offers
 
-		// Ищем доступное здание с минимальным уровнем
 		bestIdx := -1
 		minLevel := 999999
 		for i, off := range offers {
@@ -68,20 +67,23 @@ func (m *Model) stepTown() {
 
 			m.ExecuteMagistrateInvest(targetOffer)
 			bldName := T(m.Lang, targetOffer.NameKey)
-			m.MagistrateState.ActionSummary = fmt.Sprintf("Инвестировано %dG в «%s» (Ур.%d)", targetOffer.Cost, bldName, targetOffer.Level+1)
+			m.MagistrateState.ActionSummary = T(m.Lang, "town.sum.magistrate_invest", targetOffer.Cost, bldName, targetOffer.Level+1)
+			m.MagistrateState.Offers = m.GenerateMagistrateOffers()
 			return
 		}
 
-		m.MagistrateState.ActionSummary = "Казна распределена. Инвестиции в Магистрате завершены."
+		m.MagistrateState.ActionSummary = T(m.Lang, "town.sum.magistrate_done")
 		m.TownPhase = TownPhaseChurch
 
 	case TownPhaseChurch:
-		m.initChurchScreen()
+		if len(m.ChurchState.Offers) == 0 && m.ChurchState.ActionSummary == "" {
+			m.initChurchScreen()
+		}
 		if m.ManualMode {
 			return
 		}
 
-		// Обработка брошенных в бездне тел выжившими
+		// Обработка брошенных в бездне тел
 		var livingHeroes []*Hero
 		var downedHeroes []*Hero
 		for _, h := range m.Party {
@@ -105,7 +107,6 @@ func (m *Model) stepTown() {
 			carryCapacity--
 		}
 
-		// Пошаговая стабилизация и очищение
 		offers := m.ChurchState.Offers
 		for i, off := range offers {
 			if off.CanAfford {
@@ -114,25 +115,37 @@ func (m *Model) stepTown() {
 
 				m.ExecuteChurchAction(off)
 				if off.Type == ChurchActionStabilize {
-					m.ChurchState.ActionSummary = fmt.Sprintf("Стабилизирован тяжелораненый боец %s", off.HeroName)
+					m.ChurchState.ActionSummary = T(m.Lang, "town.sum.church_stabilize", off.HeroName)
 				} else {
-					m.ChurchState.ActionSummary = fmt.Sprintf("Очищен разум бойца %s (-60 стресса)", off.HeroName)
+					m.ChurchState.ActionSummary = T(m.Lang, "town.sum.church_cleanse", off.HeroName)
 				}
+				m.ChurchState.Offers = m.GenerateChurchOffers()
 				return
 			}
 		}
 
-		m.ChurchState.ActionSummary = "Отряд благословлен, раненых нет."
+		m.ChurchState.ActionSummary = T(m.Lang, "town.sum.church_done")
 		m.TownPhase = TownPhaseTavern
 
 	case TownPhaseTavern:
-		m.initTavernScreen()
+		if len(m.TavernState.Offers) == 0 && m.TavernState.ActionSummary == "" {
+			m.initTavernScreen()
+		}
 		if m.ManualMode {
 			return
 		}
 
 		offers := m.TavernState.Offers
-		// Выбираем лучший доступный ночлег
+		if len(offers) == 0 {
+			m.initTavernScreen()
+			offers = m.TavernState.Offers
+		}
+
+		if m.TavernState.ActionSummary != "" {
+			m.TownPhase = TownPhaseGuild
+			return
+		}
+
 		chosenIdx := -1
 		if offers[0].CanAfford {
 			chosenIdx = 0
@@ -140,15 +153,15 @@ func (m *Model) stepTown() {
 			chosenIdx = 1
 		}
 
-		if chosenIdx != -1 && m.TavernState.ChosenIdx == -1 {
+		if chosenIdx != -1 {
 			m.TavernState.Cursor = chosenIdx
 			m.TavernState.ChosenIdx = chosenIdx
 
 			m.ExecuteTavernRest(offers[chosenIdx])
 			if chosenIdx == 0 {
-				m.TavernState.ActionSummary = fmt.Sprintf("Отряд отдохнул в комфортных покоях (-%dG, 100%% HP/MP)", offers[0].Cost)
+				m.TavernState.ActionSummary = T(m.Lang, "town.sum.tavern_inn", offers[0].Cost)
 			} else {
-				m.TavernState.ActionSummary = "Казна пуста. Ночлег на сеновале у очага (40% сил)."
+				m.TavernState.ActionSummary = T(m.Lang, "town.sum.tavern_barn")
 			}
 			return
 		}
@@ -156,7 +169,9 @@ func (m *Model) stepTown() {
 		m.TownPhase = TownPhaseGuild
 
 	case TownPhaseGuild:
-		m.initGuildScreen()
+		if len(m.GuildState.Offers) == 0 && m.GuildState.ActionSummary == "" {
+			m.initGuildScreen()
+		}
 		if m.ManualMode {
 			return
 		}
@@ -173,29 +188,31 @@ func (m *Model) stepTown() {
 		}
 
 		offers := m.GuildState.Offers
-		// Пошаговый найм на свободные вакансии
 		for i, off := range offers {
-			// Предпочитаем ветерана, если хватает денег, иначе берем ополчение
 			if off.IsVeteran && off.CanAfford {
 				m.GuildState.Cursor = i
 				m.GuildState.ChosenIdx = i
 				m.ExecuteGuildRecruit(off)
-				m.GuildState.ActionSummary = fmt.Sprintf("Нанят ветеран %s (%s, -%dG)", m.Party[off.SlotIdx].DisplayName(m.Lang), off.Class, off.Cost)
+				m.GuildState.ActionSummary = T(m.Lang, "town.sum.guild_hire", m.Party[off.SlotIdx].DisplayName(m.Lang), T(m.Lang, "class."+string(off.Class)+".name"), off.Cost)
+				m.GuildState.Offers = m.GenerateGuildOffers()
 				return
 			} else if !off.IsVeteran {
 				m.GuildState.Cursor = i
 				m.GuildState.ChosenIdx = i
 				m.ExecuteGuildRecruit(off)
-				m.GuildState.ActionSummary = fmt.Sprintf("Призван ополченец %s (%s, бесплатно)", m.Party[off.SlotIdx].DisplayName(m.Lang), off.Class)
+				m.GuildState.ActionSummary = T(m.Lang, "town.sum.guild_militia", m.Party[off.SlotIdx].DisplayName(m.Lang), T(m.Lang, "class."+string(off.Class)+".name"))
+				m.GuildState.Offers = m.GenerateGuildOffers()
 				return
 			}
 		}
 
-		m.GuildState.ActionSummary = "Все позиции укомплектованы. Отряд полон."
+		m.GuildState.ActionSummary = T(m.Lang, "town.sum.guild_done")
 		m.TownPhase = TownPhaseSmithy
 
 	case TownPhaseSmithy:
-		m.initSmithyScreen()
+		if len(m.SmithyState.Offers) == 0 && m.SmithyState.ActionSummary == "" {
+			m.initSmithyScreen()
+		}
 		if m.ManualMode {
 			return
 		}
@@ -218,39 +235,44 @@ func (m *Model) stepTown() {
 			m.SmithyState.ChosenIdx = bestIdx
 
 			m.ExecuteSmithyUpgrade(targetOffer)
-			m.SmithyState.ActionSummary = fmt.Sprintf("Заточено: %s (+%d) для %s (-%dG)",
+			m.SmithyState.ActionSummary = T(m.Lang, "town.sum.smithy_upgrade",
 				targetOffer.ItemName, targetOffer.Level+1, m.Party[targetOffer.HeroIdx].DisplayName(m.Lang), targetOffer.Cost)
+			m.SmithyState.Offers = m.GenerateSmithyOffers()
 			return
 		}
 
-		m.SmithyState.ActionSummary = "Лимит бюджета исчерпан или экипировка максимально заточена."
+		m.SmithyState.ActionSummary = T(m.Lang, "town.sum.smithy_done")
 		m.TownPhase = TownPhaseTannery
 
 	case TownPhaseTannery:
-		m.initTanneryScreen()
+		if len(m.TanneryState.Offers) == 0 && m.TanneryState.ActionSummary == "" {
+			m.initTanneryScreen()
+		}
 		if m.ManualMode {
 			return
+		}
+
+		// 1. Пошив сумки
+		if m.BagLevel < len(bagUpgrades)-1 {
+			nextBag := bagUpgrades[m.BagLevel+1]
+			maxAllowedTier := m.Legacy.TanneryLevel + 1
+			if nextBag.Level <= maxAllowedTier && m.Gold >= nextBag.Cost && m.TanneryState.ChosenIdx != 999 {
+				m.TanneryState.Cursor = 0
+				m.TanneryState.ChosenIdx = 999
+				if m.ExecuteBagUpgrade() {
+					bagName := T(m.Lang, nextBag.NameKey)
+					m.TanneryState.ActionSummary = T(m.Lang, "town.sum.tannery_bag", bagName, nextBag.Capacity, nextBag.Cost)
+					m.TanneryState.Offers = m.GenerateTanneryOffers()
+					return
+				}
+			}
 		}
 
 		budget := AllocateBudget(m.Gold)
 		tanneryBudget := budget.Tannery + budget.Bags
 		offers := m.TanneryState.Offers
 
-		// 1. Проверяем пошив сумки
-		if m.BagLevel < len(bagUpgrades)-1 {
-			nextBag := bagUpgrades[m.BagLevel+1]
-			maxAllowedTier := m.Legacy.TanneryLevel + 1
-			if nextBag.Level <= maxAllowedTier && tanneryBudget >= nextBag.Cost && m.Gold >= nextBag.Cost && m.TanneryState.ChosenIdx != 0 {
-				m.TanneryState.Cursor = 0
-				m.TanneryState.ChosenIdx = 0
-				m.ExecuteBagUpgrade()
-				bagName := T(m.Lang, nextBag.NameKey)
-				m.TanneryState.ActionSummary = fmt.Sprintf("Сшита %s (%d слотов, -%dG)", bagName, nextBag.Capacity, nextBag.Cost)
-				return
-			}
-		}
-
-		// 2. Проверяем выделку легких/средних доспехов
+		// 2. Выделка доспехов
 		bestIdx := -1
 		minCost := 999999
 		for i, off := range offers {
@@ -270,16 +292,19 @@ func (m *Model) stepTown() {
 			m.TanneryState.ChosenIdx = offset + bestIdx
 
 			m.ExecuteTanneryUpgrade(targetOffer)
-			m.TanneryState.ActionSummary = fmt.Sprintf("Выделка: %s (+%d) для %s (-%dG)",
+			m.TanneryState.ActionSummary = T(m.Lang, "town.sum.tannery_upgrade",
 				targetOffer.ItemName, targetOffer.Level+1, m.Party[targetOffer.HeroIdx].DisplayName(m.Lang), targetOffer.Cost)
+			m.TanneryState.Offers = m.GenerateTanneryOffers()
 			return
 		}
 
-		m.TanneryState.ActionSummary = "Сумка расширена, доспехи в отличном состоянии."
+		m.TanneryState.ActionSummary = T(m.Lang, "town.sum.tannery_done")
 		m.TownPhase = TownPhaseAlchemist
 
 	case TownPhaseAlchemist:
-		m.initAlchemistScreen()
+		if len(m.AlchemistState.Offers) == 0 && m.AlchemistState.ActionSummary == "" {
+			m.initAlchemistScreen()
+		}
 		if m.ManualMode {
 			return
 		}
@@ -287,41 +312,60 @@ func (m *Model) stepTown() {
 		budget := AllocateBudget(m.Gold).Alchemy
 		offers := m.AlchemistState.Offers
 
-		// 1. Ищем подходящие мутации
+		// 1. Честное распределение мутаций: ищем доступного героя с НАИМЕНЬШИМ числом мутаций
+		bestMutIdx := -1
+		minMutations := 999999
 		for i, off := range offers {
 			if off.Type == AlchemistActionMutation && off.CanAfford && budget >= off.Cost {
-				m.AlchemistState.Cursor = i
-				m.AlchemistState.ChosenIdx = i
-				m.ExecuteAlchemistOffer(off)
-				m.AlchemistState.ActionSummary = fmt.Sprintf("Принята мутация: %s для %s (-%dG)", off.ItemTitle, off.HeroName, off.Cost)
-				return
+				if off.HeroIdx >= 0 && off.HeroIdx < len(m.Party) {
+					heroMutCount := m.Party[off.HeroIdx].Mutations.Total()
+					if heroMutCount < minMutations {
+						minMutations = heroMutCount
+						bestMutIdx = i
+					}
+				}
 			}
 		}
 
-		// 2. Ищем докупку зелий
+		if bestMutIdx != -1 {
+			targetOffer := offers[bestMutIdx]
+			m.AlchemistState.Cursor = bestMutIdx
+			m.AlchemistState.ChosenIdx = bestMutIdx
+			m.ExecuteAlchemistOffer(targetOffer)
+			m.AlchemistState.ActionSummary = T(m.Lang, "town.sum.alchemist_mutation", targetOffer.ItemTitle, targetOffer.HeroName, targetOffer.Cost)
+			m.AlchemistState.Offers = m.GenerateAlchemistOffers()
+			return
+		}
+
+		// 2. Честное распределение зелий: отдаем зелье тому, у кого меньше всего зелий в поясе
+		bestPotIdx := -1
+		minPotions := 999999
 		for i, off := range offers {
 			if off.Type == AlchemistActionPotion && off.CanAfford && budget >= off.Cost {
-				m.AlchemistState.Cursor = i
-				m.AlchemistState.ChosenIdx = i
-				m.ExecuteAlchemistOffer(off)
-				m.AlchemistState.ActionSummary = fmt.Sprintf("Куплено зелье %s для %s (-%dG)", off.ItemTitle, off.HeroName, off.Cost)
-				return
+				if off.HeroIdx >= 0 && off.HeroIdx < len(m.Party) {
+					heroPotCount := len(m.Party[off.HeroIdx].Potions)
+					if heroPotCount < minPotions {
+						minPotions = heroPotCount
+						bestPotIdx = i
+					}
+				}
 			}
 		}
 
-		m.AlchemistState.ActionSummary = "Пояса укомплектованы зельями. Мутации не требуются."
+		if bestPotIdx != -1 {
+			targetOffer := offers[bestPotIdx]
+			m.AlchemistState.Cursor = bestPotIdx
+			m.AlchemistState.ChosenIdx = bestPotIdx
+			m.ExecuteAlchemistOffer(targetOffer)
+			m.AlchemistState.ActionSummary = T(m.Lang, "town.sum.alchemist_potion", targetOffer.ItemTitle, targetOffer.HeroName, targetOffer.Cost)
+			m.AlchemistState.Offers = m.GenerateAlchemistOffers()
+			return
+		}
+
+		m.AlchemistState.ActionSummary = T(m.Lang, "town.sum.alchemist_done")
 		m.TownPhase = TownPhaseDepart
 
 	case TownPhaseDepart:
-		for _, h := range m.Party {
-			h.ReviveCooldown = 0
-		}
-		m.TownHistory = []string{}
-		m.InTown = false
-		m.PathHistory = []Point{}
-		m.LoopDetectCount = 0
-		m.initDungeonForFloor(m.Floor)
-		m.addLog(accentStyle.Render(T(m.Lang, "town.log.depart")))
+		m.departFromTown(m.planDeparture())
 	}
 }
-

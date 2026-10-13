@@ -85,10 +85,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+		// Ручное управление на улицах города: стрелки, вход через дверь.
+		if m.ManualMode && m.InTown && !m.manualDungeon() && m.TownWalking {
+			if m.handleTownWalkKey(key) {
+				return m, nil
+			}
+		}
+
+		// Выход из заведения на улицу (Esc); у Врат Esc в списке этажей сначала возвращает в меню Врат.
+		if m.ManualMode && m.InTown && m.TownVisit && key == "esc" {
+			if m.TownPhase == TownPhaseDepart && m.GateState.Mode == gateModeFloors {
+				m.GateState.Mode = gateModeMain
+				return m, nil
+			}
+			m.leaveBuilding(false)
+			return m, nil
+		}
+
 		// Ручное управление в заведениях города (когда отряд не исследует подземелье).
-		if m.ManualMode && m.InTown && !m.manualDungeon() {
+		if m.ManualMode && m.InTown && !m.manualDungeon() && !m.TownWalking {
 			var cmd tea.Cmd
 			var handled bool
+			phaseBefore := m.TownPhase
 			switch m.TownPhase {
 			case TownPhaseSellLoot:
 				cmd, handled = m.handleMarketKey(key)
@@ -106,6 +124,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmd, handled = m.handleTanneryKey(key)
 			case TownPhaseAlchemist:
 				cmd, handled = m.handleAlchemistKey(key)
+			case TownPhaseDepart:
+				handled = m.handleGateKey(key)
+			}
+			// Обработчики прежнего конвейера сами переводят фазу «дальше» (например, после отдыха
+			// в таверне). На карте это означает «дела закончены»: возвращаем фазу и выходим на улицу.
+			if m.TownVisit && m.InTown && m.TownPhase != phaseBefore {
+				m.TownPhase = phaseBefore
+				m.leaveBuilding(false)
 			}
 			if handled {
 				return m, cmd
@@ -156,10 +182,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.State == StatePlaying {
 				m.AutoMode = !m.AutoMode
 				if m.AutoMode {
-					delay := m.SpeedMs
-					if m.InTown {
-						delay = m.TownDelayMs
-					}
+					delay := m.tickDelay()
 					cmd := m.restartTicks(delay)
 					return m, cmd
 				}
@@ -278,16 +301,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			// В ручном режиме город не прокручивается по таймеру сам — ждём решений игрока.
 			if m.ManualMode && m.InTown && !m.manualDungeon() {
-				return m, tickCmd(m.TownDelayMs, m.TickGen)
+				return m, tickCmd(m.tickDelay(), m.TickGen)
 			}
 			m.step()
 			if m.State == StateDefeat {
 				return m, restartTickCmd()
 			}
-			delay := m.SpeedMs
-			if m.InTown {
-				delay = m.TownDelayMs
-			}
+			delay := m.tickDelay()
 			return m, tickCmd(delay, m.TickGen)
 		}
 	}

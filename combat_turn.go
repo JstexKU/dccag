@@ -85,7 +85,7 @@ func (m *Model) executeCombatTurn() {
 		hName := h.DisplayName(m.Lang)
 
 		if h.Affliction == AfflictionParanoid && rng.Intn(100) < 35 {
-			verb := TVerb(m.Lang, h.Gender, "забился", "забилась", "cowered")
+			verb := TVerb(m.Lang, h.Gender, "cower")
 			m.addLog(stressStyle.Render(T(m.Lang, "combat.log.paranoid", hName, verb)))
 			return
 		}
@@ -148,7 +148,7 @@ func (m *Model) executeCombatTurn() {
 				woundedAlly.HP = min(woundedAlly.MaxHP, woundedAlly.HP+healAmt)
 				woundedAlly.Stress = max(0, woundedAlly.Stress-10)
 				h.Feats.HealsGiven += healAmt
-				verb := TVerb(m.Lang, h.Gender, "совершил", "совершила", "performed")
+				verb := TVerb(m.Lang, h.Gender, "perform")
 				m.addLog(healStyle.Render(T(m.Lang, "combat.log.paladin_heal", hName, verb, woundedAlly.DisplayName(m.Lang), healAmt)))
 				m.checkAndAwardTitle(h)
 				return
@@ -230,7 +230,7 @@ func (m *Model) executeCombatTurn() {
 				h.MP -= skillCost
 				h.IsStealthed = true
 				h.AddBackstab()
-				verb := TVerb(m.Lang, h.Gender, "растворился", "растворилась", "vanished")
+				verb := TVerb(m.Lang, h.Gender, "vanish")
 				m.addLog(accentStyle.Render(T(m.Lang, "combat.log.rogue_stealth", hName, verb)))
 			} else if h.MP >= 6 && targetMob != nil && targetMob.HP > 20 && (forceSkill || rng.Intn(100) < 50) {
 				h.MP -= 6
@@ -328,7 +328,7 @@ func (m *Model) executeCombatTurn() {
 				criticalAlly.HP = min(criticalAlly.MaxHP, criticalAlly.HP+hAmt)
 				criticalAlly.Stress = max(0, criticalAlly.Stress-10)
 				h.Feats.HealsGiven += hAmt
-				verb := TVerb(m.Lang, h.Gender, "исцелил", "исцелила", "healed")
+				verb := TVerb(m.Lang, h.Gender, "heal")
 				m.addLog(healStyle.Render(T(m.Lang, "combat.log.cleric_heal", hName, verb, criticalAlly.DisplayName(m.Lang), hAmt)))
 				m.checkAndAwardTitle(h)
 				return
@@ -343,7 +343,7 @@ func (m *Model) executeCombatTurn() {
 				if lowest := m.getRandomLivingHero(); lowest != nil && lowest.HP < lowest.MaxHP {
 					lowest.HP = min(lowest.MaxHP, lowest.HP+4)
 				}
-				verb := TVerb(m.Lang, h.Gender, "обрушил", "обрушила", "unleashed")
+				verb := TVerb(m.Lang, h.Gender, "unleash")
 				m.addLog(fountStyle.Render(T(m.Lang, "combat.log.cleric_smite", hName, verb, smiteDmg)))
 				if targetMob.HP <= 0 {
 					m.onMonsterKilled(h, targetMob)
@@ -417,7 +417,7 @@ func (m *Model) executeCombatTurn() {
 				aoeDmg := h.TotalAtk() + 5
 				h.AddManaBurst()
 				h.AddCCDuration()
-				verb := TVerb(m.Lang, h.Gender, "накрыл", "накрыла", "blanketed")
+				verb := TVerb(m.Lang, h.Gender, "blanket")
 				m.addLog(fireStyle.Render(T(m.Lang, "combat.log.mage_storm", hName, verb, aoeDmg)))
 				for _, mob := range m.Combat.Pack.Members {
 					if !mob.IsDead {
@@ -618,7 +618,7 @@ func (m *Model) executeCombatTurn() {
 		isFumble := d20 == 1 && !h.IsStealthed
 
 		if isFumble {
-			verb := TVerb(m.Lang, h.Gender, "промахнулся", "промахнулась", "missed")
+			verb := TVerb(m.Lang, h.Gender, "miss")
 			m.addLog(subtleStyle.Render(T(m.Lang, "combat.log.fumble", hName, verb)))
 			return
 		}
@@ -656,7 +656,7 @@ func (m *Model) executeCombatTurn() {
 		}
 
 		m.checkAndAwardTitle(h)
-		hitVerb := TVerb(m.Lang, h.Gender, "нанес", "нанесла", "dealt")
+		hitVerb := TVerb(m.Lang, h.Gender, "deal")
 		m.addLog(T(m.Lang, "combat.log.hit", hName, hitVerb, dmg, mobDisplayName, targetMob.HP))
 
 		if targetMob.HP <= 0 {
@@ -693,7 +693,7 @@ func (m *Model) executeCombatTurn() {
 		heroAC := 10 + victim.TotalDef()
 
 		if mobRoll == 1 {
-			verb := TVerb(m.Lang, victim.Gender, "увернулся", "увернулась", "dodged")
+			verb := TVerb(m.Lang, victim.Gender, "dodge")
 			m.addLog(healStyle.Render(T(m.Lang, "combat.log.dodge", victimName, verb, mobDisplayName)))
 			return
 		}
@@ -737,7 +737,7 @@ func (m *Model) executeCombatTurn() {
 		actualHeroName := actualHero.DisplayName(m.Lang)
 
 		if guarded {
-			verb := TVerb(m.Lang, actualHero.Gender, "прикрыл собой", "прикрыла собой", "shielded")
+			verb := TVerb(m.Lang, actualHero.Gender, "shield")
 			m.addLog(healStyle.Render(T(m.Lang, "combat.log.tank_guard", actualHeroName, verb, victimName, mobDisplayName, dealtDmg)))
 		} else {
 			m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.mob_hit", mobDisplayName, dealtDmg, actualHeroName)))
@@ -756,7 +756,7 @@ func (m *Model) executeCombatTurn() {
 			actualHero.IsAura = false
 			actualHero.CauseOfDeath = T(m.Lang, "combat.log.death_cause_mob", mobDisplayName)
 
-			verb := TVerb(m.Lang, actualHero.Gender, "рухнул без сознания", "рухнула без сознания", "fell unconscious")
+			verb := TVerb(m.Lang, actualHero.Gender, "fell_unconscious")
 			m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.hero_downed", actualHeroName, verb, mobDisplayName)))
 			m.onLeaderDowned(actualHero)
 			for _, ally := range m.Party {

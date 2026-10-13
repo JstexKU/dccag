@@ -236,13 +236,24 @@ func (bp HeroBlueprint) Preview(smithyLvl int) HeroPreview {
 	}
 }
 
+// partySize — сколько героев в отряде.
+const partySize = 5
+
 // createLeaderHero собирает героя-лидера из чертежа.
 func createLeaderHero(bp HeroBlueprint, smithyLvl int) *Hero {
+	return createCustomHero(bp, smithyLvl, true)
+}
+
+// createCustomHero собирает героя 1-го уровня из чертежа. Призвание и особые права
+// лидера получает только leader == true.
+func createCustomHero(bp HeroBlueprint, smithyLvl int, leader bool) *Hero {
 	bp = bp.Sanitized()
 	h := buildHero(bp.Class, bp.Race, "", bp.Gender, 1, smithyLvl)
 	h.CustomName = bp.Name
-	h.IsLeader = true
-	h.Calling = bp.Calling
+	h.IsLeader = leader
+	if leader {
+		h.Calling = bp.Calling
+	}
 
 	h.MaxHP += bp.Points[StatHP] * statSpecs[StatHP].perPoint
 	h.MaxMP += bp.Points[StatMP] * statSpecs[StatMP].perPoint
@@ -254,9 +265,12 @@ func createLeaderHero(bp HeroBlueprint, smithyLvl int) *Hero {
 	return h
 }
 
-// buildStartingParty собирает стартовый отряд из пяти героев разных классов.
-// С чертежом первым идёт лидер, а его класс исключается из случайных спутников.
-func buildStartingParty(smithyLvl int, bp *HeroBlueprint) []*Hero {
+// buildStartingParty собирает стартовый отряд из пяти героев.
+//
+// Без чертежа отряд случайный: пять героев разных классов. С чертежом первым идёт
+// лидер, следом — созданные игроком спутники (до четырёх), а свободные места
+// добираются случайными героями тех классов, которых в отряде ещё нет.
+func buildStartingParty(smithyLvl int, bp *HeroBlueprint, companions ...HeroBlueprint) []*Hero {
 	if bp == nil || !bp.Valid() {
 		// Перемешиваем все 10 классов и отбираем ровно 5 уникальных
 		shuffled := make([]HeroClass, len(AllClasses))
@@ -265,27 +279,60 @@ func buildStartingParty(smithyLvl int, bp *HeroBlueprint) []*Hero {
 			shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
 		})
 		var heroes []*Hero
-		for _, c := range shuffled[:5] {
+		for _, c := range shuffled[:partySize] {
 			heroes = append(heroes, createHero(c, 1, smithyLvl))
 		}
 		return heroes
 	}
 
+	heroes := []*Hero{createLeaderHero(*bp, smithyLvl)}
+	used := map[HeroClass]bool{bp.Sanitized().Class: true}
+
+	for _, c := range companions {
+		if len(heroes) >= partySize {
+			break
+		}
+		c = c.Sanitized()
+		if !c.Valid() {
+			continue
+		}
+		heroes = append(heroes, createCustomHero(c, smithyLvl, false))
+		used[c.Class] = true
+	}
+
 	var pool []HeroClass
 	for _, c := range AllClasses {
-		if c != bp.Class {
+		if !used[c] {
 			pool = append(pool, c)
 		}
 	}
 	rng.Shuffle(len(pool), func(i, j int) {
 		pool[i], pool[j] = pool[j], pool[i]
 	})
-
-	heroes := []*Hero{createLeaderHero(*bp, smithyLvl)}
-	for _, c := range pool[:4] {
+	for _, c := range pool {
+		if len(heroes) >= partySize {
+			break
+		}
 		heroes = append(heroes, createHero(c, 1, smithyLvl))
 	}
 	return heroes
+}
+
+// randomPartyBlueprints — пять случайных героев разных классов (кнопка «Случайный отряд»).
+func randomPartyBlueprints(lang Language) [partySize]HeroBlueprint {
+	classes := make([]HeroClass, len(AllClasses))
+	copy(classes, AllClasses)
+	rng.Shuffle(len(classes), func(i, j int) {
+		classes[i], classes[j] = classes[j], classes[i]
+	})
+
+	var out [partySize]HeroBlueprint
+	for i := range out {
+		bp := randomBlueprint(lang)
+		bp.Class = classes[i]
+		out[i] = bp.Sanitized()
+	}
+	return out
 }
 
 // randomBlueprint — случайный, но полностью допустимый герой (кнопка «Случайно»).

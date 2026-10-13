@@ -36,6 +36,10 @@ func (m *Model) evaluateRetreat() RetreatReason {
 		}
 	}
 
+	if m.Training && m.trainingFinished() {
+		return RetreatTrainingDone
+	}
+
 	return RetreatNone
 }
 
@@ -400,9 +404,9 @@ func (m *Model) findNextStep() Point {
 	}
 
 	// 5. РЕЖИМ ИССЛЕДОВАТЕЛЯ (Frontier Exploration):
-	// Идем открывать неизведанную тьму, пока не изучим хотя бы 70% карты
+	// Идем открывать неизведанную тьму, пока не изучим хотя бы 85% карты
 	exploredPct := m.explorationRatio()
-	needMoreExploration := exploredPct < 0.70 && !forceDeeper && !bagFull
+	needMoreExploration := exploredPct < 0.85 && !forceDeeper && !bagFull
 
 	isFrontier := func(p Point, t Tile) bool {
 		if !m.Explored[p.Y][p.X] || t == TileWall {
@@ -420,7 +424,7 @@ func (m *Model) findNextStep() Point {
 		return false
 	}
 
-	// Если этаж ещё мало исследован (<70%), сначала в приоритете поиск тумана войны!
+	// Если этаж ещё мало исследован (<85%), сначала в приоритете поиск тумана войны!
 	if needMoreExploration {
 		if step, found := findPath(true, isFrontier); found {
 			return step
@@ -432,11 +436,16 @@ func (m *Model) findNextStep() Point {
 
 	// 6. СПУСК ПО ЛЕСТНИЦЕ:
 	// Сюда мы попадаем, если:
-	// - Исследовали >= 70% карты
+	// - Исследовали >= 85% карты
 	// - Либо нет доступных границ тумана войны (все залы обойдены)
 	// - Либо переполнен мешок / включен режим побега из ловушки
+	// На тренировочном этаже отряд не спускается глубже, а уходит к выходу.
+	leaveTile := TileStairs
+	if m.Training && !m.ManualMode {
+		leaveTile = TileExit
+	}
 	step, found := findPath(false, func(p Point, t Tile) bool {
-		return m.Explored[p.Y][p.X] && t == TileStairs
+		return m.Explored[p.Y][p.X] && t == leaveTile
 	})
 	if found {
 		return step
