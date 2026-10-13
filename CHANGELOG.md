@@ -25,6 +25,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Not changed on purpose
 - Command-line help and startup errors in `main.go`, the telemetry console message, and the key hints inside the bars (`[Enter]`, `[Esc]`, ...) stay as they are: they are developer-facing or name physical keys.
 - The unit suffix `G` (gold), the `HP`/`MP`/`ST` values and the product name stay identical in both languages, but they now live in the dictionaries (`ui.hp_short`, `menu.title`, ...) and can be localized there.
+[Unreleased]
+
+## [3.3.1]
+
+Added
+7 Playable Races with Racial Perks and Class Synergies:
+Complete race system integrated into character generation and party creation: Human, Elf, Beastman, Olongr, Dwarf, Demonkin, and Dragonkin.
+Unique traits: Human exp boost & stress relief on level-up; Elf speed, crit & MP regeneration; Beastman lifesteal; Olongr health, defense & stun immunity; Dwarf defense, virtue bonus & reinforced block (55%); Demonkin low-health enrage & mana-on-kill; Dragonkin fire immunity & fire retaliation damage.
+140 unique hero names (10 male and 10 female names for each of the 7 races).
+10 Unique Legendary Relics with Active Gameplay Mechanics:
+Expanded relic system from 3 to 10 relics with 3 leveling tiers each (types_world.go, tiles.go, combat_turn.go, combat.go, step.go, manual.go).
+Compass of Greed (RelicGreedCompass): Up to +45% gold multiplier, increased monster damage.
+Martyr's Crown (RelicMartyrCrown): Permanent attack buff granted to surviving party members upon ally death.
+Holy Grail (RelicHolyGrail): Passive squad-wide stress mitigation.
+Pioneer's Eye (RelicPioneerEye): Expanded field-of-view radius through fog of war and automatic hidden wall detection.
+Quicksilver Vial (RelicQuicksilverVial): Squad speed bonus and guaranteed first-turn initiative in combat.
+Obsidian Anvil (RelicObsidianAnvil): Gear tempering granting bonus attack and defense for equipped T2+ items.
+Whispering Skull (RelicWhisperingSkull): Lowers party critical strike threshold; incoming enemy crits inflict psychological stress.
+Phoenix Core (RelicPhoenixCore): One-time miraculous death prevention per dungeon trip, reviving downed hero at 35% HP with stress cleansed.
+Horn of Plenty (RelicHornOfPlenty): Amplified resource recovery (+25% to +45%) from healing potions and camp resting.
+Inquisitor's Seal (RelicInquisitorSeal): Pure bane damage bonus and 50% armor penetration against undead, demons, mini-bosses, and dragon bosses.
+Belarusian Localization (BE):
+Full Belarusian dictionary support added alongside Russian and English with on-the-fly switching via [L].
+Complete parity across all menus, town buildings, combat logs, codex entries, race descriptions, and gendered verbs (TVerb).
+Keyboard Layout Independence:
+Transparent hotkey normalization: gameplay controls and shortcut keys (M, L, T, E, I, Q, A, D, P, C, X, arrows/WASD) function seamlessly regardless of active keyboard layout (QWERTY, JCUKEN/Cyrillic, Belarusian).
+Text input fields (such as custom hero naming in the creator) preserve raw character runes.
+Codex Tab 6 Expansion:
+Full breakdown of all 10 relics with mechanics descriptions and color-coded rarity tiers.
+Fixed
+Resolved duplicate revealFog declaration across step.go and dungeon_gen.go.
+Fixed undefined boss/elite attribute access in combat_turn.go by verifying pack properties (IsMiniBoss) and dragon monster types.
+Changed
+All player-visible text now comes from the dictionaries. About 180 hardcoded strings moved to dictionary files across all supported languages (RU, EN, BE).
+TVerb accepts dynamic keys for gender-aware conjugation across all localized languages.
+Telemetry spend categories use stable, language-neutral keys (spend.*).
 
 ## [3.3.0]
 
