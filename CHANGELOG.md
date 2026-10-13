@@ -7,8 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.3.3] - 2026-10-13
+
+### Added
+- **Capital Library and Lore system.** Added a six-category registry containing 80 books and manuscripts, plus a two-column interactive reader opened with `B`.
+- **Lore discovery and progression.** Lore tiles can spawn in dungeon halls and the Forgotten Archives. Reading lore can grant class perks, racial bonuses, experience, stress relief and bane damage; unlocked volumes persist in `save.json`.
+
 ### Changed
-- **All player-visible text now comes from the dictionaries.** About 180 hardcoded Russian and English strings were moved to `i18n_ru.go` and `i18n_en.go` (159 new keys per language): the whole main menu (full, medium and compact variants), the cards of every Capital building (headers, badges, hints, offer rows, the autopilot banner), the autopilot's town summaries, the town hub status line, the Codex tab names, tier labels and the dragon HP formula, the town signs, the armory and hero card labels (`HP`, `MP`, `ST`, `Atk`, `Def`), and the Church offer descriptions.
+- **Seven playable races** are now supported: Human, Elf, Beastman, Olongr, Dwarf, Demonkin and Dragonkin, with racial traits and class synergies.
+- **Belarusian localization** joins Russian and English, with language switching through `L`.
+
+### Changed
+- **All player-visible text now comes from the dictionaries.** About 180 hardcoded Russian and English strings were moved into the localization dictionaries (`i18n_ru.go`, `i18n_en.go` and `i18n_be.go`): the whole main menu (full, medium and compact variants), the cards of every Capital building (headers, badges, hints, offer rows, the autopilot banner), the autopilot's town summaries, the town hub status line, the Codex tab names, tier labels and the dragon HP formula, the town signs, the armory and hero card labels (`HP`, `MP`, `ST`, `Atk`, `Def`), and the Church offer descriptions.
 - `TVerb` now takes a key: `TVerb(lang, gender, "reach")` reads `verb.reach.m` / `verb.reach.f` from the dictionary. The 27 call sites carried their Russian and English words inline; they now use 22 dictionary verbs.
 - Gold spending categories in the telemetry report are stable language-neutral identifiers (`spend.gear`, `spend.forge`, ...) instead of Russian phrases; the readable names live in the dictionaries under the same keys. **The keys of `GoldSpentBreakdown` in `dccag_report.json` changed accordingly.**
 - `renderAutoBanner` became a method of `Model` so that it can translate its tag and idle text.
@@ -20,13 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - The armory used the English `Atk`/`Def` in the Russian interface instead of the dictionary words.
 
 ### Added
-- Tests that keep the code free of hardcoded text (`i18n_hardcode_test.go`): no Cyrillic literals outside the dictionaries, no inline language branches, every `TVerb` key exists for both genders in both languages, sign texts fit the signboards, the menu and every Capital card contain no foreign-language leftovers, and the autopilot's town history and log are fully English in the English interface.
+- Tests that keep the code free of hardcoded text (`i18n_hardcode_test.go`): no Cyrillic literals outside the dictionaries, no inline language branches, every `TVerb` key exists for both genders in the tested language dictionaries, sign texts fit the signboards, the menu and every Capital card contain no foreign-language leftovers, and the autopilot's town history and log are fully English in the English interface.
 
 ### Not changed on purpose
 - Command-line help and startup errors in `main.go`, the telemetry console message, and the key hints inside the bars (`[Enter]`, `[Esc]`, ...) stay as they are: they are developer-facing or name physical keys.
 - The unit suffix `G` (gold), the `HP`/`MP`/`ST` values and the product name stay identical in both languages, but they now live in the dictionaries (`ui.hp_short`, `menu.title`, ...) and can be localized there.
-[Unreleased]
-
 
 ## [3.3.2]
 
