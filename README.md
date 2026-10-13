@@ -10,7 +10,7 @@ A grim tactical text-based dungeon crawler featuring autonomous squad mechanics 
 
 ## 🎮 About The Project
 
-**DCCAG** is an autonomous console roguelike. Each expedition you get a party of 5 heroes picked at random from **10 classes** (Tank, Warrior, Rogue, Mage, Cleric, Paladin, Ranger, Monk, Bard, Warlock) and 4 races (Human, Elf, Beastman, Olongr). The party explores infinite procedural floors, fights monster packs, manages stress and psychological afflictions, trades in the Capital and crafts gear, all inside a terminal UI. You can set its **tactics** and watch, take **manual control**, or create **your own leader hero** who leads the party.
+**DCCAG** is an autonomous console roguelike. Each expedition you get a party of 5 heroes picked at random from **10 classes** (Tank, Warrior, Rogue, Mage, Cleric, Paladin, Ranger, Monk, Bard, Warlock) and 7 races (Human, Elf, Beastman, Olongr, Dwarf, Demonkin, Dragonkin). The party explores infinite procedural floors, fights monster packs, manages stress and psychological afflictions, trades in the Capital and crafts gear, all inside a terminal UI. You can set its **tactics** and watch, take **manual control**, or create **your own leader hero** who leads the party.
 
 ### ✨ Key Features
 * **A Town You Walk Through**: the Capital is a map with nine buildings drawn with roofs, signs and doors: the Market, Magistrate, Church, Tavern, Guild, Forge, Tannery, Alchemist and the Dungeon Gate in the middle of the square. The autopilot walks the party from building to building (skipping the ones with nothing to do), opens the building's card at the door, finishes its business, steps back out onto the street and walks on to the next one. In manual mode you walk the streets with the arrow keys and step on a door to enter (`Esc` leaves).
@@ -23,7 +23,9 @@ A grim tactical text-based dungeon crawler featuring autonomous squad mechanics 
 * **Town Economy & Trading**: Automated visit pipeline (Market, Magistrate, Church, Tavern, Guild, Smithy, Tannery, Alchemist). Heroes proactively purchase missing gear and buy equipment upgrades from merchants.
 * **Capital Militia Meta-Progression**: Cumulative municipal investments unlock 5 permanent tiers of free reinforcements (from local watchmen up to Citadel Keepers).
 * **Permanent Legacy & Memorial Book**: Town treasury, infrastructure upgrades, tactics, and language settings persist across sessions in `save.json`. Fallen heroes are recorded in the Memorial Book, and unrecovered casualties left behind in the Abyss are permanently lost.
-* **Dynamic Bilingual Engine**: switch between Russian (**RU**) and English (**EN**) on the fly with `L`.
+* **Capital Library & Lore**: discover lore tiles in dungeon halls and the Forgotten Archives, then read unlocked volumes in the Capital Library. The library contains 80 books and manuscripts across six categories, with a two-column reader opened by `B`; lore rewards can grant class perks, racial bonuses, experience, stress relief, and bane damage. Unlocked volumes persist in `save.json`.
+* **Seven Playable Races**: Human, Elf, Beastman, Olongr, Dwarf, Demonkin, and Dragonkin, each with distinct racial traits.
+* **Trilingual Localization**: switch between Russian (**RU**), English (**EN**) and Belarusian (**BE**) on the fly with `L`.
 * **Darkest Dungeon-Inspired Mechanics**: Sanity meter (0–200), afflictions (Paranoia, Selfishness, Maniac), virtues, and lethal heart attacks.
 * **Uniform Normalized UI**: Grid system locking 6 uniform hero and party banner cards with consistent dimensions and borders across Landscape, Portrait, and PortraitWide layouts.
 * **Reproducible Runs**: `-seed N` replays the same dungeon, handy for bug reports and balancing.
@@ -47,6 +49,7 @@ A grim tactical text-based dungeon crawler featuring autonomous squad mechanics 
 | **`←`** / **`→`** | *Manual combat:* choose the target (marked with `▶`) |
 | **`E`** | Party Armory & mutations |
 | **`I`** | Codex (`Tab` / `Shift+Tab` or `1`-`7` to switch tabs) |
+| **`B`** | Capital Library: browse unlocked lore volumes |
 | **`S`** | Expedition statistics & Memorial Book |
 | **`R`** | Restart the expedition (only from the Defeat and Glory screens) |
 | **`1` / `2`** | Normal / fast speed (outside the Codex) |
@@ -113,7 +116,7 @@ go test ./...
 gofmt -l .        # should print nothing
 ```
 
-**Translations.** Everything the player sees lives in `i18n_ru.go` and `i18n_en.go` and is fetched with `T(lang, key, args...)`; gendered verbs with `TVerb(lang, gender, key)` (`verb.<key>.m` / `verb.<key>.f`). Do not write text or language branches in the code: `i18n_hardcode_test.go` fails on Cyrillic literals, on `if lang == LangEN` branches, and on missing verb or sign keys.
+**Translations.** Player-facing text is stored in the Russian, English and Belarusian dictionaries (`i18n_ru.go`, `i18n_en.go`, `i18n_be.go`) and fetched with `T(lang, key, args...)`; gendered verbs use `TVerb(lang, gender, key)` (`verb.<key>.m` / `verb.<key>.f`). Avoid hardcoded UI text and language-specific branches; `i18n_hardcode_test.go` checks for hardcoded Cyrillic, inline language branches, missing verb/sign keys and localization regressions.
 
 
 Tests cover dictionary parity (RU/EN keys and format arguments), the autopilot tactics, saving and loading, room events, tick-chain handling and a headless seeded simulation.
@@ -132,6 +135,7 @@ Tests cover dictionary parity (RU/EN keys and format arguments), the autopilot t
 * `types_items.go`: potions, mutations, equipment, materials, bag upgrades.
 * `types_monster.go`: monsters, packs, turn order, active combat.
 * `types_world.go`: tiles, biomes, quests, run statistics, town legacy and budget, relics.
+* `types_lore.go`, `lore_data.go`: lore data, categories and unlocked-volume metadata.
 * `styles.go`: Lipgloss styles.
 
 **Dungeon**
@@ -175,8 +179,8 @@ Tests cover dictionary parity (RU/EN keys and format arguments), the autopilot t
 * `ui_view.go`: `View`, Landscape / Portrait layouts, log box, controls bar.
 * `ui_cards.go`: hero cards and the party banner.
 * `ui_map.go`, `ui_town.go`, `ui_screens.go`: map, town hub, menu / statistics / armory screens.
-* `codex.go`: the Codex tabs.
-* `i18n.go`, `i18n_ru.go`, `i18n_en.go`: translation lookup and the RU / EN dictionaries.
+* `codex.go`, `ui_library.go`: Codex tabs and the Capital Library reader.
+* `i18n.go`, `i18n_ru.go`, `i18n_en.go`, `i18n_be.go`: translation lookup and RU / EN / BE dictionaries.
 
 ### 📜 License
 Distributed under the MIT License. See [LICENSE](LICENSE).
