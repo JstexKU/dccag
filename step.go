@@ -25,18 +25,24 @@ func (m *Model) step() {
 	// 1. Продолжение привала (RestTurnsLeft > 0) — сидим на месте
 	if m.RestTurnsLeft > 0 {
 		m.RestTurnsLeft--
+		recoveryStep := 1
+		// Реликвия «Рог Изобилия»: ускоренное восстановление на привале
+		if m.Relic != nil && m.Relic.PotionPotency > 1.0 {
+			recoveryStep = 2
+		}
+
 		for _, h := range m.Party {
-			if h.IsDead {
+			if h.IsDead || h.IsDowned {
 				continue
 			}
 			if h.HP < h.MaxHP {
-				h.HP++
+				h.HP = min(h.MaxHP, h.HP+recoveryStep)
 			}
 			if h.MP < h.MaxMP {
-				h.MP++
+				h.MP = min(h.MaxMP, h.MP+recoveryStep)
 			}
 			if h.Stress > 0 {
-				h.Stress--
+				h.Stress = max(0, h.Stress-recoveryStep)
 			}
 		}
 		return

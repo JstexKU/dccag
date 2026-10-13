@@ -264,6 +264,7 @@ func TestManualSkillWithoutManaSaysSo(t *testing.T) {
 func TestManualGuard(t *testing.T) {
 	m := newManualCombat(t, ClassMage)
 	hero := m.pendingHero()
+	hero.Race = RaceHuman // без регенерации маны эльфа
 	hero.MP = 0
 	hero.IsGuarding = false
 	press(m, "d")

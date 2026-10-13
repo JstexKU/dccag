@@ -134,7 +134,37 @@ type TownEstablishments struct {
 	ChurchKey    string
 }
 
+// --- 10 уникальных типов реликвий ---
+type RelicType string
+
+const (
+	RelicGreedCompass    RelicType = "greed_compass"    // Компас Алчности (+золото, урон мобов выше)
+	RelicMartyrCrown     RelicType = "martyr_crown"     // Корона Мученика (+Atk при гибели союзника)
+	RelicHolyGrail       RelicType = "holy_grail"       // Священный Грааль (сопротивление стрессу)
+	RelicPioneerEye      RelicType = "pioneer_eye"      // Око Первопроходца (радиус обзора + автопоиск тайников)
+	RelicQuicksilverVial RelicType = "quicksilver_vial" // Флакон Живой Ртути (+2 Скорость, право первого удара)
+	RelicObsidianAnvil   RelicType = "obsidian_anvil"   // Обсидиановая Наковальня (закалка T2+ экипировки)
+	RelicWhisperingSkull RelicType = "whispering_skull" // Шепчущий Череп (+крит отряда, входящие криты = стресс)
+	RelicPhoenixCore     RelicType = "phoenix_core"     // Эссенция Феникса (спасение от гибели 1 раз за поход)
+	RelicHornOfPlenty    RelicType = "horn_of_plenty"   // Рог Изобилия (+эффективность зелий и привала)
+	RelicInquisitorSeal  RelicType = "inquisitor_seal"  // Печать Инквизитора (урон против нежити/демонов/элиты)
+)
+
+var AllRelics = []RelicType{
+	RelicGreedCompass,
+	RelicMartyrCrown,
+	RelicHolyGrail,
+	RelicPioneerEye,
+	RelicQuicksilverVial,
+	RelicObsidianAnvil,
+	RelicWhisperingSkull,
+	RelicPhoenixCore,
+	RelicHornOfPlenty,
+	RelicInquisitorSeal,
+}
+
 type PartyRelic struct {
+	Type        RelicType
 	NameKey     string
 	Level       int
 	DescKey     string
@@ -142,6 +172,31 @@ type PartyRelic struct {
 	EnemyDmgMod float64
 	MartyrFury  bool
 	StressRes   int
+
+	// Новые активные свойства реликвий:
+	VisionBonus    int     // Увеличение радиуса обзора тумана войны (Око Первопроходца)
+	SpeedBonus     int     // Прибавка к скорости всего отряда (Флакон Живой Ртути)
+	FirstStrike    bool    // Гарантированный первый ход в бою (Флакон Живой Ртути)
+	GearTempered   bool    // Закалка: экипировка T2+ дает +1 Atk и +1 Def (Обсидиановая Наковальня)
+	PartyCritBonus int     // Снижение порога крита для отряда (Шепчущий Череп)
+	CritStressRisk int     // Доп. стресс при получении крита от моба (Шепчущий Череп)
+	PhoenixCharged bool    // Заряд спасения от смертельного удара активен (Эссенция Феникса)
+	PotionPotency  float64 // Множитель эффективности зелий и привала (Рог Изобилия)
+	BaneDmgBonus   int     // Чистый доп. урон по демонам/нежити/боссам (Печать Инквизитора)
+}
+
+func (r PartyRelic) TotalGoldBonus() float64 {
+	if r.GoldMult > 0 {
+		return r.GoldMult
+	}
+	return 1.0
+}
+
+func (r PartyRelic) TotalEnemyMod() float64 {
+	if r.EnemyDmgMod > 0 {
+		return r.EnemyDmgMod
+	}
+	return 1.0
 }
 
 // --- Retreat: причины отступления в город ---

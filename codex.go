@@ -66,7 +66,7 @@ func (m Model) renderCodexTabBar(innerW int) string {
 }
 
 // ============================================================
-// Вкладка 1: Мир (биомы + расы)
+// Вкладка 1: Мир (биомы + 7 рас)
 // ============================================================
 
 func (m Model) renderCodexTabWorld() string {
@@ -81,12 +81,15 @@ func (m Model) renderCodexTabWorld() string {
 	}
 	sb.WriteString("\n")
 
-	// Расы
+	// Расы (7 рас с врождёнными дарами)
 	sb.WriteString(codexSecStyle.Render(T(m.Lang, "codex.sec.races")) + "\n")
 	sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexSubStyle.Render(T(m.Lang, "race.human.name")), T(m.Lang, "codex.race.human.desc")))
 	sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexSubStyle.Render(T(m.Lang, "race.elf.name")), T(m.Lang, "codex.race.elf.desc")))
 	sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexSubStyle.Render(T(m.Lang, "race.beastman.name")), T(m.Lang, "codex.race.beastman.desc")))
 	sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexSubStyle.Render(T(m.Lang, "race.olongr.name")), T(m.Lang, "codex.race.olongr.desc")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexSubStyle.Render(T(m.Lang, "race.dwarf.name")), T(m.Lang, "codex.race.dwarf.desc")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexSubStyle.Render(T(m.Lang, "race.demonkin.name")), T(m.Lang, "codex.race.demonkin.desc")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexSubStyle.Render(T(m.Lang, "race.dragonkin.name")), T(m.Lang, "codex.race.dragonkin.desc")))
 
 	return sb.String()
 }
@@ -355,7 +358,7 @@ func (m Model) renderCodexTabCrafts() string {
 }
 
 // ============================================================
-// Вкладка 6: Алхимия и Реликвии
+// Вкладка 6: Алхимия и Реликвии (10 реликвий)
 // ============================================================
 
 func (m Model) renderCodexTabAlchemy() string {
@@ -372,6 +375,13 @@ func (m Model) renderCodexTabAlchemy() string {
 	sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexItemStyle.Render(T(m.Lang, "relic.greed_compass.name.1")), T(m.Lang, "codex.relic_greed_desc")))
 	sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexItemStyle.Render(T(m.Lang, "relic.martyr_crown.name.1")), T(m.Lang, "codex.relic_martyr_desc")))
 	sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexItemStyle.Render(T(m.Lang, "relic.holy_grail.name.1")), T(m.Lang, "codex.relic_grail_desc")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexItemStyle.Render(T(m.Lang, "relic.pioneer_eye.name.1")), T(m.Lang, "codex.relic_pioneer_desc")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexItemStyle.Render(T(m.Lang, "relic.quicksilver_vial.name.1")), T(m.Lang, "codex.relic_quicksilver_desc")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexItemStyle.Render(T(m.Lang, "relic.obsidian_anvil.name.1")), T(m.Lang, "codex.relic_anvil_desc")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexItemStyle.Render(T(m.Lang, "relic.whispering_skull.name.1")), T(m.Lang, "codex.relic_skull_desc")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexItemStyle.Render(T(m.Lang, "relic.phoenix_core.name.1")), T(m.Lang, "codex.relic_phoenix_desc")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexItemStyle.Render(T(m.Lang, "relic.horn_of_plenty.name.1")), T(m.Lang, "codex.relic_horn_desc")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexItemStyle.Render(T(m.Lang, "relic.inquisitor_seal.name.1")), T(m.Lang, "codex.relic_inquisitor_desc")))
 
 	return sb.String()
 }

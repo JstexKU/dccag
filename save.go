@@ -73,9 +73,18 @@ func loadSave() (SaveData, bool) {
 	}
 	sd.Tactics = sd.Tactics.Clamped()
 	sd.Legacy = sd.Legacy.sanitized()
-	if sd.Lang != LangEN && sd.Lang != LangRU {
+
+	validLang := false
+	for _, l := range SupportedLanguages {
+		if sd.Lang == l {
+			validLang = true
+			break
+		}
+	}
+	if !validLang {
 		sd.Lang = LangRU
 	}
+
 	if sd.Hero != nil {
 		hero := sd.Hero.Sanitized()
 		if hero.Valid() {

@@ -34,6 +34,12 @@ func (m *Model) addStress(h *Hero, amt int) {
 		amt = amt * (100 - m.Relic.StressRes) / 100
 	}
 
+	// Расовое сопротивление стрессу (например, Дварфы)
+	raceMod := GetRaceModifiers(h.Race)
+	if raceMod.StressResPercent > 0 {
+		amt = amt * (100 - raceMod.StressResPercent) / 100
+	}
+
 	itemRes := 0
 	for _, it := range []*EquipItem{h.Head, h.Chest, h.Legs} {
 		if it != nil {
@@ -65,6 +71,8 @@ func (m *Model) addStress(h *Hero, amt int) {
 		virtueChance := 20
 		if h.Race == RaceOlongr {
 			virtueChance = 40
+		} else if h.Race == RaceDwarf {
+			virtueChance = 30
 		}
 
 		if rng.Intn(100) < virtueChance {
@@ -178,14 +186,12 @@ func (m *Model) checkAndDrinkPotions(h *Hero) {
 	h.Potions = remainingPotions
 }
 
-// classBase — стартовые характеристики класса до модификаторов расы.
 type classBase struct {
 	MaxHP, MaxMP, BaseDef, Speed int
 	SkillNameKey                 string
 	SkillCost                    int
 }
 
-// baseStatsFor возвращает стартовые характеристики и навык класса.
 func baseStatsFor(class HeroClass) classBase {
 	maxHP := 42
 	baseDef := 2
@@ -273,14 +279,17 @@ func baseStatsFor(class HeroClass) classBase {
 	}
 }
 
-// createHero создаёт героя заданного класса со случайными расой, именем и полом.
+// createHero создаёт героя заданного класса, подбирая синергичную расу и аутентичное имя
 func createHero(class HeroClass, floor int, smithyLvl int) *Hero {
-	race := AllRaces[rng.Intn(len(AllRaces))]
-	nameDef := getRandomHeroName()
-	return buildHero(class, race, nameDef.NameKey, nameDef.Gender, floor, smithyLvl)
+	race := PickRaceForClass(class)
+	gender := GenderMale
+	if rng.Intn(2) == 1 {
+		gender = GenderFemale
+	}
+	nameDef := getRandomHeroName(race, gender)
+	return buildHero(class, race, nameDef.NameKey, gender, floor, smithyLvl)
 }
 
-// buildHero собирает героя с заданными расой, именем и полом и выдаёт ему снаряжение класса.
 func buildHero(class HeroClass, race RaceType, nameKey string, gender Gender, floor int, smithyLvl int) *Hero {
 	targetLevel := max(1, floor/2)
 

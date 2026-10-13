@@ -126,6 +126,9 @@ func (m *Model) executeCombatTurn() {
 				h.AddBlock()
 				m.addLog(healStyle.Render(T(m.Lang, "combat.log.tank_bash", hName, bashDmg)))
 				if targetMob.HP <= 0 {
+					if h.Race == RaceDemonkin {
+						h.MP = min(h.MaxMP, h.MP+3)
+					}
 					m.onMonsterKilled(h, targetMob)
 				}
 				return
@@ -160,6 +163,9 @@ func (m *Model) executeCombatTurn() {
 				h.AddBlock()
 				m.addLog(goldStyle.Render(T(m.Lang, "combat.log.paladin_smite", hName, smiteDmg)))
 				if targetMob.HP <= 0 {
+					if h.Race == RaceDemonkin {
+						h.MP = min(h.MaxMP, h.MP+3)
+					}
 					m.onMonsterKilled(h, targetMob)
 				}
 				return
@@ -181,6 +187,9 @@ func (m *Model) executeCombatTurn() {
 						mob.HP -= cleaveDmg
 						h.Feats.DamageDealt += cleaveDmg
 						if mob.HP <= 0 {
+							if h.Race == RaceDemonkin {
+								h.MP = min(h.MaxMP, h.MP+3)
+							}
 							m.onMonsterKilled(h, mob)
 						}
 						hitCount++
@@ -203,6 +212,9 @@ func (m *Model) executeCombatTurn() {
 						mob.HP -= flurryDmg
 						h.Feats.DamageDealt += flurryDmg
 						if mob.HP <= 0 {
+							if h.Race == RaceDemonkin {
+								h.MP = min(h.MaxMP, h.MP+3)
+							}
 							m.onMonsterKilled(h, mob)
 						}
 						hits++
@@ -218,6 +230,9 @@ func (m *Model) executeCombatTurn() {
 				h.AddCCDuration()
 				m.addLog(fountStyle.Render(T(m.Lang, "combat.log.monk_palm", hName, palmDmg)))
 				if targetMob.HP <= 0 {
+					if h.Race == RaceDemonkin {
+						h.MP = min(h.MaxMP, h.MP+3)
+					}
 					m.onMonsterKilled(h, targetMob)
 				}
 				return
@@ -239,6 +254,9 @@ func (m *Model) executeCombatTurn() {
 				h.Feats.DamageDealt += poisonDmg
 				m.addLog(stressStyle.Render(T(m.Lang, "combat.log.rogue_poison", hName, poisonDmg)))
 				if targetMob.HP <= 0 {
+					if h.Race == RaceDemonkin {
+						h.MP = min(h.MaxMP, h.MP+3)
+					}
 					m.onMonsterKilled(h, targetMob)
 				}
 				return
@@ -255,6 +273,9 @@ func (m *Model) executeCombatTurn() {
 				h.AddCCDuration()
 				m.addLog(accentStyle.Render(T(m.Lang, "combat.log.ranger_trap", hName, T(m.Lang, targetMob.NameKey), trapDmg)))
 				if targetMob.HP <= 0 {
+					if h.Race == RaceDemonkin {
+						h.MP = min(h.MaxMP, h.MP+3)
+					}
 					m.onMonsterKilled(h, targetMob)
 				}
 				return
@@ -266,6 +287,9 @@ func (m *Model) executeCombatTurn() {
 						mob.HP -= volleyDmg
 						h.Feats.DamageDealt += volleyDmg
 						if mob.HP <= 0 {
+							if h.Race == RaceDemonkin {
+								h.MP = min(h.MaxMP, h.MP+3)
+							}
 							m.onMonsterKilled(h, mob)
 						}
 					}
@@ -277,7 +301,6 @@ func (m *Model) executeCombatTurn() {
 
 		// 7. КЛИРИК
 		if useSkills && h.Class == ClassCleric {
-			// А. Приоритет: поднятие на ноги союзника без сознания
 			var downedAlly *Hero
 			for _, ally := range m.Party {
 				if ally.IsDowned && !ally.IsDead {
@@ -297,7 +320,6 @@ func (m *Model) executeCombatTurn() {
 				m.checkAndAwardTitle(h)
 				m.Stats.Resurrections++
 
-				// Добавляем бойца в спасённые
 				m.Stats.FallenHeroes = append(m.Stats.FallenHeroes, FallenHeroRecord{
 					FullName: downedAlly.FullName(m.Lang),
 					Class:    downedAlly.Class,
@@ -310,7 +332,6 @@ func (m *Model) executeCombatTurn() {
 				return
 			}
 
-			// Б. Обычное исцеление раненых
 			var criticalAlly *Hero
 			for _, ally := range m.Party {
 				if !ally.IsDead && !ally.IsDowned && float64(ally.HP)/float64(ally.MaxHP) <= 0.45 {
@@ -346,6 +367,9 @@ func (m *Model) executeCombatTurn() {
 				verb := TVerb(m.Lang, h.Gender, "unleash")
 				m.addLog(fountStyle.Render(T(m.Lang, "combat.log.cleric_smite", hName, verb, smiteDmg)))
 				if targetMob.HP <= 0 {
+					if h.Race == RaceDemonkin {
+						h.MP = min(h.MaxMP, h.MP+3)
+					}
 					m.onMonsterKilled(h, targetMob)
 				}
 				return
@@ -383,6 +407,9 @@ func (m *Model) executeCombatTurn() {
 						mob.HP -= dissonanceDmg
 						mob.Atk = max(1, mob.Atk-2)
 						if mob.HP <= 0 {
+							if h.Race == RaceDemonkin {
+								h.MP = min(h.MaxMP, h.MP+3)
+							}
 							m.onMonsterKilled(h, mob)
 						}
 					}
@@ -406,6 +433,9 @@ func (m *Model) executeCombatTurn() {
 						mob.HP -= barrelDmg
 						h.Feats.DamageDealt += barrelDmg
 						if mob.HP <= 0 {
+							if h.Race == RaceDemonkin {
+								h.MP = min(h.MaxMP, h.MP+3)
+							}
 							m.onMonsterKilled(h, mob)
 						}
 					}
@@ -424,6 +454,9 @@ func (m *Model) executeCombatTurn() {
 						mob.HP -= aoeDmg
 						h.Feats.DamageDealt += aoeDmg
 						if mob.HP <= 0 {
+							if h.Race == RaceDemonkin {
+								h.MP = min(h.MaxMP, h.MP+3)
+							}
 							m.onMonsterKilled(h, mob)
 						}
 					}
@@ -439,6 +472,9 @@ func (m *Model) executeCombatTurn() {
 						mob.HP -= chainDmg
 						h.Feats.DamageDealt += chainDmg
 						if mob.HP <= 0 {
+							if h.Race == RaceDemonkin {
+								h.MP = min(h.MaxMP, h.MP+3)
+							}
 							m.onMonsterKilled(h, mob)
 						}
 						hits++
@@ -487,6 +523,9 @@ func (m *Model) executeCombatTurn() {
 				h.Feats.DamageDealt += drainDmg
 				m.addLog(fireStyle.Render(T(m.Lang, "combat.log.warlock_drain", hName, drainDmg, healSelf)))
 				if targetMob.HP <= 0 {
+					if h.Race == RaceDemonkin {
+						h.MP = min(h.MaxMP, h.MP+3)
+					}
 					m.onMonsterKilled(h, targetMob)
 				}
 				return
@@ -520,6 +559,10 @@ func (m *Model) executeCombatTurn() {
 		if raceMod.CritChanceBonus > 0 {
 			critThreshold -= raceMod.CritChanceBonus
 		}
+		// Реликвия «Шепчущий Череп»: снижение порога крита
+		if m.Relic != nil && m.Relic.PartyCritBonus > 0 {
+			critThreshold -= m.Relic.PartyCritBonus
+		}
 		if h.IsStealthed {
 			critThreshold = 1
 		}
@@ -528,6 +571,19 @@ func (m *Model) executeCombatTurn() {
 		}
 		bonusDmg := 0
 		armorPierce := 0
+
+		// Реликвия «Печать Инквизитора»: чистый урон и пробитие брони по демонам, нежити и боссам
+		if m.Relic != nil && m.Relic.BaneDmgBonus > 0 {
+			isBaneTarget := (m.Combat != nil && m.Combat.Pack != nil && m.Combat.Pack.IsMiniBoss) ||
+				targetMob.Type == MobDragon ||
+				targetMob.Type == MobSkeleton || targetMob.Type == MobDrowned || targetMob.Type == MobSproutSkeleton ||
+				targetMob.Type == MobMinerGhoul || targetMob.Type == MobImp || targetMob.Type == MobVoidDemon ||
+				targetMob.Type == MobBloodCultist || targetMob.Type == MobPhantom
+			if isBaneTarget {
+				bonusDmg += m.Relic.BaneDmgBonus
+				armorPierce += targetMob.Defense / 2
+			}
+		}
 
 		// ==================== МАЛЫЕ НАВЫКИ (3-5 MP) ====================
 		minorClass := h.Class
@@ -660,6 +716,9 @@ func (m *Model) executeCombatTurn() {
 		m.addLog(T(m.Lang, "combat.log.hit", hName, hitVerb, dmg, mobDisplayName, targetMob.HP))
 
 		if targetMob.HP <= 0 {
+			if h.Race == RaceDemonkin {
+				h.MP = min(h.MaxMP, h.MP+3)
+			}
 			m.onMonsterKilled(h, targetMob)
 		}
 		return
@@ -698,13 +757,18 @@ func (m *Model) executeCombatTurn() {
 			return
 		}
 		if mobHit < heroAC && mobRoll < 18 {
-			m.addLog(subtleStyle.Render(T(m.Lang, "combat.log.armor_absorb", victimName, mobDisplayName)))
+			m.addLog(subtleStyle.Render(T(m.Lang, "combat.log.armor_deflect", victimName, mobDisplayName)))
 			return
 		}
 
 		rawDmg := int(float64(mob.Atk)*1.25) - (victim.TotalDef() / 2)
 		if victim.IsGuarding {
-			rawDmg = int(float64(rawDmg) * 0.6)
+			blockMult := 0.60
+			// Дварфы блокируют 55% урона
+			if victim.Race == RaceDwarf {
+				blockMult = 0.45
+			}
+			rawDmg = int(float64(rawDmg) * blockMult)
 		}
 
 		livingCount := m.Combat.Pack.LivingCount()
@@ -716,12 +780,21 @@ func (m *Model) executeCombatTurn() {
 
 		if mobRoll >= 18 {
 			rawDmg = int(float64(rawDmg) * 2.0)
-			m.addStress(victim, 35)
+			critStress := 35
+			// Реликвия «Шепчущий Череп»: повышенный стресс при получении крита
+			if m.Relic != nil && m.Relic.CritStressRisk > 0 {
+				critStress += m.Relic.CritStressRisk
+			}
+			m.addStress(victim, critStress)
 			m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.mob_crit", mobDisplayName, victimName)))
 		}
 
 		floorScale := 1.0 + float64(m.Floor)*0.015
-		inDmg := max(5, int(float64(rawDmg)*m.Relic.EnemyDmgMod*enrageMult*floorScale))
+		enemyMod := 1.0
+		if m.Relic != nil {
+			enemyMod = m.Relic.TotalEnemyMod()
+		}
+		inDmg := max(5, int(float64(rawDmg)*enemyMod*enrageMult*floorScale))
 
 		actualHero := victim
 		guarded := false
@@ -743,25 +816,44 @@ func (m *Model) executeCombatTurn() {
 			m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.mob_hit", mobDisplayName, dealtDmg, actualHeroName)))
 		}
 
+		// Драконит: огненное возмездие
+		actualRaceMod := GetRaceModifiers(actualHero.Race)
+		if actualRaceMod.RetaliateFire > 0 && !isRanged {
+			mob.HP -= actualRaceMod.RetaliateFire
+			if mob.HP <= 0 {
+				m.onMonsterKilled(actualHero, mob)
+			}
+		}
+
 		actualHero.Feats.DamageTaken += dealtDmg
 		m.addStress(actualHero, 12)
 
 		if actualHero.HP <= 0 {
-			actualHero.HP = 0
-			actualHero.IsDowned = true
-			actualHero.IsGuarding = false
-			actualHero.IsBerserk = false
-			actualHero.IsStealthed = false
-			actualHero.IsCharged = false
-			actualHero.IsAura = false
-			actualHero.CauseOfDeath = T(m.Lang, "combat.log.death_cause_mob", mobDisplayName)
+			// Реликвия «Эссенция Феникса»: чудесное спасение 1 раз за поход
+			if m.Relic != nil && m.Relic.PhoenixCharged {
+				m.Relic.PhoenixCharged = false
+				actualHero.HP = max(15, actualHero.MaxHP*35/100)
+				actualHero.Stress = max(0, actualHero.Stress-40)
+				actualHero.Affliction = AfflictionNone
+				actualHero.Feats.NearDeathEscapes++
+				m.addLog(goldStyle.Render("🔥 [Phoenix] " + actualHeroName + " rises from the ashes! Death avoided!"))
+			} else {
+				actualHero.HP = 0
+				actualHero.IsDowned = true
+				actualHero.IsGuarding = false
+				actualHero.IsBerserk = false
+				actualHero.IsStealthed = false
+				actualHero.IsCharged = false
+				actualHero.IsAura = false
+				actualHero.CauseOfDeath = T(m.Lang, "combat.log.death_cause_mob", mobDisplayName)
 
-			verb := TVerb(m.Lang, actualHero.Gender, "fell_unconscious")
-			m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.hero_downed", actualHeroName, verb, mobDisplayName)))
-			m.onLeaderDowned(actualHero)
-			for _, ally := range m.Party {
-				if !ally.IsDead && !ally.IsDowned {
-					m.addStress(ally, 18)
+				verb := TVerb(m.Lang, actualHero.Gender, "fell_unconscious")
+				m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.hero_downed", actualHeroName, verb, mobDisplayName)))
+				m.onLeaderDowned(actualHero)
+				for _, ally := range m.Party {
+					if !ally.IsDead && !ally.IsDowned {
+						m.addStress(ally, 18)
+					}
 				}
 			}
 		} else {
@@ -772,3 +864,4 @@ func (m *Model) executeCombatTurn() {
 		}
 	}
 }
+

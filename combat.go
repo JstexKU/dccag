@@ -82,6 +82,11 @@ func (m *Model) startCombat(pos Point, pack *MonsterPack) {
 		speedPenalty = 2
 	}
 
+	relicSpeed := 0
+	if m.Relic != nil {
+		relicSpeed = m.Relic.SpeedBonus
+	}
+
 	for _, h := range m.Party {
 		if !h.IsDead && !h.IsDowned {
 			h.IsGuarding = false
@@ -89,7 +94,7 @@ func (m *Model) startCombat(pos Point, pack *MonsterPack) {
 			h.IsStealthed = false
 			h.IsCharged = false
 			h.IsAura = false
-			initRoll := rng.Intn(20) + 1 + h.TotalSpeed() + m.Legacy.TanneryLevel - speedPenalty
+			initRoll := rng.Intn(20) + 1 + h.TotalSpeed() + relicSpeed + m.Legacy.TanneryLevel - speedPenalty
 			combat.TurnQueue = append(combat.TurnQueue, TurnOrderEntry{
 				Type: CombatantHero, HeroRef: h, Initiative: initRoll,
 			})
@@ -108,6 +113,21 @@ func (m *Model) startCombat(pos Point, pack *MonsterPack) {
 	sort.Slice(combat.TurnQueue, func(i, j int) bool {
 		return combat.TurnQueue[i].Initiative > combat.TurnQueue[j].Initiative
 	})
+
+	// Реликвия «Флакон Живой Ртути»: гарантированный первый ход у самого быстрого героя
+	if m.Relic != nil && m.Relic.FirstStrike && len(combat.TurnQueue) > 0 {
+		firstHeroIdx := -1
+		for idx, entry := range combat.TurnQueue {
+			if entry.Type == CombatantHero {
+				firstHeroIdx = idx
+				break
+			}
+		}
+		if firstHeroIdx > 0 {
+			heroEntry := combat.TurnQueue[firstHeroIdx]
+			combat.TurnQueue = append([]TurnOrderEntry{heroEntry}, append(combat.TurnQueue[:firstHeroIdx], combat.TurnQueue[firstHeroIdx+1:]...)...)
+		}
+	}
 
 	m.Combat = combat
 	m.addLog(accentStyle.Render(T(m.Lang, "combat.log.start", pack.LivingCount())))

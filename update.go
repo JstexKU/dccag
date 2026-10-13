@@ -7,6 +7,33 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+var ruToEnKey = map[rune]rune{
+	'й': 'q', 'ц': 'w', 'у': 'e', 'к': 'r', 'е': 't', 'н': 'y', 'г': 'u', 'ш': 'i', 'щ': 'o', 'з': 'p', 'х': '[', 'ъ': ']',
+	'ф': 'a', 'ы': 's', 'в': 'd', 'а': 'f', 'п': 'g', 'р': 'h', 'о': 'j', 'л': 'k', 'д': 'l', 'ж': ';', 'э': '\'',
+	'я': 'z', 'ч': 'x', 'с': 'c', 'м': 'v', 'і': 's', 'т': 'n', 'ь': 'm', 'б': ',', 'ю': '.', 'ё': '`',
+	'ў': ']', '’': '\'',
+	'Й': 'q', 'Ц': 'w', 'У': 'e', 'К': 'r', 'Е': 't', 'Н': 'y', 'Г': 'u', 'Ш': 'i', 'Щ': 'o', 'З': 'p', 'Х': '[', 'Ъ': ']',
+	'Ф': 'a', 'Ы': 's', 'В': 'd', 'А': 'f', 'П': 'g', 'Р': 'h', 'О': 'j', 'Л': 'k', 'Д': 'l', 'Ж': ';', 'Э': '\'',
+	'Я': 'z', 'Ч': 'x', 'С': 'c', 'М': 'v', 'І': 's', 'Т': 'n', 'Ь': 'm', 'Б': ',', 'Ю': '.', 'Ё': '`',
+	'Ў': ']',
+}
+
+// normalizeKey приводит одиночные символы с русской/белорусской раскладки к их QWERTY-эквивалентам,
+// а также приводит заглавные латинские буквы к нижнему регистру (на случай Caps Lock).
+func normalizeKey(key string) string {
+	runes := []rune(key)
+	if len(runes) == 1 {
+		r := runes[0]
+		if en, ok := ruToEnKey[r]; ok {
+			return string(en)
+		}
+		if r >= 'A' && r <= 'Z' {
+			return string(r + ('a' - 'A'))
+		}
+	}
+	return key
+}
+
 func tickCmd(speedMs, gen int) tea.Cmd {
 	return tea.Tick(time.Duration(speedMs)*time.Millisecond, func(time.Time) tea.Msg {
 		return TickMsg{Gen: gen}
@@ -60,11 +87,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		key := msg.String()
 
-		// Экран создания героя забирает все клавиши: буквы — это текст имени.
+		// Экран создания героя забирает все клавиши без нормализации: буквы — это текст имени.
 		if m.State == StateCreator {
 			cmd := m.handleCreatorKey(msg)
 			return m, cmd
 		}
+
+		// Для всех игровых экранов нормализуем раскладку клавиш (ЙЦУКЕН -> QWERTY)
+		key = normalizeKey(key)
+
 		if m.State == StateMenu {
 			if cmd, handled := m.handleMenuKey(key); handled {
 				return m, cmd
@@ -142,11 +173,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "l":
-			if m.Lang == LangRU {
-				m.Lang = LangEN
-			} else {
-				m.Lang = LangRU
-			}
+			m.Lang = NextLanguage(m.Lang)
 		case "1", "2", "3", "4", "5", "6", "7":
 			if m.State == StateInfoBook {
 				tabIdx, _ := strconv.Atoi(key)

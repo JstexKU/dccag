@@ -30,11 +30,14 @@ var dictEN = map[string]string{
 
 	// Statuses
 
-	// --- Races ---
-	"race.human.name":    "Human",
-	"race.elf.name":      "Elf",
-	"race.beastman.name": "Beast",
-	"race.olongr.name":   "Olongr",
+	// --- Races (7 Races) ---
+	"race.human.name":     "Human",
+	"race.elf.name":       "Elf",
+	"race.beastman.name":  "Beast",
+	"race.olongr.name":    "Olongr",
+	"race.dwarf.name":     "Dwarf",
+	"race.demonkin.name":  "Demonkin",
+	"race.dragonkin.name": "Dragonkin",
 
 	// --- Classes (10) ---
 	"class.tank.name":     "Tank",
@@ -141,7 +144,7 @@ var dictEN = map[string]string{
 	"mut.aether.name":  "Aether Fluid",
 	"mut.bastion.name": "Bastion Elixir",
 
-	// --- Relics ---
+	// --- Relics (10 Relics, Lvl 1-3) ---
 	"relic.greed_compass.name.1": "Tarnished Compass of Greed (Lvl.1)",
 	"relic.greed_compass.name.2": "Sanctified Compass of Greed (Lvl.2)",
 	"relic.greed_compass.name.3": "Ancient Compass of Greed (Lvl.3)",
@@ -156,6 +159,41 @@ var dictEN = map[string]string{
 	"relic.holy_grail.name.2": "Sanctified Holy Grail (Lvl.2)",
 	"relic.holy_grail.name.3": "Ancient Holy Grail (Lvl.3)",
 	"relic.holy_grail.desc":   "Reduces party stress intake",
+
+	"relic.pioneer_eye.name.1": "Tarnished Pioneer's Eye (Lvl.1)",
+	"relic.pioneer_eye.name.2": "Sanctified Pioneer's Eye (Lvl.2)",
+	"relic.pioneer_eye.name.3": "Ancient Pioneer's Eye (Lvl.3)",
+	"relic.pioneer_eye.desc":   "Wider field of view and automatic secret detection",
+
+	"relic.quicksilver_vial.name.1": "Tarnished Quicksilver Vial (Lvl.1)",
+	"relic.quicksilver_vial.name.2": "Sanctified Quicksilver Vial (Lvl.2)",
+	"relic.quicksilver_vial.name.3": "Ancient Quicksilver Vial (Lvl.3)",
+	"relic.quicksilver_vial.desc":   "+Speed and guaranteed first strike in combat",
+
+	"relic.obsidian_anvil.name.1": "Tarnished Obsidian Anvil (Lvl.1)",
+	"relic.obsidian_anvil.name.2": "Sanctified Obsidian Anvil (Lvl.2)",
+	"relic.obsidian_anvil.name.3": "Ancient Obsidian Anvil (Lvl.3)",
+	"relic.obsidian_anvil.desc":   "Tempered gear: T2+ equipment grants bonus Atk and Def",
+
+	"relic.whispering_skull.name.1": "Tarnished Whispering Skull (Lvl.1)",
+	"relic.whispering_skull.name.2": "Sanctified Whispering Skull (Lvl.2)",
+	"relic.whispering_skull.name.3": "Ancient Whispering Skull (Lvl.3)",
+	"relic.whispering_skull.desc":   "Lowers crit threshold, but taking enemy crits inflicts stress",
+
+	"relic.phoenix_core.name.1": "Tarnished Phoenix Core (Lvl.1)",
+	"relic.phoenix_core.name.2": "Sanctified Phoenix Core (Lvl.2)",
+	"relic.phoenix_core.name.3": "Ancient Phoenix Core (Lvl.3)",
+	"relic.phoenix_core.desc":   "Miraculous rescue: revives a hero from mortal blow once per expedition",
+
+	"relic.horn_of_plenty.name.1": "Tarnished Horn of Plenty (Lvl.1)",
+	"relic.horn_of_plenty.name.2": "Sanctified Horn of Plenty (Lvl.2)",
+	"relic.horn_of_plenty.name.3": "Ancient Horn of Plenty (Lvl.3)",
+	"relic.horn_of_plenty.desc":   "Increases potency of potions and camp recovery",
+
+	"relic.inquisitor_seal.name.1": "Tarnished Inquisitor's Seal (Lvl.1)",
+	"relic.inquisitor_seal.name.2": "Sanctified Inquisitor's Seal (Lvl.2)",
+	"relic.inquisitor_seal.name.3": "Ancient Inquisitor's Seal (Lvl.3)",
+	"relic.inquisitor_seal.desc":   "Pure bane damage and armor pierce against undead, demons, and bosses",
 
 	// --- Prefixes & Suffixes ---
 	"prefix.fire":      "Blazing",
@@ -418,57 +456,61 @@ var dictEN = map[string]string{
 	"mob.boss_golem":     "Diamond Colossus",
 	"mob.boss_leviathan": "Deep Leviathan",
 
-	// --- Hero Names ---
-	"hero.name.brand":     "Brand",
-	"hero.name.thorin":    "Thorin",
-	"hero.name.lyra":      "Lyra",
-	"hero.name.aldos":     "Aldos",
-	"hero.name.selina":    "Selina",
-	"hero.name.ragnar":    "Ragnar",
-	"hero.name.ingvar":    "Ingvar",
-	"hero.name.wulf":      "Wulf",
-	"hero.name.sigurd":    "Sigurd",
-	"hero.name.morgan":    "Morgan",
-	"hero.name.elias":     "Elias",
-	"hero.name.duncan":    "Duncan",
-	"hero.name.gottfried": "Gottfried",
-	"hero.name.walter":    "Walter",
-	"hero.name.cassian":   "Cassian",
-	"hero.name.iris":      "Iris",
-	"hero.name.morrigan":  "Morrigan",
-	"hero.name.brigitte":  "Brigitte",
-	"hero.name.agnes":     "Agnes",
-	"hero.name.hilda":     "Hilda",
-	"hero.name.yaropolk":  "Yaropolk",
-	"hero.name.radomir":   "Radomir",
-	"hero.name.dobrynya":  "Dobrynya",
-	"hero.name.lyutobor":  "Lyutobor",
-	"hero.name.bronislav": "Bronislav",
-	"hero.name.aeron":     "Aeron",
-	"hero.name.draven":    "Draven",
-	"hero.name.kalar":     "Kalar",
-	"hero.name.zordan":    "Zordan",
-	"hero.name.tarion":    "Tarion",
-	"hero.name.veldor":    "Veldor",
-	"hero.name.falcon":    "Falcon",
-	"hero.name.yorick":    "Yorick",
-	"hero.name.edan":      "Edan",
-	"hero.name.zarvin":    "Zarvin",
-	"hero.name.lirianna":  "Lirianna",
-	"hero.name.velara":    "Velara",
-	"hero.name.mirael":    "Mirael",
-	"hero.name.celestina": "Celestina",
-	"hero.name.kaelina":   "Kaelina",
-	"hero.name.tirianna":  "Tirianna",
-	"hero.name.nayra":     "Nayra",
-	"hero.name.elmira":    "Elmira",
-	"hero.name.zeyra":     "Zeyra",
-	"hero.name.xandr":     "Xandr",
-	"hero.name.verissa":   "Verissa",
-	"hero.name.orwin":     "Orwin",
-	"hero.name.silran":    "Silran",
-	"hero.name.keldra":    "Keldra",
-	"hero.name.veynara":   "Veynara",
+	// Names: Human
+	"hero.name.brand": "Brand", "hero.name.aldos": "Aldos", "hero.name.walter": "Walter",
+	"hero.name.cassian": "Cassian", "hero.name.elias": "Elias", "hero.name.duncan": "Duncan",
+	"hero.name.gottfried": "Gottfried", "hero.name.roland": "Roland", "hero.name.godric": "Godric", "hero.name.marcus": "Marcus",
+	"hero.name.selina": "Selina", "hero.name.brigitte": "Brigitte", "hero.name.agnes": "Agnes",
+	"hero.name.hilda": "Hilda", "hero.name.eleanor": "Eleanor", "hero.name.beatrice": "Beatrice",
+	"hero.name.martha": "Martha", "hero.name.constance": "Constance", "hero.name.sybilla": "Sybilla", "hero.name.adele": "Adele",
+
+	// Elf
+	"hero.name.silran": "Silran", "hero.name.veldor": "Veldor", "hero.name.aeron": "Aeron",
+	"hero.name.falcon": "Falcon", "hero.name.zarvin": "Zarvin", "hero.name.illirion": "Illirion",
+	"hero.name.celeborn": "Celeborn", "hero.name.faelin": "Faelin", "hero.name.talandril": "Talandril", "hero.name.elorien": "Elorien",
+	"hero.name.lirianna": "Lirianna", "hero.name.velara": "Velara", "hero.name.mirael": "Mirael",
+	"hero.name.celestina": "Celestina", "hero.name.kaelina": "Kaelina", "hero.name.tirianna": "Tirianna",
+	"hero.name.nayra": "Nayra", "hero.name.elmira": "Elmira", "hero.name.silvana": "Silvana", "hero.name.elaria": "Elaria",
+
+	// Beastman
+	"hero.name.wulf": "Wulf", "hero.name.ragnar": "Ragnar", "hero.name.ingvar": "Ingvar",
+	"hero.name.sigurd": "Sigurd", "hero.name.lyutobor": "Lyutobor", "hero.name.groh": "Groh",
+	"hero.name.fenris": "Fenris", "hero.name.grimm": "Grimm", "hero.name.torval": "Torval", "hero.name.brokk": "Brokk",
+	"hero.name.morrigan": "Morrigan", "hero.name.zeyra": "Zeyra", "hero.name.keldra": "Keldra",
+	"hero.name.verissa": "Verissa", "hero.name.skadi": "Skadi", "hero.name.freya": "Freya",
+	"hero.name.runa": "Runa", "hero.name.brigg": "Brigg", "hero.name.astrid": "Astrid", "hero.name.gerda": "Gerda",
+
+	// Olongr
+	"hero.name.yaropolk": "Yaropolk", "hero.name.radomir": "Radomir", "hero.name.dobrynya": "Dobrynya",
+	"hero.name.bronislav": "Bronislav", "hero.name.xandr": "Xandr", "hero.name.volimir": "Volimir",
+	"hero.name.svyatoyar": "Svyatoyar", "hero.name.gorynya": "Gorynya", "hero.name.tverdislav": "Tverdislav", "hero.name.stoyan": "Stoyan",
+	"hero.name.lada": "Lada", "hero.name.miroslava": "Miroslava", "hero.name.radmila": "Radmila",
+	"hero.name.bogdana": "Bogdana", "hero.name.zvenislava": "Zvenislava", "hero.name.vsemila": "Vsemila",
+	"hero.name.gorislava": "Gorislava", "hero.name.darina": "Darina", "hero.name.dobronega": "Dobronega", "hero.name.yaroslava": "Yaroslava",
+
+	// Dwarf
+	"hero.name.thorin": "Thorin", "hero.name.balin": "Balin", "hero.name.dain": "Dain",
+	"hero.name.dvalin": "Dvalin", "hero.name.baldur": "Baldur", "hero.name.grombor": "Grombor",
+	"hero.name.thorgrim": "Thorgrim", "hero.name.khazad": "Khazad", "hero.name.kadrin": "Kadrin", "hero.name.rungar": "Rungar",
+	"hero.name.dis": "Dis", "hero.name.helga": "Helga", "hero.name.brinya": "Brinya",
+	"hero.name.torra": "Torra", "hero.name.gertrud": "Gertrud", "hero.name.dagna": "Dagna",
+	"hero.name.sigrun": "Sigrun", "hero.name.hildur": "Hildur", "hero.name.verena": "Verena", "hero.name.groa": "Groa",
+
+	// Demonkin
+	"hero.name.draven": "Draven", "hero.name.kalar": "Kalar", "hero.name.zordan": "Zordan",
+	"hero.name.azazel": "Azazel", "hero.name.malahor": "Malahor", "hero.name.valakar": "Valakar",
+	"hero.name.balthazar": "Balthazar", "hero.name.mordox": "Mordox", "hero.name.nergal": "Nergal", "hero.name.lucian": "Lucian",
+	"hero.name.lilith": "Lilith", "hero.name.carmilla": "Carmilla", "hero.name.bellatrix": "Bellatrix",
+	"hero.name.morticia": "Morticia", "hero.name.zazira": "Zazira", "hero.name.hecate": "Hecate",
+	"hero.name.sekhmet": "Sekhmet", "hero.name.velveta": "Velveta", "hero.name.astarte": "Astarte", "hero.name.raziel": "Raziel",
+
+	// Dragonkin
+	"hero.name.tarion": "Tarion", "hero.name.ignis": "Ignis", "hero.name.drakor": "Drakor",
+	"hero.name.valirion": "Valirion", "hero.name.pyros": "Pyros", "hero.name.sargon": "Sargon",
+	"hero.name.vulkanion": "Vulkanion", "hero.name.ragor": "Ragor", "hero.name.drakaris": "Drakaris", "hero.name.smorg": "Smorg",
+	"hero.name.veynara": "Veynara", "hero.name.sindra": "Sindra", "hero.name.ember": "Ember",
+	"hero.name.salamandra": "Salamandra", "hero.name.pyrra": "Pyrra", "hero.name.veigar": "Veigar",
+	"hero.name.drakonis": "Drakonis", "hero.name.tiamat": "Tiamat", "hero.name.sovereign": "Sovereign", "hero.name.caldera": "Caldera",
 
 	// --- Titles ---
 	"title.militia":               "Militia",
@@ -645,7 +687,7 @@ var dictEN = map[string]string{
 
 	"combat.log.paladin_heal":  "✨ %s %s [Lay on Hands] upon %s (+%d HP, -10 stress)!",
 	"combat.log.paladin_smite": "⚔️ %s strikes with [Holy Smite] (-%d HP) and enters block!",
-	"combat.log.paladin_minor": "🛡️️ %s raises [Sacred Shield] (+2 Def, -4 stress)!",
+	"combat.log.paladin_minor": "🛡 %s raises [Sacred Shield] (+2 Def, -4 stress)!",
 
 	"combat.log.warrior_rage":   "⚔️ %s enters [Rage State] (+5 Atk, -2 Def)!",
 	"combat.log.warrior_cleave": "⚔️ %s performs [Cleave] hitting %d enemies (-%d HP)!",
@@ -797,11 +839,14 @@ var dictEN = map[string]string{
 	"codex.biome.11.title": "Floors 11, 22... (Throne of the Void)",
 	"codex.biome.11.desc":  "Demons, Death Knights and the Dragon.",
 
-	"codex.sec.races":          "2. RACES & INNATE BONUSES:",
-	"codex.race.human.desc":    "+15% bonus EXP, 'Adaptation' clears stress on level-up.",
-	"codex.race.elf.desc":      "+4 Speed, +2% Crit, 'Aether Bond' regenerates +2 MP per round.",
-	"codex.race.beastman.desc": "+2 Speed, 10% lifesteal on hit, -10% Base Def.",
-	"codex.race.olongr.desc":   "+20% Def, +15% Max HP, 'Monolith' stun immunity.",
+	"codex.sec.races":           "2. RACES & INNATE BONUSES:",
+	"codex.race.human.desc":     "+15% bonus EXP, 'Adaptation' clears stress on level-up.",
+	"codex.race.elf.desc":       "+4 Speed, +2% Crit, 'Aether Bond' regenerates +2 MP per round.",
+	"codex.race.beastman.desc":  "+2 Speed, 10% lifesteal on hit, -10% Base Def.",
+	"codex.race.olongr.desc":    "+20% Def, +15% Max HP, 'Monolith' stun immunity.",
+	"codex.race.dwarf.desc":     "+12% Def, -15% stress taken, +30% virtue chance, 55% block.",
+	"codex.race.demonkin.desc":  "+1 Speed, +2% Crit, +4 Atk at HP < 50%, +3 MP on kill.",
+	"codex.race.dragonkin.desc": "+12% Max HP, +8% Def, fire immunity, 4 fire retaliation damage.",
 
 	"codex.sec.spells":         "3. CLASS ABILITIES (MAJOR / MEDIUM / MINOR):",
 	"codex.spell.tank.major":   "Stance (+5 Def, block)",
@@ -834,6 +879,19 @@ var dictEN = map[string]string{
 	"codex.spell.bard.major":   "Ballad (-15 Stress)",
 	"codex.spell.bard.med":     "Dissonance (-Atk to pack)",
 	"codex.spell.bard.minor":   "Lively Tune (+5 MP)",
+
+	// --- Codex: Relics (All 10 Relics) ---
+	"codex.sec.7":                 "9. LEGENDARY RELICS & ARTIFACTS:",
+	"codex.relic_greed_desc":      "Increases gold yield up to +45%, but enemies hit harder.",
+	"codex.relic_martyr_desc":     "Grants permanent Attack to survivors when a hero falls in battle.",
+	"codex.relic_grail_desc":      "Passively shields the party against stress accumulation.",
+	"codex.relic_pioneer_desc":    "Wider view through the fog of war and reveals hidden walls.",
+	"codex.relic_quicksilver_desc": "+Speed to whole squad and grants guaranteed first turn in combat.",
+	"codex.relic_anvil_desc":      "Tempered arms: T2+ equipped armor and weapons yield extra Atk and Def.",
+	"codex.relic_skull_desc":      "Lowers squad critical threshold; incoming enemy crits induce terror.",
+	"codex.relic_phoenix_desc":    "Spares a warrior from mortal blow once per expedition, restoring 35% HP.",
+	"codex.relic_horn_desc":       "Potions and rests provide up to +45% increased resource recovery.",
+	"codex.relic_inquisitor_desc": "Pure bane damage and 50% armor penetration against undead, demons, and bosses.",
 
 	"codex.sec.2":            "4. MONSTERS & STAT PROGRESSION:",
 	"codex.catacombs_header": " [Rotting Catacombs]",
@@ -878,11 +936,6 @@ var dictEN = map[string]string{
 	"codex.mut_titan_desc":   "+20 MaxHP (Emergency survival priority)",
 	"codex.mut_aether_desc":  "+14 MaxMP, +1 Atk (Priority: Mage, Cleric, Warlock)",
 	"codex.mut_bastion_desc": "+2 Def, +6 HP (Priority: Tank, Paladin)",
-
-	"codex.sec.7":             "9. LEGENDARY RELICS & ARTIFACTS:",
-	"codex.relic_greed_desc":  "Increases gold yield up to +45%, but enemies hit harder.",
-	"codex.relic_martyr_desc": "Grants permanent Attack to survivors when a hero falls in battle.",
-	"codex.relic_grail_desc":  "Passively shields the party against stress accumulation.",
 
 	// --- Rest flavor (per biome) ---
 	"dungeon.log.rest.catacombs.1": "🌿 The party leaned against a mossy sarcophagus, catching their breath in damp silence.",
@@ -1067,6 +1120,9 @@ var dictEN = map[string]string{
 	"creator.race.elf":        "+4 speed, +2% crit, +2 mana regen",
 	"creator.race.beastman":   "+2 speed, 10% lifesteal, -10% defense",
 	"creator.race.olongr":     "+15% health, +20% defense, -3 speed, stun immune",
+	"creator.race.dwarf":      "+12% defense, -15% stress, -2 speed, stalwart block",
+	"creator.race.demonkin":   "+1 speed, +2% crit, +4 atk at HP < 50%, mana thirst",
+	"creator.race.dragonkin":  "+12% health, +8% defense, fire immune, flame retaliation",
 	"creator.points":          "Free points: %d of %d",
 	"creator.stat.hp":         "Health",
 	"creator.stat.mp":         "Mana",
@@ -1191,7 +1247,7 @@ var dictEN = map[string]string{
 	"menu.goal":            "Guide your autonomous squad through INFINITE floors and ruthless biomes.",
 	"menu.features":        "SYSTEM FEATURES:",
 	"menu.feature.lang":    "Bilingual Engine (RU / EN) switched on the fly with [L].",
-	"menu.feature.classes": "10 Unique Classes across 4 Diverse Races with innate perks.",
+	"menu.feature.classes": "10 Unique Classes across 7 Diverse Races with innate perks.",
 	"menu.feature.places":  "Dynamic establishments: «%s», «%s».",
 	"menu.feature.evac":    "Strategic evacuation: rescue veteran bodies equal to survivors count.",
 	"menu.autostart":       "⏳ Expedition autostarts in: %d sec...",

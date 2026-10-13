@@ -30,11 +30,14 @@ var dictRU = map[string]string{
 
 	// Статусы
 
-	// --- Расы героев ---
-	"race.human.name":    "Человек",
-	"race.elf.name":      "Эльф",
-	"race.beastman.name": "Зверочел.",
-	"race.olongr.name":   "Олонгр",
+	// --- Расы героев (7 рас) ---
+	"race.human.name":     "Человек",
+	"race.elf.name":       "Эльф",
+	"race.beastman.name":  "Зверочел.",
+	"race.olongr.name":    "Олонгр",
+	"race.dwarf.name":     "Дварф",
+	"race.demonkin.name":  "Демонит",
+	"race.dragonkin.name": "Драконит",
 
 	// --- Классы героев (10 шт.) ---
 	"class.tank.name":     "Танк",
@@ -141,7 +144,7 @@ var dictRU = map[string]string{
 	"mut.aether.name":  "Флюид Эфира",
 	"mut.bastion.name": "Эликсир Бастиона",
 
-	// --- Реликвии ---
+	// --- Реликвии (10 реликвий, Ур. 1-3) ---
 	"relic.greed_compass.name.1": "Потускневший Компас Алчности (Ур.1)",
 	"relic.greed_compass.name.2": "Освященный Компас Алчности (Ур.2)",
 	"relic.greed_compass.name.3": "Древний Компас Алчности (Ур.3)",
@@ -156,6 +159,41 @@ var dictRU = map[string]string{
 	"relic.holy_grail.name.2": "Освященный Священный Грааль (Ур.2)",
 	"relic.holy_grail.name.3": "Древний Священный Грааль (Ур.3)",
 	"relic.holy_grail.desc":   "Снижает получаемый стресс отряда",
+
+	"relic.pioneer_eye.name.1": "Потускневшее Око Первопроходца (Ур.1)",
+	"relic.pioneer_eye.name.2": "Освященное Око Первопроходца (Ур.2)",
+	"relic.pioneer_eye.name.3": "Древнее Око Первопроходца (Ур.3)",
+	"relic.pioneer_eye.desc":   "Расширенный обзор тумана войны и поиск тайников",
+
+	"relic.quicksilver_vial.name.1": "Потускневший Флакон Живой Ртути (Ур.1)",
+	"relic.quicksilver_vial.name.2": "Освященный Флакон Живой Ртути (Ур.2)",
+	"relic.quicksilver_vial.name.3": "Древний Флакон Живой Ртути (Ур.3)",
+	"relic.quicksilver_vial.desc":   "+Скорость отряду и право первого удара в бою",
+
+	"relic.obsidian_anvil.name.1": "Потускневшая Обсидиановая Наковальня (Ур.1)",
+	"relic.obsidian_anvil.name.2": "Освященная Обсидиановая Наковальня (Ур.2)",
+	"relic.obsidian_anvil.name.3": "Древняя Обсидиановая Наковальня (Ур.3)",
+	"relic.obsidian_anvil.desc":   "Закалка: надетая экипировка T2+ даёт бонус к Atk и Def",
+
+	"relic.whispering_skull.name.1": "Потускневший Шепчущий Череп (Ур.1)",
+	"relic.whispering_skull.name.2": "Освященный Шепчущий Череп (Ур.2)",
+	"relic.whispering_skull.name.3": "Древний Шепчущий Череп (Ур.3)",
+	"relic.whispering_skull.desc":   "Снижает порог крита отряда, но входящие криты врагов несут стресс",
+
+	"relic.phoenix_core.name.1": "Потускневшая Эссенция Феникса (Ур.1)",
+	"relic.phoenix_core.name.2": "Освященная Эссенция Феникса (Ур.2)",
+	"relic.phoenix_core.name.3": "Древняя Эссенция Феникса (Ур.3)",
+	"relic.phoenix_core.desc":   "Чудесное спасение: спасает бойца от смертельного удара раз за поход",
+
+	"relic.horn_of_plenty.name.1": "Потускневший Рог Изобилия (Ур.1)",
+	"relic.horn_of_plenty.name.2": "Освященный Рог Изобилия (Ур.2)",
+	"relic.horn_of_plenty.name.3": "Древний Рог Изобилия (Ур.3)",
+	"relic.horn_of_plenty.desc":   "Увеличивает силу зелий и целебность привала",
+
+	"relic.inquisitor_seal.name.1": "Потускневшая Печать Инквизитора (Ур.1)",
+	"relic.inquisitor_seal.name.2": "Освященная Печать Инквизитора (Ур.2)",
+	"relic.inquisitor_seal.name.3": "Древняя Печать Инквизитора (Ур.3)",
+	"relic.inquisitor_seal.desc":   "Чистый урон и пробитие брони против нежити, демонов и боссов",
 
 	// --- Префиксы и суффиксы ---
 	"prefix.fire":      "Пылающий",
@@ -418,57 +456,61 @@ var dictRU = map[string]string{
 	"mob.boss_golem":     "Алмазный Колосс",
 	"mob.boss_leviathan": "Глубинный Левиафан",
 
-	// --- Имена героев ---
-	"hero.name.brand":     "Бранд",
-	"hero.name.thorin":    "Торин",
-	"hero.name.lyra":      "Лира",
-	"hero.name.aldos":     "Алдос",
-	"hero.name.selina":    "Селина",
-	"hero.name.ragnar":    "Рагнар",
-	"hero.name.ingvar":    "Ингвар",
-	"hero.name.wulf":      "Вульф",
-	"hero.name.sigurd":    "Сигурд",
-	"hero.name.morgan":    "Морган",
-	"hero.name.elias":     "Элиас",
-	"hero.name.duncan":    "Дункан",
-	"hero.name.gottfried": "Готфрид",
-	"hero.name.walter":    "Вальтер",
-	"hero.name.cassian":   "Кассиан",
-	"hero.name.iris":      "Айрис",
-	"hero.name.morrigan":  "Морриган",
-	"hero.name.brigitte":  "Бригитта",
-	"hero.name.agnes":     "Агнес",
-	"hero.name.hilda":     "Хильда",
-	"hero.name.yaropolk":  "Ярополк",
-	"hero.name.radomir":   "Радомир",
-	"hero.name.dobrynya":  "Добрыня",
-	"hero.name.lyutobor":  "Лютобор",
-	"hero.name.bronislav": "Бронислав",
-	"hero.name.aeron":     "Аэрон",
-	"hero.name.draven":    "Дрейвен",
-	"hero.name.kalar":     "Кэлар",
-	"hero.name.zordan":    "Зордан",
-	"hero.name.tarion":    "Тарион",
-	"hero.name.veldor":    "Велдор",
-	"hero.name.falcon":    "Фалькон",
-	"hero.name.yorick":    "Йоррик",
-	"hero.name.edan":      "Эдан",
-	"hero.name.zarvin":    "Зарвин",
-	"hero.name.lirianna":  "Лирианна",
-	"hero.name.velara":    "Велара",
-	"hero.name.mirael":    "Мираэль",
-	"hero.name.celestina": "Селестина",
-	"hero.name.kaelina":   "Каэлина",
-	"hero.name.tirianna":  "Тирианна",
-	"hero.name.nayra":     "Найра",
-	"hero.name.elmira":    "Эльмира",
-	"hero.name.zeyra":     "Зейра",
-	"hero.name.xandr":     "Ксандр",
-	"hero.name.verissa":   "Верисса",
-	"hero.name.orwin":     "Орвин",
-	"hero.name.silran":    "Сильран",
-	"hero.name.keldra":    "Келдра",
-	"hero.name.veynara":   "Вейнара",
+	// Имена: Люди
+	"hero.name.brand": "Бранд", "hero.name.aldos": "Алдос", "hero.name.walter": "Вальтер",
+	"hero.name.cassian": "Кассиан", "hero.name.elias": "Элиас", "hero.name.duncan": "Дункан",
+	"hero.name.gottfried": "Готфрид", "hero.name.roland": "Роланд", "hero.name.godric": "Годрик", "hero.name.marcus": "Маркус",
+	"hero.name.selina": "Селина", "hero.name.brigitte": "Бригитта", "hero.name.agnes": "Агнес",
+	"hero.name.hilda": "Хильда", "hero.name.eleanor": "Элеонора", "hero.name.beatrice": "Беатрис",
+	"hero.name.martha": "Марта", "hero.name.constance": "Констанция", "hero.name.sybilla": "Сибилла", "hero.name.adele": "Адель",
+
+	// Эльфы
+	"hero.name.silran": "Сильран", "hero.name.veldor": "Велдор", "hero.name.aeron": "Аэрон",
+	"hero.name.falcon": "Фалькон", "hero.name.zarvin": "Зарвин", "hero.name.illirion": "Иллирион",
+	"hero.name.celeborn": "Келеборн", "hero.name.faelin": "Фаэлин", "hero.name.talandril": "Таландрил", "hero.name.elorien": "Элориен",
+	"hero.name.lirianna": "Лирианна", "hero.name.velara": "Велара", "hero.name.mirael": "Мираэль",
+	"hero.name.celestina": "Селестина", "hero.name.kaelina": "Каэлина", "hero.name.tirianna": "Тирианна",
+	"hero.name.nayra": "Найра", "hero.name.elmira": "Эльмира", "hero.name.silvana": "Сильвана", "hero.name.elaria": "Элария",
+
+	// Зверолюды
+	"hero.name.wulf": "Вульф", "hero.name.ragnar": "Рагнар", "hero.name.ingvar": "Ингвар",
+	"hero.name.sigurd": "Сигурд", "hero.name.lyutobor": "Лютобор", "hero.name.groh": "Грох",
+	"hero.name.fenris": "Фенрис", "hero.name.grimm": "Гримм", "hero.name.torval": "Торваль", "hero.name.brokk": "Брокк",
+	"hero.name.morrigan": "Морриган", "hero.name.zeyra": "Зейра", "hero.name.keldra": "Келдра",
+	"hero.name.verissa": "Верисса", "hero.name.skadi": "Скади", "hero.name.freya": "Фрейя",
+	"hero.name.runa": "Руна", "hero.name.brigg": "Бригг", "hero.name.astrid": "Астрид", "hero.name.gerda": "Герда",
+
+	// Олонгры
+	"hero.name.yaropolk": "Ярополк", "hero.name.radomir": "Радомир", "hero.name.dobrynya": "Добрыня",
+	"hero.name.bronislav": "Бронислав", "hero.name.xandr": "Ксандр", "hero.name.volimir": "Волимир",
+	"hero.name.svyatoyar": "Святояр", "hero.name.gorynya": "Горыня", "hero.name.tverdislav": "Твердислав", "hero.name.stoyan": "Стоян",
+	"hero.name.lada": "Лада", "hero.name.miroslava": "Мирослава", "hero.name.radmila": "Радмила",
+	"hero.name.bogdana": "Богдана", "hero.name.zvenislava": "Звенислава", "hero.name.vsemila": "Всемила",
+	"hero.name.gorislava": "Горислава", "hero.name.darina": "Дарина", "hero.name.dobronega": "Добронега", "hero.name.yaroslava": "Ярослава",
+
+	// Дварфы
+	"hero.name.thorin": "Торин", "hero.name.balin": "Балин", "hero.name.dain": "Даин",
+	"hero.name.dvalin": "Двалин", "hero.name.baldur": "Бальдур", "hero.name.grombor": "Громбор",
+	"hero.name.thorgrim": "Торгрим", "hero.name.khazad": "Кхазад", "hero.name.kadrin": "Кадрин", "hero.name.rungar": "Рунгар",
+	"hero.name.dis": "Дис", "hero.name.helga": "Хельга", "hero.name.brinya": "Бринья",
+	"hero.name.torra": "Торра", "hero.name.gertrud": "Гертруд", "hero.name.dagna": "Дагна",
+	"hero.name.sigrun": "Сигрун", "hero.name.hildur": "Хильдур", "hero.name.verena": "Верена", "hero.name.groa": "Гроа",
+
+	// Демониты
+	"hero.name.draven": "Дрейвен", "hero.name.kalar": "Кэлар", "hero.name.zordan": "Зордан",
+	"hero.name.azazel": "Азазель", "hero.name.malahor": "Малахор", "hero.name.valakar": "Валакар",
+	"hero.name.balthazar": "Бальтазар", "hero.name.mordox": "Мордокс", "hero.name.nergal": "Нергал", "hero.name.lucian": "Люциан",
+	"hero.name.lilith": "Лилит", "hero.name.carmilla": "Кармилла", "hero.name.bellatrix": "Беллатрикс",
+	"hero.name.morticia": "Мортиция", "hero.name.zazira": "Зазира", "hero.name.hecate": "Геката",
+	"hero.name.sekhmet": "Сехмет", "hero.name.velveta": "Вельвета", "hero.name.astarte": "Астарта", "hero.name.raziel": "Разиэль",
+
+	// Дракониты
+	"hero.name.tarion": "Тарион", "hero.name.ignis": "Игнис", "hero.name.drakor": "Дракор",
+	"hero.name.valirion": "Валирион", "hero.name.pyros": "Пирос", "hero.name.sargon": "Саргон",
+	"hero.name.vulkanion": "Вульканион", "hero.name.ragor": "Рагор", "hero.name.drakaris": "Дракарис", "hero.name.smorg": "Сморг",
+	"hero.name.veynara": "Вейнара", "hero.name.sindra": "Синдра", "hero.name.ember": "Эмбер",
+	"hero.name.salamandra": "Саламандра", "hero.name.pyrra": "Пирра", "hero.name.veigar": "Вейгар",
+	"hero.name.drakonis": "Драконис", "hero.name.tiamat": "Тиамат", "hero.name.sovereign": "Соверен", "hero.name.caldera": "Кальдера",
 
 	// --- Титулы ---
 	"title.militia":               "Ополченец",
@@ -635,7 +677,7 @@ var dictRU = map[string]string{
 	"combat.log.retreat_dialog":  "Отряд отступил в Столицу.",
 	"combat.log.flee_fail":       "💥 [ПРОВАЛ ПОБЕГА] Монстры перекрыли отход! Отряд перегруппировался под градом скользящих ударов.",
 	"combat.log.death_flee":      "Зарублен при неудачном отходе",
-	"combat.log.paranoid":        "👁️️ %s %s в угол (Паранойя)!",
+	"combat.log.paranoid":        "👁 %s %s в угол (Паранойя)!",
 	"combat.log.miniboss_trophy": "👑 Трофей чемпиона: [%s]!",
 
 	// Умения
@@ -656,10 +698,10 @@ var dictRU = map[string]string{
 	"combat.log.monk_minor":  "🧘 %s: [Концентрация духа] (+4 к атаке кулака)!",
 
 	"combat.log.rogue_stealth": "🗡️ %s %s в тенях [Скрытность] (100%% крит)!",
-	"combat.log.rogue_poison":  "☣️️ %s наносит [Отравленный выпад] (-%d HP)!",
+	"combat.log.rogue_poison":  "☣ %s наносит [Отравленный выпад] (-%d HP)!",
 	"combat.log.quick_cut":     "🗡️ %s: [Быстрый порез] (кража трофеев, крит-порог 17)!",
 
-	"combat.log.ranger_trap":   "🕸️️ %s ставит [Стальной капкан] на [%s] (-%d HP, -5 Atk монстра)!",
+	"combat.log.ranger_trap":   "🕸 %s ставит [Стальной капкан] на [%s] (-%d HP, -5 Atk монстра)!",
 	"combat.log.ranger_volley": "🏹 %s выпускает [Град стрел] по тылам врагов (-%d HP)!",
 	"combat.log.ranger_minor":  "🎯 %s проводит [Прицельный выстрел] (игнорирование брони)!",
 
@@ -797,11 +839,14 @@ var dictRU = map[string]string{
 	"codex.biome.11.title": "Этажи 11, 22... (Трон Бездны)",
 	"codex.biome.11.desc":  "Демоны, Рыцари Смерти и Пепельный Дракон.",
 
-	"codex.sec.races":          "2. РАСЫ И ВРОЖДЕННЫЕ ДАРЫ:",
-	"codex.race.human.desc":    "+15% к опыту (EXP), снятие стресса при росте уровня.",
-	"codex.race.elf.desc":      "+4 к скорости, +2% к криту, регенерация +2 MP в раунд.",
-	"codex.race.beastman.desc": "+2 к скорости, 10% вампиризма от удара, -10% к защите.",
-	"codex.race.olongr.desc":   "+20% к защите, +15% к Max HP, иммунитет к оглушению.",
+	"codex.sec.races":           "2. РАСЫ И ВРОЖДЕННЫЕ ДАРЫ:",
+	"codex.race.human.desc":     "+15% к опыту (EXP), снятие стресса при росте уровня.",
+	"codex.race.elf.desc":       "+4 к скорости, +2% к криту, регенерация +2 MP в раунд.",
+	"codex.race.beastman.desc":  "+2 к скорости, 10% вампиризма от удара, -10% к защите.",
+	"codex.race.olongr.desc":    "+20% к защите, +15% к Max HP, иммунитет к оглушению.",
+	"codex.race.dwarf.desc":     "+12% к защите, -15% стресса, +30% шанс воодушевления, блок 55%.",
+	"codex.race.demonkin.desc":  "+1 к скорости, +2% к криту, +4 к атаке при HP < 50%, +3 MP за убийство.",
+	"codex.race.dragonkin.desc": "+12% к Max HP, +8% к защите, иммунитет к огню, 4 урона возмездия огнём.",
 
 	"codex.sec.spells":         "3. КЛАССОВЫЕ УМЕНИЯ (БОЛЬШОЕ / СРЕДНЕЕ / МАЛОЕ):",
 	"codex.spell.tank.major":   "Стойка (+5 Def, блок)",
@@ -834,6 +879,19 @@ var dictRU = map[string]string{
 	"codex.spell.bard.major":   "Баллада (-15 Stress)",
 	"codex.spell.bard.med":     "Диссонанс (-Atk стае)",
 	"codex.spell.bard.minor":   "Бодрящий мотив (+5 MP)",
+
+	// --- Кодекс: Реликвии (все 10 штук) ---
+	"codex.sec.7":                 "9. РЕЛИКВИИ И АРТЕФАКТЫ ПОДЗЕМЕЛЬЯ:",
+	"codex.relic_greed_desc":      "Увеличивает добычу золота до +45%, но враги бьют больнее.",
+	"codex.relic_martyr_desc":     "При гибели героя все выжившие получают +4 Atk.",
+	"codex.relic_grail_desc":      "Пассивно снижает весь получаемый отрядом стресс.",
+	"codex.relic_pioneer_desc":    "Расширяет радиус обзора сквозь туман войны и находит скрытые тайники.",
+	"codex.relic_quicksilver_desc": "+Скорость всему отряду и гарантирует право первого хода в схватке.",
+	"codex.relic_anvil_desc":      "Закалка оружия: экипировка ранга T2+ даёт дополнительную Atk и Def.",
+	"codex.relic_skull_desc":      "Снижает порог крита отряда; входящие криты врагов несут дополнительный стресс.",
+	"codex.relic_phoenix_desc":    "Спасает бойца от смертельного удара 1 раз за поход, восстанавливая 35% HP.",
+	"codex.relic_horn_desc":       "Зелья и привал восстанавливают до +45% больше жизненных ресурсов.",
+	"codex.relic_inquisitor_desc": "Чистый урон и 50% пробитие брони против нежити, демонов и боссов.",
 
 	"codex.sec.2":            "4. МОНСТРЫ И ПРОГРЕССИЯ ХАРАКТЕРИСТИК:",
 	"codex.catacombs_header": " [Гнилые Катакомбы]",
@@ -878,11 +936,6 @@ var dictRU = map[string]string{
 	"codex.mut_titan_desc":   "+20 MaxHP (Экстренное спасение при ранениях)",
 	"codex.mut_aether_desc":  "+14 MaxMP, +1 Atk (Приоритет: Маг, Жрец, Варлок)",
 	"codex.mut_bastion_desc": "+2 Def, +6 HP (Приоритет: Танк, Паладин)",
-
-	"codex.sec.7":             "9. РЕЛИКВИИ И АРТЕФАКТЫ ПОДЗЕМЕЛЬЯ:",
-	"codex.relic_greed_desc":  "Увеличивает добычу золота до +45%, но враги бьют больнее.",
-	"codex.relic_martyr_desc": "При гибели героя все выжившие получают +4 Atk.",
-	"codex.relic_grail_desc":  "Пассивно снижает весь получаемый отрядом стресс.",
 
 	// --- Привал (флавор по биомам) ---
 	"dungeon.log.rest.catacombs.1": "🌿 Отряд прислонился к замшелому саркофагу, переводя дух в сырой тишине.",
@@ -1067,6 +1120,9 @@ var dictRU = map[string]string{
 	"creator.race.elf":        "+4 скорость, +2% к криту, +2 к регенерации маны",
 	"creator.race.beastman":   "+2 скорость, вампиризм 10%, -10% защиты",
 	"creator.race.olongr":     "+15% к здоровью, +20% защиты, -3 скорость, не оглушается",
+	"creator.race.dwarf":      "+12% защиты, -15% стресса, -2 скорость, стойкий блок",
+	"creator.race.demonkin":   "+1 скорость, +2% крит, +4 атаки при HP < 50%, жажда маны",
+	"creator.race.dragonkin":  "+12% к здоровью, +8% защиты, иммунитет к огню, шипы пламени",
 	"creator.points":          "Свободных очков: %d из %d",
 	"creator.stat.hp":         "Здоровье",
 	"creator.stat.mp":         "Мана",
@@ -1191,7 +1247,7 @@ var dictRU = map[string]string{
 	"menu.goal":            "Ваша задача — провести отряд сквозь БЕСКОНЕЧНЫЕ этажи опаснейших биомов.",
 	"menu.features":        "ОСОБЕННОСТИ СИСТЕМЫ:",
 	"menu.feature.lang":    "Двуязычный движок (RU / EN) с переключением на лету клавишей [L].",
-	"menu.feature.classes": "10 специализированных классов и 4 расы со своими врождёнными дарами.",
+	"menu.feature.classes": "10 специализированных классов и 7 рас со своими врождёнными дарами.",
 	"menu.feature.places":  "Колоритные заведения: «%s», «%s».",
 	"menu.feature.evac":    "Эвакуация при побеге: вынос тел ценных ветеранов по числу выживших.",
 	"menu.autostart":       "⏳ Автоматический старт экспедиции через: %d сек...",

@@ -49,7 +49,7 @@ func productionSources(t *testing.T) []string {
 	}
 	var out []string
 	for _, f := range files {
-		if strings.HasSuffix(f, "_test.go") || f == "i18n_ru.go" || f == "i18n_en.go" {
+		if strings.HasSuffix(f, "_test.go") || f == "i18n_ru.go" || f == "i18n_en.go" || f == "i18n_be.go" {
 			continue
 		}
 		out = append(out, f)
@@ -91,13 +91,13 @@ func TestNoHardcodedCyrillicInSource(t *testing.T) {
 	for _, f := range productionSources(t) {
 		for _, l := range stringLiteralsOf(t, f) {
 			if hasCyrillic(l.Value) {
-				t.Errorf("%s:%d: захардкоженный русский текст %q — вынесите его в словари", l.File, l.Line, l.Value)
+				t.Errorf("%s:%d: захардкоженный кириллический текст %q — вынесите его в словари", l.File, l.Line, l.Value)
 			}
 		}
 	}
 }
 
-var langBranch = regexp.MustCompile(`\b[lL]ang\s*[=!]=\s*Lang(EN|RU)\b`)
+var langBranch = regexp.MustCompile(`\b[lL]ang\s*[=!]=\s*Lang(EN|RU|BE)\b`)
 
 // Переводить «веткой по языку» нельзя: тексты берутся через T. Исключения — переключатель
 // языка, проверка сохранения и сама функция перевода.
@@ -144,6 +144,9 @@ func TestTVerbKeysExistInBothDictionaries(t *testing.T) {
 				if _, ok := dictEN[key]; !ok {
 					t.Errorf("%s: нет ключа %q в английском словаре", f, key)
 				}
+				if _, ok := dictBE[key]; !ok {
+					t.Errorf("%s: нет ключа %q в белорусском словаре", f, key)
+				}
 			}
 		}
 	}
@@ -162,6 +165,8 @@ func TestTVerbPicksGenderAndLanguage(t *testing.T) {
 		{LangRU, GenderFemale, "достигла"},
 		{LangEN, GenderMale, "reached"},
 		{LangEN, GenderFemale, "reached"},
+		{LangBE, GenderMale, "дасягнуў"},
+		{LangBE, GenderFemale, "дасягнула"},
 	}
 	for _, c := range cases {
 		if got := TVerb(c.lang, c.gender, "reach"); got != c.want {
@@ -171,17 +176,22 @@ func TestTVerbPicksGenderAndLanguage(t *testing.T) {
 }
 
 func TestEveryVerbHasBothGendersInBothLanguages(t *testing.T) {
+	dicts := map[Language]map[string]string{
+		LangRU: dictRU,
+		LangEN: dictEN,
+		LangBE: dictBE,
+	}
+
 	for key := range dictRU {
 		if !strings.HasPrefix(key, "verb.") {
 			continue
 		}
 		base := strings.TrimSuffix(strings.TrimSuffix(key, ".m"), ".f")
 		for _, suffix := range []string{".m", ".f"} {
-			if _, ok := dictRU[base+suffix]; !ok {
-				t.Errorf("у глагола %s нет варианта %s в русском словаре", base, suffix)
-			}
-			if _, ok := dictEN[base+suffix]; !ok {
-				t.Errorf("у глагола %s нет варианта %s в английском словаре", base, suffix)
+			for lang, dict := range dicts {
+				if _, ok := dict[base+suffix]; !ok {
+					t.Errorf("у глагола %s нет варианта %s в словаре %s", base, suffix, lang)
+				}
 			}
 		}
 	}
@@ -198,15 +208,20 @@ func TestSpendCategoriesAreTranslatable(t *testing.T) {
 		if !strings.HasPrefix(id, "spend.") || hasCyrillic(id) {
 			t.Errorf("идентификатор категории %q должен быть языконезависимым", id)
 		}
-		if dictRU[id] == "" || dictEN[id] == "" {
+		if dictRU[id] == "" || dictEN[id] == "" || dictBE[id] == "" {
 			t.Errorf("у категории %q нет названия в словарях", id)
 		}
 	}
 }
 
 func TestTownSignsFitTheSignboard(t *testing.T) {
+	dicts := map[Language]map[string]string{
+		LangRU: dictRU,
+		LangEN: dictEN,
+		LangBE: dictBE,
+	}
 	for _, key := range townSignKeys {
-		for lang, dict := range map[Language]map[string]string{LangRU: dictRU, LangEN: dictEN} {
+		for lang, dict := range dicts {
 			text, ok := dict[key]
 			if !ok || text == "" {
 				t.Errorf("%s: нет подписи %q", lang, key)
@@ -229,7 +244,7 @@ func TestTownSignsFitTheSignboard(t *testing.T) {
 }
 
 func TestCodexTabsAndTiersAreTranslated(t *testing.T) {
-	for _, lang := range []Language{LangRU, LangEN} {
+	for _, lang := range []Language{LangRU, LangEN, LangBE} {
 		names := codexTabNames(lang)
 		if len(names) != codexTabCount {
 			t.Fatalf("%s: вкладок %d, ожидалось %d", lang, len(names), codexTabCount)
@@ -245,6 +260,9 @@ func TestCodexTabsAndTiersAreTranslated(t *testing.T) {
 	}
 	if got := T(LangRU, "codex.tier", 3); got != "Т3" {
 		t.Errorf("русский ярус: %q", got)
+	}
+	if got := T(LangBE, "codex.tier", 3); got != "Т3" {
+		t.Errorf("белорусский ярус: %q", got)
 	}
 }
 
@@ -347,7 +365,7 @@ func TestAutopilotTownSummariesFollowTheLanguage(t *testing.T) {
 }
 
 func TestChurchOfferDescriptionsAreTranslated(t *testing.T) {
-	for _, lang := range []Language{LangRU, LangEN} {
+	for _, lang := range []Language{LangRU, LangEN, LangBE} {
 		useTempSave(t)
 		seedRNG(7)
 		m := initialModel()

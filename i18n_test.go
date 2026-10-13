@@ -20,31 +20,46 @@ func countVerbs(s string) int {
 	return n
 }
 
-// Ключи в русском и английском словарях должны совпадать один в один.
+// Ключи во всех поддерживаемых словарях (RU, EN, BE) должны совпадать один в один.
 func TestDictKeyParity(t *testing.T) {
-	for k := range dictRU {
-		if _, ok := dictEN[k]; !ok {
-			t.Errorf("ключ %q есть в RU, но отсутствует в EN", k)
-		}
+	dicts := map[Language]map[string]string{
+		LangRU: dictRU,
+		LangEN: dictEN,
+		LangBE: dictBE,
 	}
-	for k := range dictEN {
-		if _, ok := dictRU[k]; !ok {
-			t.Errorf("ключ %q есть в EN, но отсутствует в RU", k)
+
+	for l1, d1 := range dicts {
+		for l2, d2 := range dicts {
+			if l1 == l2 {
+				continue
+			}
+			for k := range d1 {
+				if _, ok := d2[k]; !ok {
+					t.Errorf("ключ %q есть в %s, но отсутствует в %s", k, l1, l2)
+				}
+			}
 		}
 	}
 }
 
-// Переводы одного ключа должны принимать одинаковое число аргументов,
+// Переводы одного ключа во всех словарях должны принимать одинаковое число аргументов,
 // иначе fmt.Sprintf выведет «%!s(MISSING)» или «%!(EXTRA ...)».
 func TestFormatVerbParity(t *testing.T) {
+	targetDicts := map[Language]map[string]string{
+		LangEN: dictEN,
+		LangBE: dictBE,
+	}
+
 	for k, ru := range dictRU {
-		en, ok := dictEN[k]
-		if !ok {
-			continue
-		}
-		if countVerbs(ru) != countVerbs(en) {
-			t.Errorf("ключ %q: в RU %d аргументов, в EN %d\n  RU: %s\n  EN: %s",
-				k, countVerbs(ru), countVerbs(en), ru, en)
+		for lang, dict := range targetDicts {
+			val, ok := dict[k]
+			if !ok {
+				continue
+			}
+			if countVerbs(ru) != countVerbs(val) {
+				t.Errorf("ключ %q: в RU %d аргументов, в %s %d\n  RU: %s\n  %s: %s",
+					k, countVerbs(ru), lang, countVerbs(val), ru, lang, val)
+			}
 		}
 	}
 }
@@ -71,16 +86,21 @@ func goSources(t *testing.T) map[string]string {
 
 var literalKeyCall = regexp.MustCompile(`\bT\(\s*[\w.]+\s*,\s*"([\w.]+)"\s*[,)]`)
 
-// Любой ключ, который код запрашивает литералом, обязан существовать в словарях.
+// Любой ключ, который код запрашивает литералом, обязан существовать во всех словарях.
 func TestUsedKeysExist(t *testing.T) {
+	dicts := map[Language]map[string]string{
+		LangRU: dictRU,
+		LangEN: dictEN,
+		LangBE: dictBE,
+	}
+
 	for file, src := range goSources(t) {
 		for _, m := range literalKeyCall.FindAllStringSubmatch(src, -1) {
 			key := m[1]
-			if _, ok := dictRU[key]; !ok {
-				t.Errorf("%s: ключ %q не найден в RU-словаре", file, key)
-			}
-			if _, ok := dictEN[key]; !ok {
-				t.Errorf("%s: ключ %q не найден в EN-словаре", file, key)
+			for lang, dict := range dicts {
+				if _, ok := dict[key]; !ok {
+					t.Errorf("%s: ключ %q не найден в словаре %s", file, key, lang)
+				}
 			}
 		}
 	}
@@ -89,4 +109,5 @@ func TestUsedKeysExist(t *testing.T) {
 func TestTranslateMissingKeyDoesNotPanic(t *testing.T) {
 	_ = T(LangRU, "no.such.key")
 	_ = T(LangEN, "no.such.key", 1, 2)
+	_ = T(LangBE, "no.such.key", 1, 2)
 }

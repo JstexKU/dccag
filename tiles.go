@@ -5,32 +5,47 @@ import (
 )
 
 func generateRelic(level int) PartyRelic {
-	relicKeys := []string{"greed_compass", "martyr_crown", "holy_grail"}
-	chosen := relicKeys[rng.Intn(len(relicKeys))]
+	chosen := AllRelics[rng.Intn(len(AllRelics))]
 
-	nameKey := fmt.Sprintf("relic.%s.name.%d", chosen, level)
-	descKey := fmt.Sprintf("relic.%s.desc", chosen)
+	nameKey := fmt.Sprintf("relic.%s.name.%d", string(chosen), level)
+	descKey := fmt.Sprintf("relic.%s.desc", string(chosen))
+
+	relic := PartyRelic{
+		Type:        chosen,
+		NameKey:     nameKey,
+		Level:       level,
+		DescKey:     descKey,
+		GoldMult:    1.0,
+		EnemyDmgMod: 1.0,
+	}
 
 	switch chosen {
-	case "greed_compass":
-		gMult := 1.15 + (float64(level) * 0.10)
-		dmgMod := 1.20 - (float64(level) * 0.02)
-		return PartyRelic{
-			NameKey: nameKey, Level: level, GoldMult: gMult, EnemyDmgMod: dmgMod, MartyrFury: false,
-			DescKey: descKey,
-		}
-	case "martyr_crown":
-		return PartyRelic{
-			NameKey: nameKey, Level: level, GoldMult: 1.0, EnemyDmgMod: 1.0, MartyrFury: true,
-			DescKey: descKey,
-		}
-	default:
-		res := 10 + (level * 10)
-		return PartyRelic{
-			NameKey: nameKey, Level: level, GoldMult: 1.0, EnemyDmgMod: 1.0, MartyrFury: false, StressRes: res,
-			DescKey: descKey,
-		}
+	case RelicGreedCompass:
+		relic.GoldMult = 1.15 + (float64(level) * 0.10)
+		relic.EnemyDmgMod = 1.20 - (float64(level) * 0.02)
+	case RelicMartyrCrown:
+		relic.MartyrFury = true
+	case RelicHolyGrail:
+		relic.StressRes = 10 + (level * 10)
+	case RelicPioneerEye:
+		relic.VisionBonus = 1 + (level / 2) // +1 радиус на ур.1-2, +2 на ур.3
+	case RelicQuicksilverVial:
+		relic.SpeedBonus = 1 + level // +2..+4 к скорости всего отряда
+		relic.FirstStrike = true
+	case RelicObsidianAnvil:
+		relic.GearTempered = true // закалка T2+ экипировки
+	case RelicWhisperingSkull:
+		relic.PartyCritBonus = 1 + level // -2..-4 к порогу крита
+		relic.CritStressRisk = max(5, 20-level*3)
+	case RelicPhoenixCore:
+		relic.PhoenixCharged = true // заряд возрождения при смертельном уроне
+	case RelicHornOfPlenty:
+		relic.PotionPotency = 1.15 + (float64(level) * 0.10) // +25%..+45% силы зелий и привала
+	case RelicInquisitorSeal:
+		relic.BaneDmgBonus = 3 + (level * 2) // +5..+9 чистый урон по нежити/демонам/элите
 	}
+
+	return relic
 }
 
 func (m *Model) handleAltar() {

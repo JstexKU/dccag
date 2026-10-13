@@ -144,13 +144,16 @@ func (m *Model) removeHero() {
 	persistState(m.Lang, m.Legacy, m.Tactics, nil)
 }
 
-// handleMenuKey — клавиши главного меню, связанные с героем. Второе значение: «обработана».
+// handleMenuKey — клавиши главного меню, связанные с героем и режимом.
 // Удаление героя требует повторного нажатия X, любая другая клавиша отменяет его.
 func (m *Model) handleMenuKey(key string) (tea.Cmd, bool) {
 	if key != "x" {
 		m.MenuConfirmRemove = false
 	}
 	switch key {
+	case "m":
+		m.ManualMode = !m.ManualMode
+		return nil, true
 	case "c":
 		m.openCreator()
 		return nil, true
@@ -266,11 +269,7 @@ func (m *Model) handleCreatorKey(msg tea.KeyMsg) tea.Cmd {
 		c.Draft = defaultBlueprint()
 		return nil
 	case "ctrl+l":
-		if m.Lang == LangRU {
-			m.Lang = LangEN
-		} else {
-			m.Lang = LangRU
-		}
+		m.Lang = NextLanguage(m.Lang)
 		return nil
 	case "up", "shift+tab":
 		c.Row = (c.Row + creatorRows - 1) % creatorRows
@@ -303,7 +302,6 @@ func (m *Model) handleCreatorKey(msg tea.KeyMsg) tea.Cmd {
 	return nil
 }
 
-// callingValue — числовой бонус призвания (для подстановки в описание).
 func callingValue(c LeaderCalling) int {
 	switch c {
 	case CallingStrategist:
@@ -363,7 +361,7 @@ func (m Model) renderCreatorScreen() string {
 	boxW := max(40, m.TermWidth-4)
 	innerW := max(30, boxW-6)
 	tight := m.TermHeight < 30
-	gap := "\n" // пустая строка между блоками; в тесном окне убирается
+	gap := "\n"
 	if tight {
 		gap = ""
 	}

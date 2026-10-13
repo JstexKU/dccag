@@ -177,20 +177,26 @@ func (m *Model) drinkPotion(user, target *Hero, idx int) {
 		m.addLog(potionStyle.Render(T(m.Lang, "ctl.potion_give", user.DisplayName(m.Lang), pName, tName)))
 	}
 
+	power := p.Power
+	// Реликвия «Рог Изобилия»: усиление действия зелий
+	if m.Relic != nil && m.Relic.PotionPotency > 1.0 {
+		power = int(float64(power) * m.Relic.PotionPotency)
+	}
+
 	switch p.Type {
 	case PotionHP:
-		target.HP = min(target.MaxHP, target.HP+p.Power)
+		target.HP = min(target.MaxHP, target.HP+power)
 		verb := TVerb(m.Lang, target.Gender, "drink")
-		m.addLog(potionStyle.Render(T(m.Lang, "dungeon.log.potion_hp", tName, verb, pName, p.Power)))
+		m.addLog(potionStyle.Render(T(m.Lang, "dungeon.log.potion_hp", tName, verb, pName, power)))
 	case PotionMP:
-		target.MP = min(target.MaxMP, target.MP+p.Power)
+		target.MP = min(target.MaxMP, target.MP+power)
 		verb := TVerb(m.Lang, target.Gender, "drink")
-		m.addLog(potionStyle.Render(T(m.Lang, "dungeon.log.potion_mp", tName, verb, pName, p.Power)))
+		m.addLog(potionStyle.Render(T(m.Lang, "dungeon.log.potion_mp", tName, verb, pName, power)))
 	case PotionStress:
-		target.Stress = max(0, target.Stress-p.Power)
+		target.Stress = max(0, target.Stress-power)
 		target.Affliction = AfflictionNone
 		verb := TVerb(m.Lang, target.Gender, "take")
-		m.addLog(potionStyle.Render(T(m.Lang, "dungeon.log.potion_stress", tName, verb, pName, p.Power)))
+		m.addLog(potionStyle.Render(T(m.Lang, "dungeon.log.potion_stress", tName, verb, pName, power)))
 	}
 }
 
@@ -234,20 +240,26 @@ func (m *Model) manualCamp() {
 		return
 	}
 
+	turns := manualCampTurns
+	// Реликвия «Рог Изобилия»: усиление эффекта привала
+	if m.Relic != nil && m.Relic.PotionPotency > 1.0 {
+		turns = int(float64(turns) * m.Relic.PotionPotency)
+	}
+
 	m.Stats.TotalSteps += manualCampTurns
 	m.ManualLastCamp = m.Stats.TotalSteps
 	for _, h := range m.Party {
-		if h.IsDead {
+		if h.IsDead || h.IsDowned {
 			continue
 		}
-		h.HP = min(h.MaxHP, h.HP+manualCampTurns)
-		h.MP = min(h.MaxMP, h.MP+manualCampTurns)
-		h.Stress = max(0, h.Stress-manualCampTurns)
+		h.HP = min(h.MaxHP, h.HP+turns)
+		h.MP = min(h.MaxMP, h.MP+turns)
+		h.Stress = max(0, h.Stress-turns)
 	}
 	biome := getBiome(m.Floor)
 	key := fmt.Sprintf("dungeon.log.rest.%s.%d", biome.Name, rng.Intn(4)+1)
 	m.addLog(healStyle.Render(T(m.Lang, key)))
-	m.addLog(subtleStyle.Render(T(m.Lang, "ctl.camp_done", manualCampTurns)))
+	m.addLog(subtleStyle.Render(T(m.Lang, "ctl.camp_done", turns)))
 }
 
 // manualLeave — возвращение в город; возможно только на клетке выхода.

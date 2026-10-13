@@ -330,6 +330,9 @@ func randomPartyBlueprints(lang Language) [partySize]HeroBlueprint {
 	for i := range out {
 		bp := randomBlueprint(lang)
 		bp.Class = classes[i]
+		bp.Race = PickRaceForClass(bp.Class)
+		nameDef := getRandomHeroName(bp.Race, bp.Gender)
+		bp.Name = cleanName(T(lang, nameDef.NameKey))
 		out[i] = bp.Sanitized()
 	}
 	return out
@@ -341,21 +344,17 @@ func randomBlueprint(lang Language) HeroBlueprint {
 	if rng.Intn(2) == 1 {
 		gender = GenderFemale
 	}
-	var names []HeroNameDef
-	for _, n := range HeroNames {
-		if n.Gender == gender {
-			names = append(names, n)
-		}
-	}
+	class := AllClasses[rng.Intn(len(AllClasses))]
+	race := PickRaceForClass(class)
+
+	nameDef := getRandomHeroName(race, gender)
 
 	bp := HeroBlueprint{
+		Name:    cleanName(T(lang, nameDef.NameKey)),
 		Gender:  gender,
-		Race:    AllRaces[rng.Intn(len(AllRaces))],
-		Class:   AllClasses[rng.Intn(len(AllClasses))],
+		Race:    race,
+		Class:   class,
 		Calling: AllCallings[rng.Intn(len(AllCallings))],
-	}
-	if len(names) > 0 {
-		bp.Name = cleanName(T(lang, names[rng.Intn(len(names))].NameKey))
 	}
 	for left := creatorPoints; left > 0; {
 		if bp.AdjustPoint(rng.Intn(statCount), 1) {
