@@ -217,6 +217,9 @@ func (m *Model) moveTo(next Point) {
 		m.Gold += gold
 		m.Stats.TotalGoldEarned += gold
 
+		// Квест «Золотая лихорадка»: учёт золота из сундука
+		m.checkQuestProgress(QuestCollectGold, "", gold)
+
 		targetClass := ClassWarrior
 		if lh := m.getRandomLivingHero(); lh != nil {
 			targetClass = lh.Class
@@ -251,6 +254,9 @@ func (m *Model) moveTo(next Point) {
 		m.Grid[next.Y][next.X] = TileFloor
 
 	case TileBarrel:
+		// Квест «Огненный шквал»: разрушение/подрыв бочки при наступлении
+		m.Stats.BarrelsBlown++
+		m.checkQuestProgress(QuestPyromania, "", 1)
 		m.Grid[next.Y][next.X] = TileFloor
 
 	case TileEvent:
@@ -261,6 +267,17 @@ func (m *Model) moveTo(next Point) {
 		if m.Training && !m.ManualMode {
 			break
 		}
+
+		// Квест «Полная зачистка»: если на этаже не осталось живых стай монстров
+		if len(m.Packs) == 0 {
+			m.checkQuestProgress(QuestPurgeBiome, "", 1)
+		}
+
+		// Квест «Топография Бездны»: если разведано >= 90% территории
+		if m.calcExploredPercent() >= 90 {
+			m.checkQuestProgress(QuestFullMap, "", 1)
+		}
+
 		m.saveCurrentFloorState()
 		m.Floor++
 		m.Stats.FloorsCleared++
@@ -281,4 +298,26 @@ func (m *Model) moveTo(next Point) {
 
 	m.PartyPos = next
 	m.revealFog()
+}
+
+func (m *Model) calcExploredPercent() int {
+	if len(m.Grid) == 0 || len(m.Grid[0]) == 0 {
+		return 0
+	}
+	total := 0
+	explored := 0
+	for y := 0; y < len(m.Grid); y++ {
+		for x := 0; x < len(m.Grid[y]); x++ {
+			if m.Grid[y][x] != TileWall {
+				total++
+				if len(m.Explored) > y && len(m.Explored[y]) > x && m.Explored[y][x] {
+					explored++
+				}
+			}
+		}
+	}
+	if total == 0 {
+		return 0
+	}
+	return (explored * 100) / total
 }

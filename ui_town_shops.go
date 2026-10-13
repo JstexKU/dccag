@@ -35,22 +35,65 @@ func (m Model) renderMarketScreen(state MarketServiceState, viewW, viewH int) st
 	}
 	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n")
 
-	availRows := max(3, viewH-6)
+	availRows := max(5, viewH-6)
 
+	// --- ЛЕВАЯ КОЛОНКА: РЮКЗАК И ПРОДАЖА ЛУТА ---
 	var leftLines []string
-	leftHeader := lipgloss.NewStyle().Bold(true).Render("📦 " + T(m.Lang, "ui.bag"))
+	bagHeaderTitle := "📦 " + T(m.Lang, "ui.bag")
+	if len(m.Bag) > 0 {
+		bagHeaderTitle += fmt.Sprintf(" (%d)", len(m.Bag))
+	}
+	leftHeader := lipgloss.NewStyle().Bold(true).Render(bagHeaderTitle)
 	if state.Section == MarketSectionLoot {
-		leftHeader = accentStyle.Render("▶ 📦 " + T(m.Lang, "ui.bag"))
+		leftHeader = accentStyle.Render("▶ " + bagHeaderTitle)
 	}
 	leftLines = append(leftLines, leftHeader, subtleStyle.Render(strings.Repeat("─", halfW)))
 
 	if len(m.Bag) == 0 {
 		leftLines = append(leftLines, subtleStyle.Render("  ("+T(m.Lang, "ui.none")+")"))
 	} else {
-		for i, it := range m.Bag {
-			if len(leftLines) >= availRows {
-				break
+		reservedBottom := 1 // место под кнопку [ СДАТЬ ]
+		availForItems := max(2, availRows-2-reservedBottom)
+		pageSize := availForItems
+
+		hasTopHint := state.LootScrollOffset > 0
+		hasBotHint := state.LootScrollOffset+pageSize < len(m.Bag)
+		if hasTopHint && pageSize > 2 {
+			pageSize--
+		}
+		if hasBotHint && pageSize > 2 {
+			pageSize--
+		}
+		pageSize = max(2, pageSize)
+
+		// Удерживаем LootIdx внутри видимого скользящего окна
+		if state.LootIdx < len(m.Bag) {
+			if state.LootIdx < state.LootScrollOffset {
+				state.LootScrollOffset = state.LootIdx
+			} else if state.LootIdx >= state.LootScrollOffset+pageSize {
+				state.LootScrollOffset = state.LootIdx - pageSize + 1
 			}
+		} else if state.LootIdx == len(m.Bag) {
+			if state.LootScrollOffset < len(m.Bag)-pageSize {
+				state.LootScrollOffset = max(0, len(m.Bag)-pageSize)
+			}
+		}
+		maxOffset := max(0, len(m.Bag)-pageSize)
+		if state.LootScrollOffset > maxOffset {
+			state.LootScrollOffset = maxOffset
+		}
+		if state.LootScrollOffset < 0 {
+			state.LootScrollOffset = 0
+		}
+
+		endIdx := min(len(m.Bag), state.LootScrollOffset+pageSize)
+
+		if state.LootScrollOffset > 0 {
+			leftLines = append(leftLines, subtleStyle.Render(T(m.Lang, "ui.scroll_more_above", state.LootScrollOffset)))
+		}
+
+		for i := state.LootScrollOffset; i < endIdx; i++ {
+			it := m.Bag[i]
 			val := it.Value * 2
 			marker := "  "
 			nameStyle := subtleStyle
@@ -61,17 +104,21 @@ func (m Model) renderMarketScreen(state MarketServiceState, viewW, viewH int) st
 			name := shortenItemName(it.DisplayName(m.Lang), max(4, halfW-11))
 			leftLines = append(leftLines, fmt.Sprintf("%s%s +%dG", marker, nameStyle.Render(padRight(name, halfW-11)), val))
 		}
+
+		if endIdx < len(m.Bag) {
+			leftLines = append(leftLines, subtleStyle.Render(T(m.Lang, "ui.scroll_more_below", len(m.Bag)-endIdx)))
+		}
 	}
+
 	sellAllMarker := "  "
 	sellAllStyle := healStyle
 	if state.Section == MarketSectionLoot && state.LootIdx == len(m.Bag) {
 		sellAllMarker = accentStyle.Render("▶ ")
 		sellAllStyle = healStyle.Copy().Bold(true).Underline(true)
 	}
-	if len(leftLines) < availRows {
-		leftLines = append(leftLines, sellAllMarker+sellAllStyle.Render(fmt.Sprintf("[ %s ]", T(m.Lang, "ui.turn_in"))))
-	}
+	leftLines = append(leftLines, sellAllMarker+sellAllStyle.Render(fmt.Sprintf("[ %s ]", T(m.Lang, "ui.turn_in"))))
 
+	// --- ПРАВАЯ КОЛОНКА: ВИТРИНА МАГАЗИНА ---
 	var rightLines []string
 	rightHeader := lipgloss.NewStyle().Bold(true).Render("🛒 " + T(m.Lang, "town.hub_title"))
 	if state.Section == MarketSectionShop {
@@ -82,10 +129,26 @@ func (m Model) renderMarketScreen(state MarketServiceState, viewW, viewH int) st
 	if len(state.Offers) == 0 {
 		rightLines = append(rightLines, subtleStyle.Render("  ("+T(m.Lang, "ui.none")+")"))
 	} else {
-		for i, off := range state.Offers {
-			if len(rightLines) >= availRows {
-				break
+		availForOffers := max(2, availRows-2)
+		shopPageSize := availForOffers
+		shopOffset := 0
+		if len(state.Offers) > shopPageSize {
+			if state.ShopIdx >= shopPageSize {
+				shopOffset = state.ShopIdx - shopPageSize + 1
 			}
+			maxShopOffset := len(state.Offers) - shopPageSize
+			if shopOffset > maxShopOffset {
+				shopOffset = maxShopOffset
+			}
+		}
+		endShop := min(len(state.Offers), shopOffset+shopPageSize)
+
+		if shopOffset > 0 {
+			rightLines = append(rightLines, subtleStyle.Render(T(m.Lang, "ui.scroll_more_above", shopOffset)))
+		}
+
+		for i := shopOffset; i < endShop; i++ {
+			off := state.Offers[i]
 			marker := "  "
 			itemStyle := goldStyle
 			isChosen := (!m.ManualMode && state.Section == MarketSectionShop && state.ShopIdx == i)
@@ -109,6 +172,10 @@ func (m Model) renderMarketScreen(state MarketServiceState, viewW, viewH int) st
 			}
 			name := shortenItemName(off.Item.DisplayName(m.Lang), max(4, halfW-20))
 			rightLines = append(rightLines, fmt.Sprintf("%s%s (%s) %sG [%s]%s", marker, itemStyle.Render(name), heroName, goldStyle.Render(fmt.Sprintf("%d", off.Cost)), statDiffStr, badge))
+		}
+
+		if endShop < len(state.Offers) {
+			rightLines = append(rightLines, subtleStyle.Render(T(m.Lang, "ui.scroll_more_below", len(state.Offers)-endShop)))
 		}
 	}
 

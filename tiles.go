@@ -75,6 +75,9 @@ func (m *Model) handleAltar() {
 
 func (m *Model) handleFountain() {
 	m.Stats.FountainsUsed++
+	// Квест «Благодать источника»: посещение святого источника
+	m.checkQuestProgress(QuestUseFountain, "", 1)
+
 	for _, h := range m.Party {
 		if !h.IsDead {
 			h.HP = h.MaxHP
@@ -110,15 +113,22 @@ func (m *Model) handleTrappedChest() {
 
 	if rollSuccess {
 		m.Stats.TrapsDisarmed++
+		// Квест «Сапёрное дело»: успешное снятие ловушки
+		m.checkQuestProgress(QuestDisarmTraps, "", 1)
+
 		gold := int(float64(rng.Intn(25)+15) * m.goldMult())
 		m.Gold += gold
 		m.Stats.TotalGoldEarned += gold
+		// Квест «Золотая лихорадка»: учёт золота из сундука
+		m.checkQuestProgress(QuestCollectGold, "", gold)
 
 		targetClass := ClassWarrior
 		if lh := m.getRandomLivingHero(); lh != nil {
 			targetClass = lh.Class
 			lh.AddTreasure()
 			lh.RevealSecret()
+			// Квест «Тайные тропы»: вскрытие тайника
+			m.checkQuestProgress(QuestSecrets, "", 1)
 			m.checkAndAwardTitle(lh)
 		}
 		rareItem := generateItemForClass(targetClass, m.Floor+1)
@@ -160,6 +170,8 @@ func (m *Model) handleRelicTile() {
 	} else {
 		m.Gold += 80
 		m.Stats.TotalGoldEarned += 80
+		// Квест «Золотая лихорадка»: компенсация за дубликат реликвии
+		m.checkQuestProgress(QuestCollectGold, "", 80)
 		m.addLog(goldStyle.Render(T(m.Lang, "dungeon.log.relic_salvaged")))
 	}
 }

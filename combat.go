@@ -146,6 +146,14 @@ func (m *Model) onMonsterKilled(h *Hero, mob *Monster) {
 	m.Stats.MonsterKills[mob.Type]++
 	m.checkQuestProgress(QuestHuntMonster, mob.Type, 1)
 
+	// Квест «Золотая лихорадка»: учёт добычи золота с монстров
+	m.checkQuestProgress(QuestCollectGold, "", g)
+
+	// Квест «Охота на мутантов»: уничтожение монстра с аффиксом
+	if mob.Affix != AffixNone && mob.Affix != "" {
+		m.checkQuestProgress(QuestAffixBounty, mob.Type, 1)
+	}
+
 	// Награда и прогресс за уничтожение Мини-босса
 	if m.Combat.Pack.IsMiniBoss && mob.ID == 1 {
 		m.checkQuestProgress(QuestHuntMiniBoss, mob.Type, 1)
@@ -155,12 +163,29 @@ func (m *Model) onMonsterKilled(h *Hero, mob *Monster) {
 		m.equipOrBag(miniBossItem)
 	}
 
+	// Награда и прогресс за уничтожение Главного Босса (Пепельного Дракона)
 	if mob.Type == MobDragon {
 		h.Feats.BossKills++
+		m.checkQuestProgress(QuestHuntBoss, mob.Type, 1)
 		bossItem := generateItemForClass(h.Class, m.Floor+2)
 		bossItem.UpgradeLevel = 4
 		m.addLog(accentStyle.Render(T(m.Lang, "combat.log.boss_relic", bossItem.DisplayName(m.Lang))))
 		m.equipOrBag(bossItem)
 	}
+
+	// Квест «Безупречный строй»: если пачка полностью повержена без потерь в отряде
+	if m.Combat.Pack.LivingCount() == 0 {
+		flawless := true
+		for _, ally := range m.Party {
+			if ally.IsDead || ally.IsDowned || float64(ally.HP)/float64(ally.MaxHP) < 0.20 {
+				flawless = false
+				break
+			}
+		}
+		if flawless {
+			m.checkQuestProgress(QuestFlawlessFight, "", 1)
+		}
+	}
+
 	m.checkAndAwardTitle(h)
 }

@@ -576,6 +576,31 @@ var dictEN = map[string]string{
 	"quest.escape.desc":    "Explore sealed halls and locate the exit",
 	"quest.altar.title":    "Blood Pact",
 	"quest.altar.desc":     "Offer a blood sacrifice at the Altar",
+	// New Quests v3.3.2
+	"quest.disarm.title":   "Trap Disarmer",
+	"quest.disarm.desc":    "Disarm trapped chests in the dungeon",
+	"quest.fountain.title": "Fountain Grace",
+	"quest.fountain.desc":  "Locate a sacred fountain and drink its waters",
+	"quest.map.title":      "Abyss Cartography",
+	"quest.map.desc":       "Chart at least 90% of the floor territory",
+	"quest.gold.title":     "Gold Rush",
+	"quest.gold.desc":      "Gather gold from dungeon exploration",
+	"quest.secrets.title":  "Secret Paths",
+	"quest.secrets.desc":   "Discover hidden vaults and concealed rooms",
+	"quest.purge.title":    "Full Clearance",
+	"quest.purge.desc":     "Eliminate every monster pack on the floor",
+	"quest.boss.title":     "Lord Slayer",
+	"quest.boss.desc":      "Slay a mighty Lord of the Deep",
+	"quest.affix.title":    "Mutant Hunt",
+	"quest.affix.desc":     "Defeat monsters empowered with affixes",
+	"quest.pyro.title":     "Firestorm Havoc",
+	"quest.pyro.desc":      "Detonate tar barrels in the dark deeps",
+	"quest.flawless.title": "Flawless Vanguard",
+	"quest.flawless.desc":  "Win battles without any fallen allies",
+	"quest.crit.title":     "Precision Strikes",
+	"quest.crit.desc":      "Land critical strikes against enemies",
+	"quest.guard.title":    "Unyielding Bulwark",
+	"quest.guard.desc":     "Withstand enemy blows with blocks and guard",
 
 	// --- Town Establishments ---
 	"town.market":     "Market Square",
@@ -624,6 +649,10 @@ var dictEN = map[string]string{
 	"town.church.3": "Monastery of Silence",
 	"town.church.4": "Chapel of the Fallen Star",
 	"town.church.5": "Spring of Living Water",
+
+	// --- Scrolling through items in the market ---
+	"ui.scroll_more_above": "  ▲ %d more above...",
+	"ui.scroll_more_below": "  ▼ %d more below...",
 
 	// --- Town Logs ---
 	"town.log.enter_gate":           "The party enters through the town gates for rest...",

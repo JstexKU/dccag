@@ -15,6 +15,8 @@ const (
 	MarketSectionShop
 )
 
+const MarketLootPageSize = 6 // Количество одновременно видимых слотов лута в окне рынка
+
 type MarketOffer struct {
 	Item      EquipItem
 	Cost      int
@@ -26,12 +28,33 @@ type MarketOffer struct {
 }
 
 type MarketServiceState struct {
-	Section       MarketSection
-	LootIdx       int
-	ShopIdx       int
-	Offers        []MarketOffer
-	ActionSummary string
-	ChosenIdx     int
+	Section          MarketSection
+	LootIdx          int
+	LootScrollOffset int // Смещение для прокрутки длинного инвентаря
+	ShopIdx          int
+	Offers           []MarketOffer
+	ActionSummary    string
+	ChosenIdx        int
+}
+
+// AdjustLootScroll удерживает выбранный LootIdx внутри видимого скользящего окна MarketLootPageSize
+func (s *MarketServiceState) AdjustLootScroll(totalItems int) {
+	if totalItems <= MarketLootPageSize {
+		s.LootScrollOffset = 0
+		return
+	}
+	if s.LootIdx < s.LootScrollOffset {
+		s.LootScrollOffset = s.LootIdx
+	} else if s.LootIdx >= s.LootScrollOffset+MarketLootPageSize {
+		s.LootScrollOffset = s.LootIdx - MarketLootPageSize + 1
+	}
+	maxOffset := totalItems - MarketLootPageSize
+	if s.LootScrollOffset > maxOffset {
+		s.LootScrollOffset = maxOffset
+	}
+	if s.LootScrollOffset < 0 {
+		s.LootScrollOffset = 0
+	}
 }
 
 func (m *Model) GenerateMarketOffers() []MarketOffer {
@@ -95,6 +118,12 @@ func (m *Model) ExecuteMarketSellLoot(idx int) bool {
 	m.Bag = append(m.Bag[:idx], m.Bag[idx+1:]...)
 	m.addLog(goldStyle.Render(T(m.Lang, "town.log.market_sold", price)))
 	m.logTownAction("⚖️", T(m.Lang, "town.market"), T(m.Lang, "town.log.market_history", price))
+
+	// Корректируем индекс и скролл после продажи
+	if m.MarketState.LootIdx >= len(m.Bag) {
+		m.MarketState.LootIdx = max(0, len(m.Bag)-1)
+	}
+	m.MarketState.AdjustLootScroll(len(m.Bag))
 	return true
 }
 
@@ -107,9 +136,11 @@ func (m *Model) ExecuteMarketSellAll() int {
 		m.Gold += soldGold
 		m.Stats.TotalGoldEarned += soldGold
 		m.addLog(goldStyle.Render(T(m.Lang, "town.log.market_sold", soldGold)))
-		m.logTownAction("⚖", T(m.Lang, "town.market"), T(m.Lang, "town.log.market_history", soldGold))
+		m.logTownAction("⚖️", T(m.Lang, "town.market"), T(m.Lang, "town.log.market_history", soldGold))
 	}
 	m.Bag = []EquipItem{}
+	m.MarketState.LootIdx = 0
+	m.MarketState.LootScrollOffset = 0
 
 	for _, h := range m.Party {
 		if !h.IsDead && !h.IsDowned {
@@ -285,7 +316,7 @@ func (m *Model) ExecuteMagistrateInvest(offer MagistrateOffer) bool {
 	}
 
 	m.addLog(titleStyle.Render(T(m.Lang, "town.log.magistrate_tax", offer.Cost, bldName, newLevel)))
-	m.logTownAction("🏛", T(m.Lang, "town.magistrate"), T(m.Lang, "town.log.magistrate_hist", offer.Cost, bldName, newLevel))
+	m.logTownAction("🏛️", T(m.Lang, "town.magistrate"), T(m.Lang, "town.log.magistrate_hist", offer.Cost, bldName, newLevel))
 
 	if newTier := militiaTierForInvestment(m.Legacy.TotalInvested); newTier.TitleKey != prevTier.TitleKey {
 		tierName := T(m.Lang, newTier.TitleKey)
@@ -461,9 +492,9 @@ func (m *Model) ExecuteTavernRest(offer TavernOffer) bool {
 		globalDebugReport.GoldSpentBreakdown[spendTavernBarn] += offer.Cost
 		for _, h := range m.Party {
 			if !h.IsDead && !h.IsDowned {
-				// Сарай даёт хоть какой-то отдых, но не отнимает силы у тех, кто уже в порядке.
+				// Сарай даёт отдых, но не отнимает силы у тех, кто уже в порядке.
 				h.HP = max(h.HP, max(1, int(float64(h.MaxHP)*0.40)))
-				h.MP = max(h.MP, int(float64(h.MaxMP)*0.40))
+				h.MP = max(h.MP, int(float64(h.MaxHP)*0.40))
 			}
 		}
 		m.addLog(dangerStyle.Render(T(m.Lang, "town.log.tavern_barn")))
@@ -495,7 +526,6 @@ func (m *Model) GenerateGuildOffers() []GuildRecruitOffer {
 	var offers []GuildRecruitOffer
 	recruitCost := max(45, 60+(m.Floor*25)-(m.Legacy.ChurchLevel*8))
 
-	// Определяем классы, занятые живыми и дееспособными героями
 	usedClasses := make(map[HeroClass]bool)
 	for _, ally := range m.Party {
 		if !ally.IsDead && !ally.IsDowned && !ally.LostInAbyss {
@@ -504,7 +534,6 @@ func (m *Model) GenerateGuildOffers() []GuildRecruitOffer {
 	}
 
 	for i, h := range m.Party {
-		// Вакансия: боец окончательно погиб, либо ранен и не является лидером
 		if h.IsDead || h.LostInAbyss || (h.IsDowned && !h.IsLeader) {
 			var availableClasses []HeroClass
 			for _, c := range AllClasses {

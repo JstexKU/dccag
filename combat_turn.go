@@ -425,6 +425,8 @@ func (m *Model) executeCombatTurn() {
 				h.MP -= skillCost
 				m.Combat.HasBarrel = false
 				m.Stats.BarrelsBlown++
+				// Квест «Огненный шквал»: учёт подрыва бочки
+				m.checkQuestProgress(QuestPyromania, "", 1)
 				h.AddManaBurst()
 				barrelDmg := 22 + (m.Floor * 3)
 				m.addLog(barrelStyle.Render(T(m.Lang, "combat.log.mage_barrel", hName, barrelDmg)))
@@ -692,6 +694,8 @@ func (m *Model) executeCombatTurn() {
 			dmg = int(float64(dmg) * 1.8)
 			h.Feats.CritsLanded++
 			h.AddCriticalStrike()
+			// Квест «Точечные удары»: учёт критического попадания
+			m.checkQuestProgress(QuestCriticalStrikes, "", 1)
 			m.checkAndAwardTitle(h)
 			m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.crit", d20, hName)))
 			h.IsStealthed = false
@@ -812,7 +816,13 @@ func (m *Model) executeCombatTurn() {
 		if guarded {
 			verb := TVerb(m.Lang, actualHero.Gender, "shield")
 			m.addLog(healStyle.Render(T(m.Lang, "combat.log.tank_guard", actualHeroName, verb, victimName, mobDisplayName, dealtDmg)))
+			// Квест «Несокрушимый оплот»: прикрытие соратника щитом
+			m.checkQuestProgress(QuestBreakArmor, "", 1)
 		} else {
+			// Квест «Несокрушимый оплот»: удар принят в защитную стойку
+			if victim.IsGuarding {
+				m.checkQuestProgress(QuestBreakArmor, "", 1)
+			}
 			m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.mob_hit", mobDisplayName, dealtDmg, actualHeroName)))
 		}
 
@@ -864,4 +874,3 @@ func (m *Model) executeCombatTurn() {
 		}
 	}
 }
-

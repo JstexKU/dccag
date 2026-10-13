@@ -576,6 +576,31 @@ var dictRU = map[string]string{
 	"quest.escape.desc":    "Исследовать запечатанный зал и найти выход",
 	"quest.altar.title":    "Кровавый пакт",
 	"quest.altar.desc":     "Принести жертву у древнего Алтаря",
+	// Новые квесты v3.3.2
+	"quest.disarm.title":   "Сапёрное дело",
+	"quest.disarm.desc":    "Обезвредить сундуки-ловушки в подземелье",
+	"quest.fountain.title": "Благодать источника",
+	"quest.fountain.desc":  "Отыскать священный источник и испить его вод",
+	"quest.map.title":      "Топография Бездны",
+	"quest.map.desc":       "Разведать не менее 90% территории этажа",
+	"quest.gold.title":     "Золотая лихорадка",
+	"quest.gold.desc":      "Собрать золото в походах по подземелью",
+	"quest.secrets.title":  "Тайные тропы",
+	"quest.secrets.desc":   "Обнаружить скрытые тайники и потайные залы",
+	"quest.purge.title":    "Полная зачистка",
+	"quest.purge.desc":     "Истребить все стаи монстров на этаже",
+	"quest.boss.title":     "Истребление Владыки",
+	"quest.boss.desc":      "Сокрушить могучего Владыку глубин",
+	"quest.affix.title":    "Охота на мутантов",
+	"quest.affix.desc":     "Истребить монстров с особыми аффиксами",
+	"quest.pyro.title":     "Огненный шквал",
+	"quest.pyro.desc":      "Взорвать смоляные бочки во тьме подземелья",
+	"quest.flawless.title": "Безупречный строй",
+	"quest.flawless.desc":  "Одержать победы в бою без павших соратников",
+	"quest.crit.title":     "Точечные удары",
+	"quest.crit.desc":      "Нанести критические удары по врагам",
+	"quest.guard.title":    "Несокрушимый оплот",
+	"quest.guard.desc":     "Отразить удары врагов блоком и защитой",
 
 	// --- Заведения Столицы ---
 	"town.market":     "Рыночная площадь",
@@ -624,6 +649,10 @@ var dictRU = map[string]string{
 	"town.church.3": "Монастырь Безмолвия",
 	"town.church.4": "Часовня Упавшей Звезды",
 	"town.church.5": "Святыня Живой Воды",
+
+	// --- Скролинг товаров на рынке ---
+	"ui.scroll_more_above": "  ▲ ещё %d выше...",
+	"ui.scroll_more_below": "  ▼ ещё %d ниже...",
 
 	// --- Логи города ---
 	"town.log.enter_gate":           "Отряд проходит через городские ворота на привал...",

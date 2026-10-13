@@ -566,6 +566,31 @@ var dictBE = map[string]string{
 	"quest.escape.desc":    "Даследаваць запячатаную залу і знайсці выхад",
 	"quest.altar.title":    "Крывавы пакт",
 	"quest.altar.desc":     "Прынесці ахвяру каля старажытнага Алтара",
+	// Новыя квэсты v3.3.2
+	"quest.disarm.title":   "Сапёрная справа",
+	"quest.disarm.desc":    "Абязшкодзіць куфры-пасткі ў падзямеллі",
+	"quest.fountain.title": "Ласка крыніцы",
+	"quest.fountain.desc":  "Адшукаць святую крыніцу і выпіць яе вады",
+	"quest.map.title":      "Тапаграфія Бездані",
+	"quest.map.desc":       "Разведаць не менш за 90% тэрыторыі паверха",
+	"quest.gold.title":     "Залатая ліхаманка",
+	"quest.gold.desc":      "Сабраць золата ў паходах па падзямеллі",
+	"quest.secrets.title":  "Патаемныя сцежкі",
+	"quest.secrets.desc":   "Адкрыць схаваныя сховішчы і патайныя залы",
+	"quest.purge.title":    "Поўная зачыстка",
+	"quest.purge.desc":     "Вынішчыць усе зграі пачвар на паверсе",
+	"quest.boss.title":     "Знішчэнне Уладара",
+	"quest.boss.desc":      "Зрынуць магутнага Уладара глыбінь",
+	"quest.affix.title":    "Паляванне на мутантаў",
+	"quest.affix.desc":     "Вынішчыць пачвар з адмысловымі афіксамі",
+	"quest.pyro.title":     "Палымяны шквал",
+	"quest.pyro.desc":      "Падарваць бочкі са смалой у цемры падзямелля",
+	"quest.flawless.title": "Беззаганны шыхт",
+	"quest.flawless.desc":  "Атрымаць перамогі ў баях без палых паплечнікаў",
+	"quest.crit.title":     "Дакладныя ўдары",
+	"quest.crit.desc":      "Нанесці крытычныя ўдары па ворагах",
+	"quest.guard.title":    "Непахісны аплот",
+	"quest.guard.desc":     "Адбіць выпадак ворагаў блокам і аховай",
 
 	// --- Установы Сталіцы ---
 	"town.market":     "Рыначная плошча",
@@ -614,6 +639,10 @@ var dictBE = map[string]string{
 	"town.church.3": "Манастыр Маўчання",
 	"town.church.4": "Капліца Знічкі",
 	"town.church.5": "Святыня Жывой Вады",
+
+	// --- Пракрутка тавараў на рынку ---
+	"ui.scroll_more_above": "  ▲ яшчэ %d вышэй...",
+	"ui.scroll_more_below": "  ▼ яшчэ %d ніжэй...",
 
 	// --- Логі горада ---
 	"town.log.enter_gate":           "Атрад праходзіць праз гарадскія вароты на прывал...",

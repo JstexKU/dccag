@@ -61,6 +61,19 @@ const (
 	QuestFindRelic
 	QuestEscapeTrap
 	QuestHuntMiniBoss
+	// --- Новые квесты v3.3.2 (всего 19 контрактов) ---
+	QuestDisarmTraps     // Сапёрное дело (разминирование сундуков-ловушек)
+	QuestUseFountain     // Благодать источника (испить святых вод)
+	QuestFullMap         // Топография Бездны (разведка 90%+ этажа)
+	QuestCollectGold     // Золотая лихорадка (сбор золота в подземелье)
+	QuestSecrets         // Тайные тропы (поиск скрытых тайников и залов)
+	QuestPurgeBiome      // Полная зачистка (уничтожение всех стай на этаже)
+	QuestHuntBoss        // Истребление Владыки (победа над боссом/Драконом)
+	QuestAffixBounty     // Охота на мутантов (враги с аффиксами)
+	QuestPyromania       // Огненный шквал (подрыв бочек со смолой)
+	QuestFlawlessFight   // Безупречный строй (бои без павших соратников)
+	QuestCriticalStrikes // Точечные удары (критические попадания)
+	QuestBreakArmor      // Несокрушимый оплот (блоки и парирования ударов)
 )
 
 type AutoQuest struct {
@@ -173,7 +186,7 @@ type PartyRelic struct {
 	MartyrFury  bool
 	StressRes   int
 
-	// Новые активные свойства реликвий:
+	// Активные свойства реликвий:
 	VisionBonus    int     // Увеличение радиуса обзора тумана войны (Око Первопроходца)
 	SpeedBonus     int     // Прибавка к скорости всего отряда (Флакон Живой Ртути)
 	FirstStrike    bool    // Гарантированный первый ход в бою (Флакон Живой Ртути)

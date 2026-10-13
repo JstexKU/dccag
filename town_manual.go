@@ -6,10 +6,11 @@ import (
 
 func (m *Model) initMarketScreen() {
 	m.MarketState = MarketServiceState{
-		Section: MarketSectionLoot,
-		LootIdx: 0,
-		ShopIdx: 0,
-		Offers:  m.GenerateMarketOffers(),
+		Section:          MarketSectionLoot,
+		LootIdx:          0,
+		LootScrollOffset: 0,
+		ShopIdx:          0,
+		Offers:           m.GenerateMarketOffers(),
 	}
 }
 
@@ -78,6 +79,7 @@ func (m *Model) handleMarketKey(key string) (tea.Cmd, bool) {
 			if maxIdx > 0 {
 				st.LootIdx = (st.LootIdx + maxIdx + 1) % (maxIdx + 1)
 			}
+			st.AdjustLootScroll(len(m.Bag))
 		} else if len(st.Offers) > 0 {
 			st.ShopIdx = (st.ShopIdx + len(st.Offers) - 1) % len(st.Offers)
 		}
@@ -88,8 +90,25 @@ func (m *Model) handleMarketKey(key string) (tea.Cmd, bool) {
 			if maxIdx > 0 {
 				st.LootIdx = (st.LootIdx + 1) % (maxIdx + 1)
 			}
+			st.AdjustLootScroll(len(m.Bag))
 		} else if len(st.Offers) > 0 {
 			st.ShopIdx = (st.ShopIdx + 1) % len(st.Offers)
+		}
+		return nil, true
+	case "pgup":
+		if st.Section == MarketSectionLoot {
+			st.LootIdx = max(0, st.LootIdx-5)
+			st.AdjustLootScroll(len(m.Bag))
+		} else if len(st.Offers) > 0 {
+			st.ShopIdx = max(0, st.ShopIdx-5)
+		}
+		return nil, true
+	case "pgdown":
+		if st.Section == MarketSectionLoot {
+			st.LootIdx = min(len(m.Bag), st.LootIdx+5)
+			st.AdjustLootScroll(len(m.Bag))
+		} else if len(st.Offers) > 0 {
+			st.ShopIdx = min(len(st.Offers)-1, st.ShopIdx+5)
 		}
 		return nil, true
 	case "enter":
@@ -97,11 +116,13 @@ func (m *Model) handleMarketKey(key string) (tea.Cmd, bool) {
 			if st.LootIdx == len(m.Bag) {
 				m.ExecuteMarketSellAll()
 				st.LootIdx = 0
+				st.LootScrollOffset = 0
 			} else if len(m.Bag) > 0 && st.LootIdx < len(m.Bag) {
 				m.ExecuteMarketSellLoot(st.LootIdx)
 				if st.LootIdx >= len(m.Bag) && st.LootIdx > 0 {
 					st.LootIdx = len(m.Bag) - 1
 				}
+				st.AdjustLootScroll(len(m.Bag))
 			}
 		} else if len(st.Offers) > 0 && st.ShopIdx < len(st.Offers) {
 			if m.ExecuteMarketBuy(st.Offers[st.ShopIdx]) {
@@ -115,6 +136,7 @@ func (m *Model) handleMarketKey(key string) (tea.Cmd, bool) {
 	case " ":
 		m.ExecuteMarketSellAll()
 		st.LootIdx = 0
+		st.LootScrollOffset = 0
 		return nil, true
 	case "esc":
 		m.TownPhase = TownPhaseMagistrate
