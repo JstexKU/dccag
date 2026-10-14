@@ -115,6 +115,13 @@ func (m *Model) initDungeonForFloor(floor int) {
 				m.PartyPos = saved.ExitPos
 			}
 		}
+
+		// Если активен режим тренировки — гарантированно заселяем этаж монстрами и обновляем снимок
+		if m.Training {
+			m.repopulateTrainingFloor()
+			m.saveCurrentFloorState()
+		}
+
 		m.revealFog()
 		return
 	}

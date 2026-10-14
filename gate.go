@@ -108,16 +108,30 @@ func (m *Model) departFromTown(plan departurePlan) {
 	m.PathHistory = []Point{}
 	m.LoopDetectCount = 0
 
-	m.Training = plan.Training
 	m.TripStartMaxFloor = m.MaxFloor
 	m.Floor = clampInt(plan.Floor, 1, max(1, m.MaxFloor))
+	m.Training = plan.Training || (m.Floor < m.MaxFloor)
 	m.initDungeonForFloor(m.Floor)
 
 	if m.Training {
 		m.repopulateTrainingFloor()
+		m.saveCurrentFloorState()
 		m.addLog(accentStyle.Render(T(m.Lang, "gate.log.training", m.Floor)))
 		return
 	}
+
+	// Если отряд вернулся на максимальный этаж после отступления, а живых стай там не осталось — дозаселяем
+	living := 0
+	for _, p := range m.Packs {
+		if p != nil && p.LivingCount() > 0 {
+			living++
+		}
+	}
+	if living == 0 {
+		m.repopulateTrainingFloor()
+		m.saveCurrentFloorState()
+	}
+
 	m.addLog(accentStyle.Render(T(m.Lang, "town.log.depart")))
 }
 

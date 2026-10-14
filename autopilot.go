@@ -58,7 +58,7 @@ func (m *Model) evaluateHealingUrgency() HealingUrgency {
 		hpPct := float64(h.HP) / float64(h.MaxHP)
 		mpPct := 0.0
 		if h.MaxMP > 0 {
-			mpPct = float64(h.MP) / float64(h.MaxHP)
+			mpPct = float64(h.MP) / float64(h.MaxMP)
 		}
 
 		if hpPct <= 0.25 || h.Stress >= 160 {
@@ -373,9 +373,9 @@ func (m *Model) findNextStep() Point {
 
 		hasPurgeQuest := (m.CurrentQuest.Type == QuestPurgeBiome && !m.CurrentQuest.Completed)
 
-		// Монстров бьем, если открыты (при контракте на зачистку бьём в обязательном порядке)
+		// Монстров бьем, если открыты (при зачистке или тренировке — обязательно)
 		if _, hasPack := m.Packs[p]; hasPack {
-			return !needsGear || hasPurgeQuest
+			return !needsGear || hasPurgeQuest || m.Training
 		}
 
 		if seekingFountain && t == TileAltar {
@@ -393,7 +393,6 @@ func (m *Model) findNextStep() Point {
 			return false
 		}
 
-		// TileLore включён в перечень целей автопилота
 		return t == TileChest || t == TileAltar || t == TileFountain || t == TileTrappedChest || t == TileBarrel || t == TileRelic || t == TileEvent || t == TileLore
 	}
 
@@ -407,10 +406,10 @@ func (m *Model) findNextStep() Point {
 	}
 
 	// 5. РЕЖИМ ИССЛЕДОВАТЕЛЯ (Frontier Exploration):
-	// При активном контракте на зачистку исследуем карту до конца, пока не найдём оставшихся врагов
 	exploredPct := m.explorationRatio()
 	hasPurgeTargets := (m.CurrentQuest.Type == QuestPurgeBiome && !m.CurrentQuest.Completed && len(m.Packs) > 0)
-	needMoreExploration := (exploredPct < 0.85 || hasPurgeTargets) && !forceDeeper && !bagFull
+	hasTrainingTargets := (m.Training && len(m.Packs) > 0)
+	needMoreExploration := (exploredPct < 0.85 || hasPurgeTargets || hasTrainingTargets) && !forceDeeper && !bagFull
 
 	isFrontier := func(p Point, t Tile) bool {
 		if !m.Explored[p.Y][p.X] || t == TileWall {
@@ -428,7 +427,6 @@ func (m *Model) findNextStep() Point {
 		return false
 	}
 
-	// Если этаж ещё мало исследован или не все враги найдены — сначала в приоритете поиск тумана войны!
 	if needMoreExploration {
 		if step, found := findPath(true, isFrontier); found {
 			return step
@@ -438,12 +436,17 @@ func (m *Model) findNextStep() Point {
 		}
 	}
 
+	// Если на тренировке или зачистке стаи стоят в неразведанной части, куда нет границы тумана, идём прямо к ним
+	if hasPurgeTargets || hasTrainingTargets {
+		if step, found := findPath(false, func(p Point, t Tile) bool {
+			_, hasPack := m.Packs[p]
+			return hasPack
+		}); found {
+			return step
+		}
+	}
+
 	// 6. СПУСК ПО ЛЕСТНИЦЕ:
-	// Сюда мы попадаем, если:
-	// - Исследовали >= 85% карты (и нет активного контракта на зачистку с живыми мобами)
-	// - Либо нет доступных границ тумана войны (все залы обойдены)
-	// - Либо переполнен мешок / включен режим побега из ловушки
-	// На тренировочном этаже отряд не спускается глубже, а уходит к выходу.
 	if !hasPurgeTargets {
 		leaveTile := TileStairs
 		if m.Training && !m.ManualMode {

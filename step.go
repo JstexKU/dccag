@@ -62,7 +62,7 @@ func (m *Model) step() {
 		return
 	}
 
-	// 4. Привал только при реальной необходимости (ранения, мана, стресс)
+	// 4. Привал только при реальной необходимости (тяжёлые ранения, нехватка маны у кастеров или сильный стресс)
 	needsRest := false
 	for _, h := range m.Party {
 		if h.IsDead || h.IsDowned {
@@ -71,9 +71,11 @@ func (m *Model) step() {
 		hpPct := float64(h.HP) / float64(h.MaxHP)
 		mpPct := 1.0
 		if h.MaxMP > 0 {
-			mpPct = float64(h.MP) / float64(h.MaxHP)
+			mpPct = float64(h.MP) / float64(h.MaxMP)
 		}
-		if hpPct <= 0.65 || mpPct <= 0.40 || h.Stress >= 45 {
+		isCaster := (h.Class == ClassMage || h.Class == ClassCleric || h.Class == ClassWarlock || h.Class == ClassBard || h.Class == ClassPaladin)
+
+		if hpPct <= 0.45 || (isCaster && mpPct <= 0.25) || h.Stress >= 80 {
 			needsRest = true
 			break
 		}
@@ -272,7 +274,7 @@ func (m *Model) moveTo(next Point) {
 			break
 		}
 
-		// Блокировка: если цель — полная зачистка, а монстры ещё живы, отряд проходит сквозь клетку и не спускается
+		// Блокировка: если цель — полная зачистка, а монстры ещё живы, не спускаемся
 		if m.CurrentQuest.Type == QuestPurgeBiome && !m.CurrentQuest.Completed && len(m.Packs) > 0 {
 			break
 		}
