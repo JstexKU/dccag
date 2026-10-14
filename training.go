@@ -43,16 +43,30 @@ func (m *Model) syncMaxFloor() {
 }
 
 // weakHeroes возвращает живых героев, отстающих от рекомендуемого уровня самого
-// глубокого этажа на TrainingGap и больше.
+// глубокого этажа на TrainingGap и больше, ЛИБО отстающих от среднего уровня живых соратников.
 func (m *Model) weakHeroes() []*Hero {
 	rec := recommendedLevel(m.MaxFloor)
 	gap := max(1, m.Tactics.TrainingGap)
+
+	totalLvl, livingCount := 0, 0
+	for _, h := range m.Party {
+		if !h.IsDead && !h.LostInAbyss {
+			totalLvl += h.Level
+			livingCount++
+		}
+	}
+	avgLvl := rec
+	if livingCount > 0 {
+		avgLvl = totalLvl / livingCount
+	}
+	targetLvl := max(rec, avgLvl)
+
 	var out []*Hero
 	for _, h := range m.Party {
 		if h.IsDead || h.LostInAbyss {
 			continue
 		}
-		if rec-h.Level >= gap {
+		if targetLvl-h.Level >= gap {
 			out = append(out, h)
 		}
 	}
@@ -109,21 +123,25 @@ func (m *Model) planDeparture() departurePlan {
 	return departurePlan{Floor: target, Training: true, Reason: "gate.reason.weak", Args: []any{len(weak), lowest, target}}
 }
 
-// trainingFinished — тренировка выполнила свою задачу: слабых бойцов не осталось
-// или на этаже не осталось живых стай.
+// trainingFinished — тренировка выполнила свою задачу: на этаже не осталось живых стай
+// или все слабые бойцы уже подтянули свои уровни.
 func (m *Model) trainingFinished() bool {
 	if !m.Training {
 		return false
 	}
+	livingPacks := 0
+	for _, p := range m.Packs {
+		if p.LivingCount() > 0 {
+			livingPacks++
+		}
+	}
+	if livingPacks == 0 {
+		return true
+	}
 	if len(m.weakHeroes()) == 0 {
 		return true
 	}
-	for _, p := range m.Packs {
-		if p.LivingCount() > 0 {
-			return false
-		}
-	}
-	return true
+	return false
 }
 
 // spawnSmallPack создаёт небольшую стаю, подходящую этажу: без мини-боссов и не больше

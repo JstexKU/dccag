@@ -71,7 +71,7 @@ func (m *Model) step() {
 		hpPct := float64(h.HP) / float64(h.MaxHP)
 		mpPct := 1.0
 		if h.MaxMP > 0 {
-			mpPct = float64(h.MP) / float64(h.MaxMP)
+			mpPct = float64(h.MP) / float64(h.MaxHP)
 		}
 		if hpPct <= 0.65 || mpPct <= 0.40 || h.Stress >= 45 {
 			needsRest = true
@@ -269,6 +269,11 @@ func (m *Model) moveTo(next Point) {
 
 	case TileStairs:
 		if m.Training && !m.ManualMode {
+			break
+		}
+
+		// Блокировка: если цель — полная зачистка, а монстры ещё живы, отряд проходит сквозь клетку и не спускается
+		if m.CurrentQuest.Type == QuestPurgeBiome && !m.CurrentQuest.Completed && len(m.Packs) > 0 {
 			break
 		}
 

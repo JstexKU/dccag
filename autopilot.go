@@ -364,16 +364,18 @@ func (m *Model) findNextStep() Point {
 		}
 	}
 
-	// 4. Поиск открытых интерактивных объектов (сундуки, алтари, бочки, монстры)
+	// 4. Поиск открытых интерактивных объектов (сундуки, алтари, бочки, литература, монстры)
 	// ВАЖНО: Лестницы ЗДЕСЬ НЕТ. Отряд не пойдет на лестницу, пока исследует этаж.
 	isLootOrTarget := func(p Point, t Tile) bool {
 		if !m.Explored[p.Y][p.X] {
 			return false
 		}
 
-		// Монстров бьем, если открыты
+		hasPurgeQuest := (m.CurrentQuest.Type == QuestPurgeBiome && !m.CurrentQuest.Completed)
+
+		// Монстров бьем, если открыты (при контракте на зачистку бьём в обязательном порядке)
 		if _, hasPack := m.Packs[p]; hasPack {
-			return !needsGear
+			return !needsGear || hasPurgeQuest
 		}
 
 		if seekingFountain && t == TileAltar {
@@ -391,7 +393,8 @@ func (m *Model) findNextStep() Point {
 			return false
 		}
 
-		return t == TileChest || t == TileAltar || t == TileFountain || t == TileTrappedChest || t == TileBarrel || t == TileRelic || t == TileEvent
+		// TileLore включён в перечень целей автопилота
+		return t == TileChest || t == TileAltar || t == TileFountain || t == TileTrappedChest || t == TileBarrel || t == TileRelic || t == TileEvent || t == TileLore
 	}
 
 	if needsGear {
@@ -404,9 +407,10 @@ func (m *Model) findNextStep() Point {
 	}
 
 	// 5. РЕЖИМ ИССЛЕДОВАТЕЛЯ (Frontier Exploration):
-	// Идем открывать неизведанную тьму, пока не изучим хотя бы 85% карты
+	// При активном контракте на зачистку исследуем карту до конца, пока не найдём оставшихся врагов
 	exploredPct := m.explorationRatio()
-	needMoreExploration := exploredPct < 0.85 && !forceDeeper && !bagFull
+	hasPurgeTargets := (m.CurrentQuest.Type == QuestPurgeBiome && !m.CurrentQuest.Completed && len(m.Packs) > 0)
+	needMoreExploration := (exploredPct < 0.85 || hasPurgeTargets) && !forceDeeper && !bagFull
 
 	isFrontier := func(p Point, t Tile) bool {
 		if !m.Explored[p.Y][p.X] || t == TileWall {
@@ -424,7 +428,7 @@ func (m *Model) findNextStep() Point {
 		return false
 	}
 
-	// Если этаж ещё мало исследован (<85%), сначала в приоритете поиск тумана войны!
+	// Если этаж ещё мало исследован или не все враги найдены — сначала в приоритете поиск тумана войны!
 	if needMoreExploration {
 		if step, found := findPath(true, isFrontier); found {
 			return step
@@ -436,19 +440,21 @@ func (m *Model) findNextStep() Point {
 
 	// 6. СПУСК ПО ЛЕСТНИЦЕ:
 	// Сюда мы попадаем, если:
-	// - Исследовали >= 85% карты
+	// - Исследовали >= 85% карты (и нет активного контракта на зачистку с живыми мобами)
 	// - Либо нет доступных границ тумана войны (все залы обойдены)
 	// - Либо переполнен мешок / включен режим побега из ловушки
 	// На тренировочном этаже отряд не спускается глубже, а уходит к выходу.
-	leaveTile := TileStairs
-	if m.Training && !m.ManualMode {
-		leaveTile = TileExit
-	}
-	step, found := findPath(false, func(p Point, t Tile) bool {
-		return m.Explored[p.Y][p.X] && t == leaveTile
-	})
-	if found {
-		return step
+	if !hasPurgeTargets {
+		leaveTile := TileStairs
+		if m.Training && !m.ManualMode {
+			leaveTile = TileExit
+		}
+		step, found := findPath(false, func(p Point, t Tile) bool {
+			return m.Explored[p.Y][p.X] && t == leaveTile
+		})
+		if found {
+			return step
+		}
 	}
 
 	// 7. Если лестница ещё не найдена в разведанной зоне, продолжаем открывать остатки карты

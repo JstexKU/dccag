@@ -13,6 +13,12 @@ func (m *Model) executeCombatTurn() {
 	if m.Combat.Pack.LivingCount() == 0 {
 		m.addLog(healStyle.Render(T(m.Lang, "combat.log.pack_defeated")))
 		delete(m.Packs, m.Combat.Pos)
+
+		// Если это была последняя стая на этаже — контракт на зачистку закрывается сразу в бою
+		if len(m.Packs) == 0 {
+			m.checkQuestProgress(QuestPurgeBiome, "", 1)
+		}
+
 		m.PartyPos = m.Combat.Pos
 		m.Combat = nil
 		m.revealFog()
