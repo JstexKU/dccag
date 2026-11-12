@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 )
 
 func (m Model) renderLibraryScreen(viewW, viewH int) string {
@@ -163,7 +164,8 @@ func (m Model) renderLibraryScreen(viewW, viewH int) string {
 	return padTownLines(sb.String(), viewW, viewH)
 }
 
-// wordWrap разбивает длинные абзацы текста по границам слов под ширину колонки
+// wordWrap разбивает длинные абзацы текста по границам слов под ширину колонки.
+// Ширина считается в ячейках терминала (широкие символы занимают две), а не в рунах.
 func wordWrap(text string, limit int) []string {
 	if limit <= 4 {
 		limit = 4
@@ -177,7 +179,7 @@ func wordWrap(text string, limit int) []string {
 	curr := words[0]
 
 	for _, w := range words[1:] {
-		if len([]rune(curr))+1+len([]rune(w)) <= limit {
+		if runewidth.StringWidth(curr)+1+runewidth.StringWidth(w) <= limit {
 			curr += " " + w
 		} else {
 			lines = append(lines, curr)

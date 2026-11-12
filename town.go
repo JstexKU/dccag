@@ -223,7 +223,7 @@ func (m *Model) stepTown() {
 		bestIdx := -1
 		minCost := 999999
 		for i, off := range offers {
-			if off.CanAfford && budget >= off.Cost && off.Cost < minCost {
+			if off.CanAfford && smithyOfferWithinBudget(off, budget) && off.Cost < minCost {
 				minCost = off.Cost
 				bestIdx = i
 			}
@@ -234,9 +234,15 @@ func (m *Model) stepTown() {
 			m.SmithyState.Cursor = bestIdx
 			m.SmithyState.ChosenIdx = bestIdx
 
+			heroName := m.Party[targetOffer.HeroIdx].DisplayName(m.Lang)
 			m.ExecuteSmithyUpgrade(targetOffer)
-			m.SmithyState.ActionSummary = T(m.Lang, "town.sum.smithy_upgrade",
-				targetOffer.ItemName, targetOffer.Level+1, m.Party[targetOffer.HeroIdx].DisplayName(m.Lang), targetOffer.Cost)
+			if targetOffer.Enchant {
+				m.SmithyState.ActionSummary = T(m.Lang, "town.sum.smithy_enchant",
+					targetOffer.ItemName, enchantLabel(m.Lang, targetOffer.EnchantKind), targetOffer.EnchantLevel, heroName, targetOffer.Cost)
+			} else {
+				m.SmithyState.ActionSummary = T(m.Lang, "town.sum.smithy_upgrade",
+					targetOffer.ItemName, targetOffer.Level+1, heroName, targetOffer.Cost)
+			}
 			m.SmithyState.Offers = m.GenerateSmithyOffers()
 			return
 		}
@@ -311,6 +317,17 @@ func (m *Model) stepTown() {
 
 		budget := AllocateBudget(m.Gold).Alchemy
 		offers := m.AlchemistState.Offers
+
+		// 0. Эликсир Усердия отстающему бойцу: сокращает долгие тренировки
+		if bestElixirIdx := m.pickAutoElixir(offers); bestElixirIdx != -1 {
+			targetOffer := offers[bestElixirIdx]
+			m.AlchemistState.Cursor = bestElixirIdx
+			m.AlchemistState.ChosenIdx = bestElixirIdx
+			m.ExecuteAlchemistOffer(targetOffer)
+			m.AlchemistState.ActionSummary = T(m.Lang, "town.sum.alchemist_elixir", targetOffer.ItemTitle, targetOffer.HeroName, targetOffer.Cost)
+			m.AlchemistState.Offers = m.GenerateAlchemistOffers()
+			return
+		}
 
 		// 1. Честное распределение мутаций: ищем доступного героя с НАИМЕНЬШИМ числом мутаций
 		bestMutIdx := -1

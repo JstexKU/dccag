@@ -77,8 +77,8 @@ func (s *LibraryState) AdjustScroll(totalItems, pageSize int) {
 	}
 }
 
-// GlobalLoreRegister содержит статическую базу всех доступных в игре томов
-var AllLoreVolumes = []LoreVolume{}
+// AllLoreVolumes содержит статическую базу всех доступных в игре томов
+var AllLoreVolumes = buildLoreDatabase()
 
 // UnlockedLoreStore — структура для сериализации в save.json и хранения в TownLegacy
 type UnlockedLoreStore map[string]bool

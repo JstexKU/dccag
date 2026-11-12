@@ -26,10 +26,22 @@ func (m *Model) getRandomLivingHero() *Hero {
 	return living[rng.Intn(len(living))]
 }
 
+// addStress добавляет герою стресс: сначала снижает его по всем источникам сопротивления,
+// затем переносит часть на союзников и проверяет срыв (добродетель или психоз) и сердечный приступ.
 func (m *Model) addStress(h *Hero, amt int) {
 	if h.IsDead || h.IsDowned {
 		return
 	}
+	amt = m.reduceStress(h, amt)
+	h.Stress += amt
+	m.applyStressSplash(h, amt)
+	m.checkBreakingPoint(h)
+	m.checkHeartAttack(h)
+}
+
+// reduceStress возвращает величину стресса после всех снижений: реликвия, раса,
+// предметы (не больше 50%) и призвание «Вдохновитель».
+func (m *Model) reduceStress(h *Hero, amt int) int {
 	if m.Relic != nil && m.Relic.StressRes > 0 {
 		amt = amt * (100 - m.Relic.StressRes) / 100
 	}
@@ -55,76 +67,91 @@ func (m *Model) addStress(h *Hero, amt int) {
 	if !h.IsLeader && m.activeCalling() == CallingInspirer {
 		amt = amt * (100 - callingInspirerStressCut) / 100
 	}
+	return amt
+}
 
-	h.Stress += amt
-
-	if amt >= 15 {
-		splash := amt / 2
-		for _, ally := range m.Party {
-			if !ally.IsDead && !ally.IsDowned && ally != h {
-				ally.Stress += splash
-			}
+// applyStressSplash переносит половину сильного стресса (от 15) на остальных живых союзников.
+func (m *Model) applyStressSplash(h *Hero, amt int) {
+	if amt < 15 {
+		return
+	}
+	splash := amt / 2
+	for _, ally := range m.Party {
+		if !ally.IsDead && !ally.IsDowned && ally != h {
+			ally.Stress += splash
 		}
 	}
+}
 
-	if h.Stress >= 100 && h.Affliction == AfflictionNone {
-		virtueChance := 20
-		if h.Race == RaceOlongr {
-			virtueChance = 40
-		} else if h.Race == RaceDwarf {
-			virtueChance = 30
-		}
-
-		if rng.Intn(100) < virtueChance {
-			h.Affliction = AfflictionVirtuous
-			h.Stress = 0
-			h.HP = h.MaxHP
-			verb1 := TVerb(m.Lang, h.Gender, "conquer")
-			verb2 := TVerb(m.Lang, h.Gender, "gain")
-			m.addLog(healStyle.Render(T(m.Lang, "dungeon.log.virtue", h.FullName(m.Lang), verb1, verb2)))
-			for _, ally := range m.Party {
-				if !ally.IsDead && !ally.IsDowned {
-					ally.Stress = max(0, ally.Stress-20)
-				}
-			}
-		} else {
-			affs := []AfflictionType{AfflictionParanoid, AfflictionSelfish, AfflictionManiac}
-			h.Affliction = affs[rng.Intn(len(affs))]
-			verb := TVerb(m.Lang, h.Gender, "broken")
-			affName := T(m.Lang, "affliction."+string(h.Affliction))
-			m.addLog(stressStyle.Render(T(m.Lang, "dungeon.log.affliction", h.FullName(m.Lang), verb, affName)))
-		}
+// checkBreakingPoint — на 100 стресса здоровый герой либо обретает добродетель, либо ломается.
+func (m *Model) checkBreakingPoint(h *Hero) {
+	if h.Stress < 100 || h.Affliction != AfflictionNone {
+		return
 	}
 
-	if h.Stress >= 200 && h.Affliction != AfflictionVirtuous {
-		h.Stress = 200
-		if h.HP <= 1 {
-			h.HP = 0
-			h.IsDowned = true
-			h.IsGuarding = false
-			h.IsBerserk = false
-			h.IsStealthed = false
-			h.IsCharged = false
-			h.IsAura = false
-			h.CauseOfDeath = T(m.Lang, "dungeon.death.heart_attack", T(m.Lang, "affliction."+string(h.Affliction)))
-			m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.heart_attack_death", h.DisplayName(m.Lang))))
-			m.onLeaderDowned(h)
-			for _, ally := range m.Party {
-				if !ally.IsDead && !ally.IsDowned {
-					ally.Stress += 35
-				}
-			}
-			return
-		}
+	virtueChance := 20
+	if h.Race == RaceOlongr {
+		virtueChance = 40
+	} else if h.Race == RaceDwarf {
+		virtueChance = 30
+	}
 
-		h.HP = 1
-		h.Stress = 160
-		verb := TVerb(m.Lang, h.Gender, "clutch")
-		m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.heart_attack", h.FullName(m.Lang), verb)))
+	if rng.Intn(100) < virtueChance {
+		h.Affliction = AfflictionVirtuous
+		h.Stress = 0
+		h.HP = h.MaxHP
+		verb1 := TVerb(m.Lang, h.Gender, "conquer")
+		verb2 := TVerb(m.Lang, h.Gender, "gain")
+		m.addLog(healStyle.Render(T(m.Lang, "dungeon.log.virtue", h.FullName(m.Lang), verb1, verb2)))
 		for _, ally := range m.Party {
-			if !ally.IsDead && !ally.IsDowned && ally != h {
-				ally.Stress += 20
+			if !ally.IsDead && !ally.IsDowned {
+				ally.Stress = max(0, ally.Stress-20)
 			}
+		}
+		return
+	}
+
+	affs := []AfflictionType{AfflictionParanoid, AfflictionSelfish, AfflictionManiac}
+	h.Affliction = affs[rng.Intn(len(affs))]
+	verb := TVerb(m.Lang, h.Gender, "broken")
+	affName := T(m.Lang, "affliction."+string(h.Affliction))
+	m.addLog(stressStyle.Render(T(m.Lang, "dungeon.log.affliction", h.FullName(m.Lang), verb, affName)))
+}
+
+// checkHeartAttack — на 200 стресса (если герой не добродетелен) случается сердечный приступ:
+// герой с одним очком здоровья погибает, иначе остаётся на грани.
+func (m *Model) checkHeartAttack(h *Hero) {
+	if h.Stress < 200 || h.Affliction == AfflictionVirtuous {
+		return
+	}
+	h.Stress = 200
+
+	if h.HP <= 1 {
+		h.HP = 0
+		h.IsDowned = true
+		h.IsGuarding = false
+		h.IsBerserk = false
+		h.IsStealthed = false
+		h.IsCharged = false
+		h.IsAura = false
+		h.CauseOfDeath = T(m.Lang, "dungeon.death.heart_attack", T(m.Lang, "affliction."+string(h.Affliction)))
+		m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.heart_attack_death", h.DisplayName(m.Lang))))
+		m.onLeaderDowned(h)
+		for _, ally := range m.Party {
+			if !ally.IsDead && !ally.IsDowned {
+				ally.Stress += 35
+			}
+		}
+		return
+	}
+
+	h.HP = 1
+	h.Stress = 160
+	verb := TVerb(m.Lang, h.Gender, "clutch")
+	m.addLog(dangerStyle.Render(T(m.Lang, "dungeon.log.heart_attack", h.FullName(m.Lang), verb)))
+	for _, ally := range m.Party {
+		if !ally.IsDead && !ally.IsDowned && ally != h {
+			ally.Stress += 20
 		}
 	}
 }
@@ -325,6 +352,7 @@ func buildHero(class HeroClass, race RaceType, nameKey string, gender Gender, fl
 		SkillCost:    skillCost,
 		IsDead:       false,
 		IsDowned:     false,
+		Affliction:   AfflictionNone, // пустая строка ломала проверки «== / != AfflictionNone» и ключ перевода
 		Potions:      []*Potion{},
 	}
 
@@ -343,6 +371,7 @@ func buildHero(class HeroClass, race RaceType, nameKey string, gender Gender, fl
 	h.Chest = &ch
 	legs := generateItemForClassSlot(class, SlotLegs, itemFloor)
 	h.Legs = &legs
+	h.refreshGearBonuses() // здоровье и мана со стартовой экипировки
 
 	return h
 }
@@ -371,6 +400,10 @@ func (m *Model) distributePartyExp(expAmt int) {
 		}
 		if m.activeCalling() == CallingMentor {
 			actualExp += actualExp * callingMentorExpPct / 100
+		}
+		// Эликсир Усердия: прибавка до конца вылазки
+		if h.ExpElixirPct > 0 {
+			actualExp += actualExp * h.ExpElixirPct / 100
 		}
 
 		if h.GainExp(actualExp) {
@@ -430,6 +463,9 @@ func (m *Model) equipOrBag(item EquipItem) {
 	}
 }
 
+// recordFallenHero заносит героя в список павших и обнуляет его состояние. Снаряжение и зелья
+// СТИРАЮТСЯ: павший ничего не оставляет отряду (мёртвый герой не возвращает вещи в сумку).
+// Если у отряда реликвия «Корона мученика», остальные получают бонус к атаке.
 func (m *Model) recordFallenHero(h *Hero) {
 	m.Stats.FallenHeroes = append(m.Stats.FallenHeroes, FallenHeroRecord{
 		FullName: h.FullName(m.Lang),

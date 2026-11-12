@@ -109,6 +109,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+		// Окно «Персонажи» перехватывает свои клавиши раньше общей обработки.
+		if m.State == StateCharacter {
+			if cmd, handled := m.handleCharacterKey(key); handled {
+				return m, cmd
+			}
+		}
+
 		// Экран библиотеки литературы перехватывает свои клавиши раньше общей обработки.
 		if m.State == StateLibrary {
 			if cmd, handled := m.handleLibraryKey(key); handled {
@@ -243,6 +250,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.State = StatePlaying
 				cmd := m.restartTicks(m.SpeedMs)
 				return m, cmd
+			}
+		// P — окно «Персонажи»; H — то же самое там, где P занята (зелья в ручном бою)
+		case "p", "h":
+			if m.State == StatePlaying && len(m.Party) > 0 {
+				m.openCharacterSheet()
 			}
 		case "e":
 			if m.State == StatePlaying {

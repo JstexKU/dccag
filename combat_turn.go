@@ -20,6 +20,7 @@ func (m *Model) executeCombatTurn() {
 		}
 
 		m.PartyPos = m.Combat.Pos
+		m.clearCombatStatuses()
 		m.Combat = nil
 		m.revealFog()
 		return
@@ -85,6 +86,16 @@ func (m *Model) executeCombatTurn() {
 		raceMod := GetRaceModifiers(h.Race)
 		if raceMod.ManaRegen > 0 && h.MP < h.MaxMP {
 			h.MP = min(h.MaxMP, h.MP+raceMod.ManaRegen)
+		}
+
+		// Суффикс «Медитации»: мана возвращается каждый ход боя
+		if regen := h.manaRegen(); regen > 0 {
+			h.MP = min(h.MaxMP, h.MP+regen)
+		}
+
+		// Яд и холод от мутантов: отравленный теряет здоровье, скованный может потерять ход.
+		if m.tickHeroStatuses(h) {
+			return
 		}
 
 		m.checkAndDrinkPotions(h)
@@ -277,7 +288,7 @@ func (m *Model) executeCombatTurn() {
 				targetMob.HP -= trapDmg
 				targetMob.Atk = max(2, targetMob.Atk-5)
 				h.AddCCDuration()
-				m.addLog(accentStyle.Render(T(m.Lang, "combat.log.ranger_trap", hName, T(m.Lang, targetMob.NameKey), trapDmg)))
+				m.addLog(accentStyle.Render(T(m.Lang, "combat.log.ranger_trap", hName, m.monsterName(targetMob), trapDmg)))
 				if targetMob.HP <= 0 {
 					if h.Race == RaceDemonkin {
 						h.MP = min(h.MaxMP, h.MP+3)
@@ -403,6 +414,7 @@ func (m *Model) executeCombatTurn() {
 					}
 				}
 				h.RemoveDot()
+				m.cleansePartyStatuses()
 				m.addLog(potionStyle.Render(T(m.Lang, "combat.log.bard_ballad", hName)))
 				return
 			} else if h.MP >= 6 && m.Combat.Pack.LivingCount() >= 2 {
@@ -548,7 +560,7 @@ func (m *Model) executeCombatTurn() {
 			m.addLog(subtleStyle.Render(T(m.Lang, "ctl.no_skill", hName)))
 		}
 
-		mobDisplayName := T(m.Lang, targetMob.NameKey)
+		mobDisplayName := m.monsterName(targetMob)
 
 		if (targetMob.Type == MobSkeleton || targetMob.Type == MobGolem || targetMob.Type == MobGargoyle || targetMob.Type == MobSproutSkeleton || targetMob.Type == MobObsidianBeetle || targetMob.Type == MobFallenCrusader) && rng.Intn(100) < 25 {
 			m.addLog(subtleStyle.Render(T(m.Lang, "combat.log.mob_block", mobDisplayName)))
@@ -558,25 +570,7 @@ func (m *Model) executeCombatTurn() {
 		d20 := rng.Intn(20) + 1
 		hitRoll := d20 + (h.TotalAtk() / 3)
 		targetAC := 10 + targetMob.Defense
-		critThreshold := 19
-		for _, it := range []*EquipItem{h.Weapon, h.Head, h.Chest} {
-			if it != nil {
-				critThreshold -= it.CritBonus
-			}
-		}
-		if raceMod.CritChanceBonus > 0 {
-			critThreshold -= raceMod.CritChanceBonus
-		}
-		// Реликвия «Шепчущий Череп»: снижение порога крита
-		if m.Relic != nil && m.Relic.PartyCritBonus > 0 {
-			critThreshold -= m.Relic.PartyCritBonus
-		}
-		if h.IsStealthed {
-			critThreshold = 1
-		}
-		if critThreshold < 14 && !h.IsStealthed {
-			critThreshold = 14
-		}
+		critThreshold := m.critThreshold(h)
 		bonusDmg := 0
 		armorPierce := 0
 
@@ -612,6 +606,7 @@ func (m *Model) executeCombatTurn() {
 					if !ally.IsDead && !ally.IsDowned && ally.Stress > 0 {
 						ally.Stress = max(0, ally.Stress-6)
 						h.RemoveDot()
+						m.cleanseStatuses(ally)
 						m.addLog(fountStyle.Render(T(m.Lang, "combat.log.blessing", hName, ally.DisplayName(m.Lang))))
 						break
 					}
@@ -678,6 +673,8 @@ func (m *Model) executeCombatTurn() {
 			}
 		}
 
+		bonusDmg += h.furyBonus() // суффикс «Ярости»: раненый герой бьёт сильнее
+		armorPierce += h.enchantPierce(targetMob)
 		isCrit := d20 >= critThreshold || h.IsStealthed
 		isFumble := d20 == 1 && !h.IsStealthed
 
@@ -725,6 +722,9 @@ func (m *Model) executeCombatTurn() {
 		hitVerb := TVerb(m.Lang, h.Gender, "deal")
 		m.addLog(T(m.Lang, "combat.log.hit", hName, hitVerb, dmg, mobDisplayName, targetMob.HP))
 
+		// Зачарование и стихия оружия: пламя, яд, лёд, молния
+		m.applyWeaponEffects(h, targetMob, dmg)
+
 		if targetMob.HP <= 0 {
 			if h.Race == RaceDemonkin {
 				h.MP = min(h.MaxMP, h.MP+3)
@@ -739,6 +739,9 @@ func (m *Model) executeCombatTurn() {
 		if mob.IsDead {
 			return
 		}
+		if m.tickMonsterStatuses(mob) { // яд клинка может убить монстра до его хода
+			return
+		}
 
 		victim := m.SelectTarget()
 		if victim == nil {
@@ -747,7 +750,7 @@ func (m *Model) executeCombatTurn() {
 
 		m.checkAndDrinkPotions(victim)
 
-		mobDisplayName := T(m.Lang, mob.NameKey)
+		mobDisplayName := m.monsterName(mob)
 		victimName := victim.DisplayName(m.Lang)
 		isRanged := (mob.Type == MobImp || mob.Type == MobPhantom || mob.Type == MobVoidDemon || mob.Type == MobDragon ||
 			mob.Type == MobDryad || mob.Type == MobTomeBook || mob.Type == MobBloodCultist || mob.Type == MobAstralWeaver)
@@ -771,7 +774,11 @@ func (m *Model) executeCombatTurn() {
 			return
 		}
 
-		rawDmg := int(float64(mob.Atk)*1.25) - (victim.TotalDef() / 2)
+		rawDmg := affixRawDamage(mob, victim.TotalDef())
+		rawDmg = victim.resistAffixDamage(mob, rawDmg) // «Пылающая» броня против огненных
+		if mob.ChillWeak {
+			rawDmg = rawDmg * (100 - chillDamagePenalty) / 100 // холод клинка ослабляет удар
+		}
 		if victim.IsGuarding {
 			blockMult := 0.60
 			// Дварфы блокируют 55% урона
@@ -831,6 +838,9 @@ func (m *Model) executeCombatTurn() {
 			}
 			m.addLog(dangerStyle.Render(T(m.Lang, "combat.log.mob_hit", mobDisplayName, dealtDmg, actualHeroName)))
 		}
+
+		// Эффекты аспекта монстра: яд, холод, вампиризм
+		m.applyAffixOnHit(mob, actualHero, dealtDmg)
 
 		// Драконит: огненное возмездие
 		actualRaceMod := GetRaceModifiers(actualHero.Race)

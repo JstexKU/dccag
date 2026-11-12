@@ -388,6 +388,12 @@ type Hero struct {
 	MP             int
 	Stress         int
 	Affliction     AfflictionType
+	GearHP         int // здоровье с предметов, уже включённое в MaxHP (gear.go)
+	GearMP         int // мана с предметов, уже включённая в MaxMP
+	ExpElixirPct   int // прибавка к опыту (%) от Эликсира Усердия до конца вылазки
+	PoisonTurns    int // ходов яда осталось (аспект монстра)
+	PoisonDmg      int // урон яда за ход
+	ChilledTurns   int // ходов холода осталось (аспект монстра)
 	BaseAtk        int
 	BaseDef        int
 	Speed          int
@@ -556,15 +562,20 @@ func (h *Hero) TotalDef() int {
 	if h.IsBerserk {
 		b -= 2
 	}
-	total := h.BaseDef + b
-	raceMod := GetRaceModifiers(h.Race)
-	if raceMod.DefBonusPercent != 0 {
-		total += int(float64(total) * raceMod.DefBonusPercent)
-	}
+	total := applyRaceDef(h.BaseDef+b, h.Race)
 	if total < 0 {
 		total = 0
 	}
 	return total
+}
+
+// applyRaceDef применяет расовый процентный модификатор защиты. Единая формула
+// для TotalDef и для предпросмотра героя на экране создания.
+func applyRaceDef(def int, race RaceType) int {
+	if pct := GetRaceModifiers(race).DefBonusPercent; pct != 0 {
+		def += int(float64(def) * pct)
+	}
+	return def
 }
 
 func (h *Hero) TotalSpeed() int {
@@ -572,6 +583,10 @@ func (h *Hero) TotalSpeed() int {
 	for _, it := range []*EquipItem{h.Weapon, h.Head, h.Chest, h.Legs} {
 		if it != nil {
 			spd += it.SpeedBonus
+			// «Громовая» броня (не оружие): +1 к скорости за каждую часть
+			if it.Slot != SlotWeapon && it.Prefix != nil && it.Prefix.Element == ElemLightning {
+				spd++
+			}
 		}
 	}
 	if spd < 1 {
@@ -605,6 +620,7 @@ func (h *Hero) SetItemInSlot(slot EquipSlot, item *EquipItem) {
 	case SlotLegs:
 		h.Legs = item
 	}
+	h.refreshGearBonuses()
 }
 
 func (h *Hero) HasFreePotionSlot(maxSlots int) bool {

@@ -203,12 +203,16 @@ func (m *Model) handleGateKey(key string) bool {
 
 // weakMark — пометка бойца, отстающего от рекомендуемого уровня.
 func (m Model) weakMark(h *Hero) string {
+	mark := ""
+	if h.ExpElixirPct > 0 {
+		mark = accentStyle.Render(" 📚") // действует Эликсир Усердия
+	}
 	for _, w := range m.weakHeroes() {
 		if w == h {
-			return dangerStyle.Render(" ⚠")
+			return mark + dangerStyle.Render(" ⚠")
 		}
 	}
-	return ""
+	return mark
 }
 
 func (m Model) renderGateScreen(viewW, viewH int) string {

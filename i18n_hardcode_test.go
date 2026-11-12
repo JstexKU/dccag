@@ -266,6 +266,9 @@ func TestCodexTabsAndTiersAreTranslated(t *testing.T) {
 	}
 }
 
+// menuLanguageHints — иноязычные подсказки, которые допустимы в меню другого языка.
+var menuLanguageHints = []string{"(Язык)"}
+
 func TestMenuFollowsTheLanguage(t *testing.T) {
 	useTempSave(t)
 	seedRNG(5)
@@ -276,13 +279,19 @@ func TestMenuFollowsTheLanguage(t *testing.T) {
 
 		m.Lang = LangEN
 		m.relocalizeStart()
-		if out := m.View(); hasCyrillic(out) {
+		// Подсказка «(Язык)» в английском меню — намеренная: по ней русскоязычный
+		// игрок находит переключатель языка.
+		out := m.View()
+		for _, ok := range menuLanguageHints {
+			out = strings.ReplaceAll(out, ok, "")
+		}
+		if hasCyrillic(out) {
 			t.Errorf("%v: в английском меню остался русский текст: %q", size, firstCyrillicLine(out))
 		}
 
 		m.Lang = LangRU
 		m.relocalizeStart()
-		out := m.View()
+		out = m.View()
 		for _, bad := range russianOnly {
 			if strings.Contains(out, bad) {
 				t.Errorf("%v: в русском меню остался английский текст %q", size, bad)

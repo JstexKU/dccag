@@ -1,5 +1,7 @@
 package main
 
+import "math"
+
 // --- Монстры и Схватки ---
 type MonsterAffix string
 
@@ -84,12 +86,24 @@ type Monster struct {
 	Speed   int
 	Exp     int
 	IsDead  bool
+
+	// Состояния от зачарованного оружия героев (enchant.go)
+	PoisonTurns  int
+	PoisonDmg    int
+	PoisonBy     *Hero // кому достанется опыт, если монстр умрёт от яда
+	ChilledTurns int
+	ChillWeak    bool // в этот ход удар монстра ослаблен холодом
 }
 
 type MonsterPack struct {
 	Members    []*Monster
 	IsBoss     bool
 	IsMiniBoss bool
+
+	// Блуждание (roaming.go): точка спавна, комната и признак погони
+	Home    Point
+	Area    RoomArea
+	Chasing bool
 }
 
 func (p *MonsterPack) LivingCount() int {
@@ -113,7 +127,7 @@ func (p *MonsterPack) GetFirstLiving() *Monster {
 
 func (p *MonsterPack) GetLowestHPFocus() *Monster {
 	var target *Monster
-	minHP := 99999
+	minHP := math.MaxInt
 	for _, m := range p.Members {
 		if !m.IsDead && m.HP < minHP {
 			minHP = m.HP

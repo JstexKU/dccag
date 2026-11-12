@@ -65,7 +65,7 @@ func (m *Model) townNeedsVisit(p TownPhase) bool {
 	case TownPhaseSmithy:
 		budget := AllocateBudget(m.Gold).Forge
 		for _, off := range m.GenerateSmithyOffers() {
-			if off.CanAfford && budget >= off.Cost {
+			if off.CanAfford && smithyOfferWithinBudget(off, budget) {
 				return true
 			}
 		}
@@ -91,7 +91,14 @@ func (m *Model) townNeedsVisit(p TownPhase) bool {
 
 	case TownPhaseAlchemist:
 		budget := AllocateBudget(m.Gold).Alchemy
-		for _, off := range m.GenerateAlchemistOffers() {
+		offers := m.GenerateAlchemistOffers()
+		if m.pickAutoElixir(offers) != -1 {
+			return true
+		}
+		for _, off := range offers {
+			if off.Type == AlchemistActionElixir {
+				continue // эликсир автопилот покупает только по особому правилу (pickAutoElixir)
+			}
 			if off.CanAfford && budget >= off.Cost {
 				return true
 			}
@@ -114,6 +121,7 @@ func (m *Model) nextWorthPhase(from TownPhase) TownPhase {
 // enterTown — отряд приходит в город из подземелья (выход, отступление, бегство).
 // Этаж запоминается, итог вылазки учитывается, тренировочный выход возвращает этаж прогресса.
 func (m *Model) enterTown(reason RetreatReason) {
+	m.clearTripEffects() // эликсир и боевые состояния действуют до конца вылазки
 	m.saveCurrentFloorState()
 	m.noteTripResult(reason)
 	if m.Training {

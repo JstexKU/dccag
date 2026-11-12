@@ -219,6 +219,7 @@ func (m *Model) manualMove(dx, dy int) {
 		m.checkAndDrinkPotions(h)
 	}
 	m.moveTo(next)
+	m.stepPacks()
 
 	if m.isPartyWiped() {
 		m.State = StateDefeat
@@ -257,6 +258,9 @@ func (m *Model) manualCamp() {
 		h.Stress = max(0, h.Stress-turns)
 	}
 	biome := getBiome(m.Floor)
+	// Косметика: вариант текста привала. Этот вызов rng есть только в ручном режиме, поэтому
+	// ручная игра с тем же сидом расходится с автопилотом после первого привала. Для воспроизведения
+	// багов пользуйтесь автопилотом.
 	key := fmt.Sprintf("dungeon.log.rest.%s.%d", biome.Name, rng.Intn(4)+1)
 	m.addLog(healStyle.Render(T(m.Lang, key)))
 	m.addLog(subtleStyle.Render(T(m.Lang, "ctl.camp_done", turns)))

@@ -76,6 +76,8 @@ func (m *Model) startCombat(pos Point, pack *MonsterPack) {
 		Round:        1,
 	}
 
+	m.clearCombatStatuses()
+
 	biome := getBiome(m.Floor)
 	speedPenalty := 0
 	if biome.Name == BiomeGrotto {
@@ -86,6 +88,7 @@ func (m *Model) startCombat(pos Point, pack *MonsterPack) {
 	if m.Relic != nil {
 		relicSpeed = m.Relic.SpeedBonus
 	}
+	frost := frostPenalty(pack)
 
 	for _, h := range m.Party {
 		if !h.IsDead && !h.IsDowned {
@@ -94,7 +97,7 @@ func (m *Model) startCombat(pos Point, pack *MonsterPack) {
 			h.IsStealthed = false
 			h.IsCharged = false
 			h.IsAura = false
-			initRoll := rng.Intn(20) + 1 + h.TotalSpeed() + relicSpeed + m.Legacy.TanneryLevel - speedPenalty
+			initRoll := rng.Intn(20) + 1 + h.TotalSpeed() + relicSpeed + m.Legacy.TanneryLevel - speedPenalty - frost
 			combat.TurnQueue = append(combat.TurnQueue, TurnOrderEntry{
 				Type: CombatantHero, HeroRef: h, Initiative: initRoll,
 			})
@@ -131,6 +134,7 @@ func (m *Model) startCombat(pos Point, pack *MonsterPack) {
 
 	m.Combat = combat
 	m.addLog(accentStyle.Render(T(m.Lang, "combat.log.start", pack.LivingCount())))
+	m.announceAffixes(pack, frost)
 }
 
 // onMonsterKilled — единая точка обработки гибели монстра от руки героя h.

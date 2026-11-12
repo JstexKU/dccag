@@ -110,17 +110,19 @@ func TestPreviewMatchesCreatedHero(t *testing.T) {
 				h := createLeaderHero(bp, smithy)
 				name := string(class) + "/" + string(race)
 
-				if p.HP != h.MaxHP || h.HP != h.MaxHP {
-					t.Errorf("%s: HP %d != %d", name, p.HP, h.MaxHP)
+				// Предпросмотр считается без снаряжения, а у созданного героя здоровье и мана
+				// со стартовых предметов уже включены в максимумы (GearHP/GearMP).
+				if p.HP != h.MaxHP-h.GearHP || h.HP != h.MaxHP {
+					t.Errorf("%s: HP %d != %d (без снаряжения)", name, p.HP, h.MaxHP-h.GearHP)
 				}
-				if p.MP != h.MaxMP || h.MP != h.MaxMP {
-					t.Errorf("%s: MP %d != %d", name, p.MP, h.MaxMP)
+				if p.MP != h.MaxMP-h.GearMP || h.MP != h.MaxMP {
+					t.Errorf("%s: MP %d != %d (без снаряжения)", name, p.MP, h.MaxMP-h.GearMP)
 				}
 				if p.Atk != h.BaseAtk {
 					t.Errorf("%s: атака %d != %d", name, p.Atk, h.BaseAtk)
 				}
-				if p.Def != h.BaseDef {
-					t.Errorf("%s: защита %d != %d", name, p.Def, h.BaseDef)
+				if p.Def != applyRaceDef(h.BaseDef, race) {
+					t.Errorf("%s: защита %d != %d", name, p.Def, applyRaceDef(h.BaseDef, race))
 				}
 				if p.Spd != h.Speed+GetRaceModifiers(race).SpeedFlat {
 					t.Errorf("%s: скорость %d != %d", name, p.Spd, h.Speed+GetRaceModifiers(race).SpeedFlat)

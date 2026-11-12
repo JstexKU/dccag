@@ -45,21 +45,8 @@ func (m *Model) syncMaxFloor() {
 // weakHeroes возвращает живых героев, отстающих от рекомендуемого уровня самого
 // глубокого этажа на TrainingGap и больше, ЛИБО отстающих от среднего уровня живых соратников.
 func (m *Model) weakHeroes() []*Hero {
-	rec := recommendedLevel(m.MaxFloor)
 	gap := max(1, m.Tactics.TrainingGap)
-
-	totalLvl, livingCount := 0, 0
-	for _, h := range m.Party {
-		if !h.IsDead && !h.LostInAbyss {
-			totalLvl += h.Level
-			livingCount++
-		}
-	}
-	avgLvl := rec
-	if livingCount > 0 {
-		avgLvl = totalLvl / livingCount
-	}
-	targetLvl := max(rec, avgLvl)
+	targetLvl := m.targetLevel()
 
 	var out []*Hero
 	for _, h := range m.Party {
@@ -223,7 +210,7 @@ func (m *Model) repopulateTrainingFloor() {
 		if tooClose {
 			continue
 		}
-		m.Packs[p] = spawnSmallPack(m.Floor)
+		m.addPack(p, spawnSmallPack(m.Floor), RoomArea{})
 		need--
 	}
 }

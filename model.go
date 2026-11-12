@@ -18,6 +18,7 @@ const (
 	StateTactics
 	StateCreator
 	StateLibrary
+	StateCharacter // окно «Персонажи» (ui_character.go)
 )
 
 type TownPhase int
@@ -66,6 +67,7 @@ type Model struct {
 	SpeedMs          int
 	TownDelayMs      int
 	StatsScroll      int
+	CharIndex        int // герой, открытый в окне «Персонажи»
 	LogScroll        int
 	CodexTab         int
 	RestartCountdown int

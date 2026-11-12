@@ -22,18 +22,8 @@ func (m Model) renderMarketScreen(state MarketServiceState, viewW, viewH int) st
 	halfW := (innerW - 3) / 2
 
 	var sb strings.Builder
-	titleStr := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true).Render("⚖ " + T(m.Lang, "town.market"))
-	goldStr := goldStyle.Render(fmt.Sprintf("%dG", m.Gold))
 	bagStr := subtleStyle.Render(fmt.Sprintf("%s: %d/%d", T(m.Lang, "ui.bag"), len(m.Bag), m.currentBagCapacity()))
-	sb.WriteString(fmt.Sprintf("%s  |  💰 %s  |  🎒 %s\n", titleStr, goldStr, bagStr))
-
-	if m.ManualMode {
-		controls := T(m.Lang, "shop.market.controls")
-		sb.WriteString(subtleStyle.Render(shortenItemName(controls, innerW)) + "\n")
-	} else {
-		sb.WriteString(m.renderAutoBanner(state.ActionSummary, innerW) + "\n")
-	}
-	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n")
+	sb.WriteString(m.renderShopTop("⚖ "+T(m.Lang, "town.market"), "shop.market.controls", state.ActionSummary, innerW, "🎒 "+bagStr))
 
 	availRows := max(5, viewH-6)
 
@@ -201,17 +191,7 @@ func (m Model) renderMagistrateScreen(state MagistrateServiceState, viewW, viewH
 	innerW := max(34, viewW)
 	var sb strings.Builder
 
-	titleStr := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true).Render("🏛 " + T(m.Lang, "town.magistrate"))
-	goldStr := goldStyle.Render(fmt.Sprintf("%dG", m.Gold))
-	sb.WriteString(fmt.Sprintf("%s  |  💰 %s\n", titleStr, goldStr))
-
-	if m.ManualMode {
-		controls := T(m.Lang, "shop.magistrate.controls")
-		sb.WriteString(subtleStyle.Render(shortenItemName(controls, innerW)) + "\n")
-	} else {
-		sb.WriteString(m.renderAutoBanner(state.ActionSummary, innerW) + "\n")
-	}
-	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n")
+	sb.WriteString(m.renderShopTop("🏛 " + T(m.Lang, "town.magistrate"), "shop.magistrate.controls", state.ActionSummary, innerW))
 
 	currentTier := militiaTierForInvestment(m.Legacy.TotalInvested)
 	militiaStatus := fmt.Sprintf("🎖 %s: %s (%dG)", T(m.Lang, "stats.militia_tier"), titleStyle.Render(T(m.Lang, currentTier.TitleKey)), m.Legacy.TotalInvested)
@@ -227,14 +207,9 @@ func (m Model) renderMagistrateScreen(state MagistrateServiceState, viewW, viewH
 		if displayed >= availRows {
 			break
 		}
-		marker := "  "
-		nameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
-		isChosen := (!m.ManualMode && state.Cursor == i && state.ActionSummary != "")
+		isChosen := m.autoPicked(state.Cursor, i, state.ActionSummary)
 
-		if state.Cursor == i {
-			marker = accentStyle.Render("▶ ")
-			nameStyle = nameStyle.Copy().Bold(true).Underline(true)
-		}
+		marker, nameStyle := shopRowStyle(state.Cursor == i)
 		costStyle := goldStyle
 		if !off.CanAfford {
 			costStyle = subtleStyle
@@ -242,10 +217,7 @@ func (m Model) renderMagistrateScreen(state MagistrateServiceState, viewW, viewH
 		targetName := T(m.Lang, off.NameKey)
 		typeLabel := T(m.Lang, off.DescKey)
 
-		badge := ""
-		if isChosen {
-			badge = " " + lipgloss.NewStyle().Foreground(lipgloss.Color("46")).Bold(true).Render("✓ " + T(m.Lang, "shop.badge.upgraded"))
-		}
+		badge := m.badgeIf(isChosen, "shop.badge.upgraded")
 
 		cleanType := shortenItemName(typeLabel, 26)
 		cleanTarget := shortenItemName(targetName, 24)
@@ -268,16 +240,7 @@ func (m Model) renderChurchScreen(state ChurchServiceState, viewW, viewH int) st
 	innerW := max(34, viewW)
 	var sb strings.Builder
 
-	titleStr := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true).Render("⛪ " + T(m.Lang, m.TownEst.ChurchKey))
-	sb.WriteString(fmt.Sprintf("%s  |  💰 %s\n", titleStr, goldStyle.Render(fmt.Sprintf("%dG", m.Gold))))
-
-	if m.ManualMode {
-		controls := T(m.Lang, "shop.church.controls")
-		sb.WriteString(subtleStyle.Render(shortenItemName(controls, innerW)) + "\n")
-	} else {
-		sb.WriteString(m.renderAutoBanner(state.ActionSummary, innerW) + "\n")
-	}
-	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n")
+	sb.WriteString(m.renderShopTop("⛪ " + T(m.Lang, m.TownEst.ChurchKey), "shop.church.controls", state.ActionSummary, innerW))
 
 	sb.WriteString(lipgloss.NewStyle().Bold(true).Render(T(m.Lang, "shop.church.header")) + "\n")
 	availRows := max(2, viewH-7)
@@ -289,14 +252,9 @@ func (m Model) renderChurchScreen(state ChurchServiceState, viewW, viewH int) st
 			if displayed >= availRows {
 				break
 			}
-			marker := "  "
-			nameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
-			isChosen := (!m.ManualMode && state.Cursor == i && state.ActionSummary != "")
+			isChosen := m.autoPicked(state.Cursor, i, state.ActionSummary)
 
-			if state.Cursor == i {
-				marker = accentStyle.Render("▶ ")
-				nameStyle = nameStyle.Copy().Bold(true).Underline(true)
-			}
+			marker, nameStyle := shopRowStyle(state.Cursor == i)
 			costStr := goldStyle.Render(fmt.Sprintf("%dG", off.Cost))
 			if off.Cost == 0 {
 				costStr = fountStyle.Render("[" + T(m.Lang, "shop.free") + "]")
@@ -307,10 +265,7 @@ func (m Model) renderChurchScreen(state ChurchServiceState, viewW, viewH int) st
 			if off.Type == ChurchActionStabilize {
 				actionLabel = dangerStyle.Render(T(m.Lang, "shop.church.stabilize"))
 			}
-			badge := ""
-			if isChosen {
-				badge = " " + lipgloss.NewStyle().Foreground(lipgloss.Color("46")).Bold(true).Render("✓ " + T(m.Lang, "shop.badge.healed"))
-			}
+			badge := m.badgeIf(isChosen, "shop.badge.healed")
 			cleanHero := shortenItemName(off.HeroName, 18)
 			cleanDesc := shortenItemName(off.Desc, 22)
 			sb.WriteString(fmt.Sprintf("%s%s: %s [%s] — %s%s\n", marker, actionLabel, nameStyle.Render(cleanHero), subtleStyle.Render(cleanDesc), costStr, badge))
@@ -326,35 +281,15 @@ func (m Model) renderTavernScreen(state TavernServiceState, viewW, viewH int) st
 	innerW := max(34, viewW)
 	var sb strings.Builder
 
-	titleStr := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true).Render("🍻 " + T(m.Lang, m.TownEst.TavernKey))
-	sb.WriteString(fmt.Sprintf("%s  |  💰 %s\n", titleStr, goldStyle.Render(fmt.Sprintf("%dG", m.Gold))))
-
-	if m.ManualMode {
-		controls := T(m.Lang, "shop.tavern.controls")
-		sb.WriteString(subtleStyle.Render(shortenItemName(controls, innerW)) + "\n")
-	} else {
-		sb.WriteString(m.renderAutoBanner(state.ActionSummary, innerW) + "\n")
-	}
-	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n")
+	sb.WriteString(m.renderShopTop("🍻 " + T(m.Lang, m.TownEst.TavernKey), "shop.tavern.controls", state.ActionSummary, innerW))
 
 	sb.WriteString(lipgloss.NewStyle().Bold(true).Render(T(m.Lang, "shop.tavern.header")) + "\n")
 	for i, off := range state.Offers {
-		marker := "  "
-		nameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
-		isChosen := (!m.ManualMode && state.Cursor == i && state.ActionSummary != "")
+		isChosen := m.autoPicked(state.Cursor, i, state.ActionSummary)
 
-		if state.Cursor == i {
-			marker = accentStyle.Render("▶ ")
-			nameStyle = nameStyle.Copy().Bold(true).Underline(true)
-		}
-		costStr := goldStyle.Render(fmt.Sprintf("%dG", off.Cost))
-		if !off.CanAfford {
-			costStr = subtleStyle.Render(fmt.Sprintf("%dG", off.Cost))
-		}
-		badge := ""
-		if isChosen {
-			badge = " " + lipgloss.NewStyle().Foreground(lipgloss.Color("46")).Bold(true).Render("✓ " + T(m.Lang, "shop.badge.paid"))
-		}
+		marker, nameStyle := shopRowStyle(state.Cursor == i)
+		costStr := costText(off.Cost, off.CanAfford)
+		badge := m.badgeIf(isChosen, "shop.badge.paid")
 		roomDesc := T(m.Lang, "shop.tavern.barn_desc")
 		pctDesc := "(40% HP & MP)"
 		if off.IsLuxury {
@@ -372,16 +307,7 @@ func (m Model) renderGuildScreen(state GuildServiceState, viewW, viewH int) stri
 	innerW := max(34, viewW)
 	var sb strings.Builder
 
-	titleStr := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true).Render("⚔ " + T(m.Lang, m.TownEst.GuildKey))
-	sb.WriteString(fmt.Sprintf("%s  |  💰 %s\n", titleStr, goldStyle.Render(fmt.Sprintf("%dG", m.Gold))))
-
-	if m.ManualMode {
-		controls := T(m.Lang, "shop.guild.controls")
-		sb.WriteString(subtleStyle.Render(shortenItemName(controls, innerW)) + "\n")
-	} else {
-		sb.WriteString(m.renderAutoBanner(state.ActionSummary, innerW) + "\n")
-	}
-	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n")
+	sb.WriteString(m.renderShopTop("⚔ " + T(m.Lang, m.TownEst.GuildKey), "shop.guild.controls", state.ActionSummary, innerW))
 
 	sb.WriteString(lipgloss.NewStyle().Bold(true).Render(T(m.Lang, "shop.guild.header")) + "\n")
 	availRows := max(2, viewH-7)
@@ -393,14 +319,9 @@ func (m Model) renderGuildScreen(state GuildServiceState, viewW, viewH int) stri
 			if displayed >= availRows {
 				break
 			}
-			marker := "  "
-			nameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
-			isChosen := (!m.ManualMode && state.Cursor == i && state.ActionSummary != "")
+			isChosen := m.autoPicked(state.Cursor, i, state.ActionSummary)
 
-			if state.Cursor == i {
-				marker = accentStyle.Render("▶ ")
-				nameStyle = nameStyle.Copy().Bold(true).Underline(true)
-			}
+			marker, nameStyle := shopRowStyle(state.Cursor == i)
 			clsName := TranslateEnum(m.Lang, "class", string(off.Class)+".short")
 			costStr := goldStyle.Render(fmt.Sprintf("%dG", off.Cost))
 			recType := T(m.Lang, "shop.guild.veteran")
@@ -410,10 +331,7 @@ func (m Model) renderGuildScreen(state GuildServiceState, viewW, viewH int) stri
 			} else if !off.CanAfford {
 				costStr = subtleStyle.Render(fmt.Sprintf("%dG", off.Cost))
 			}
-			badge := ""
-			if isChosen {
-				badge = " " + lipgloss.NewStyle().Foreground(lipgloss.Color("46")).Bold(true).Render("✓ " + T(m.Lang, "shop.badge.recruited"))
-			}
+			badge := m.badgeIf(isChosen, "shop.badge.recruited")
 			sb.WriteString(T(m.Lang, "shop.guild.row", marker, nameStyle.Render(recType), clsName, off.SlotIdx+1, costStr, badge) + "\n")
 			displayed++
 		}
@@ -427,38 +345,35 @@ func (m Model) renderForgeScreen(title string, state ForgeServiceState, isTanner
 	innerW := max(34, viewW)
 	var sb strings.Builder
 
-	titleStr := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true).Render(title)
-	sb.WriteString(fmt.Sprintf("%s  |  💰 %s\n", titleStr, goldStyle.Render(fmt.Sprintf("%dG", m.Gold))))
-
-	if m.ManualMode {
-		controls := T(m.Lang, "shop.forge.controls")
-		sb.WriteString(subtleStyle.Render(shortenItemName(controls, innerW)) + "\n")
-	} else {
-		sb.WriteString(m.renderAutoBanner(state.ActionSummary, innerW) + "\n")
+	controlsKey := "shop.forge.controls"
+	if !isTannery {
+		controlsKey = "shop.smithy.controls" // у кузнеца есть выбор вида зачарования
 	}
-	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n")
+	sb.WriteString(m.renderShopTop(title, controlsKey, state.ActionSummary, innerW))
 
 	sb.WriteString(lipgloss.NewStyle().Bold(true).Render(T(m.Lang, "shop.forge.header")) + "\n")
 	availRows := max(2, viewH-7)
 	displayed := 0
 	rowIdx := 0
 
+	// Выбранный вид зачарования оружия (кузница, ручной режим)
+	if !isTannery && m.ManualMode {
+		kind := state.EnchantKind
+		if !kindIn(m.enchantKindsAvailable(), kind) {
+			kind = m.enchantKindsAvailable()[0]
+		}
+		sb.WriteString(accentStyle.Render(T(m.Lang, "shop.forge.enchant_pick", enchantLabel(m.Lang, kind), m.enchantLevelCap())) + "\n")
+		availRows = max(2, availRows-1)
+	}
+
 	// 1. Пошив сумки
 	if isTannery && m.BagLevel < len(bagUpgrades)-1 {
 		nextBag := bagUpgrades[m.BagLevel+1]
-		marker := "  "
-		nameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
 		isChosen := (!m.ManualMode && state.ChosenIdx == 999)
 
-		if state.Cursor == rowIdx {
-			marker = accentStyle.Render("▶ ")
-			nameStyle = nameStyle.Copy().Bold(true).Underline(true)
-		}
+		marker, nameStyle := shopRowStyle(state.Cursor == rowIdx)
 		costStr := goldStyle.Render(fmt.Sprintf("%dG", nextBag.Cost))
-		badge := ""
-		if isChosen {
-			badge = " " + lipgloss.NewStyle().Foreground(lipgloss.Color("46")).Bold(true).Render("✓ " + T(m.Lang, "shop.badge.stitched"))
-		}
+		badge := m.badgeIf(isChosen, "shop.badge.stitched")
 		bagName := shortenItemName(T(m.Lang, nextBag.NameKey), 28)
 		sb.WriteString(T(m.Lang, "shop.bag.row", marker, nameStyle.Render(bagName), nextBag.Capacity, costStr, badge) + "\n")
 		rowIdx++
@@ -469,30 +384,36 @@ func (m Model) renderForgeScreen(title string, state ForgeServiceState, isTanner
 	if len(state.Offers) == 0 && (!isTannery || m.BagLevel >= len(bagUpgrades)-1) {
 		sb.WriteString(subtleStyle.Render("  " + T(m.Lang, "shop.forge.no_items")) + "\n")
 	} else {
-		for i, off := range state.Offers {
-			if displayed >= availRows {
-				break
-			}
-			marker := "  "
-			nameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
+		// Окно прокрутки: курсор всегда остаётся на экране, даже если предложений больше строк.
+		avail := max(1, availRows-displayed)
+		start := 0
+		if len(state.Offers) > avail {
+			start = max(0, min(state.Cursor-rowIdx-avail+1, len(state.Offers)-avail))
+		}
+		for i := start; i < len(state.Offers) && i-start < avail; i++ {
+			off := state.Offers[i]
 			targetIdx := rowIdx + i
 			isChosen := (!m.ManualMode && state.ChosenIdx == targetIdx)
 
-			if state.Cursor == targetIdx {
-				marker = accentStyle.Render("▶ ")
-				nameStyle = nameStyle.Copy().Bold(true).Underline(true)
-			}
+			marker, nameStyle := shopRowStyle(state.Cursor == targetIdx)
 			heroName := m.Party[off.HeroIdx].DisplayName(m.Lang)
-			costStr := goldStyle.Render(fmt.Sprintf("%dG", off.Cost))
-			if !off.CanAfford {
-				costStr = subtleStyle.Render(fmt.Sprintf("%dG", off.Cost))
-			}
-			badge := ""
-			if isChosen {
-				badge = " " + lipgloss.NewStyle().Foreground(lipgloss.Color("46")).Bold(true).Render("✓ " + T(m.Lang, "shop.badge.sharpened"))
-			}
-			slotName := T(m.Lang, "slot."+string(off.Slot))
+			costStr := costText(off.Cost, off.CanAfford)
 			cleanItem := shortenItemName(off.ItemName, max(10, innerW-42))
+
+			if off.Enchant {
+				badge := m.badgeIf(isChosen, "shop.badge.enchanted")
+				line := T(m.Lang, "shop.forge.enchant_row", marker, nameStyle.Render(cleanItem),
+					enchantLabel(m.Lang, off.EnchantKind), off.EnchantLevel, heroName, costStr, badge)
+				if off.Replaces != "" {
+					line += subtleStyle.Render(T(m.Lang, "shop.forge.enchant_replaces", off.Replaces))
+				}
+				sb.WriteString(line + "\n")
+				displayed++
+				continue
+			}
+
+			badge := m.badgeIf(isChosen, "shop.badge.sharpened")
+			slotName := T(m.Lang, "slot."+string(off.Slot))
 			sb.WriteString(fmt.Sprintf("%s%s (%s +%d) [%s] — %s%s\n", marker, nameStyle.Render(cleanItem), slotName, off.Level+1, heroName, costStr, badge))
 			displayed++
 		}
@@ -506,16 +427,7 @@ func (m Model) renderAlchemistScreen(state AlchemistServiceState, viewW, viewH i
 	innerW := max(34, viewW)
 	var sb strings.Builder
 
-	titleStr := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true).Render("🧪 " + T(m.Lang, m.TownEst.AlchemistKey))
-	sb.WriteString(fmt.Sprintf("%s  |  💰 %s\n", titleStr, goldStyle.Render(fmt.Sprintf("%dG", m.Gold))))
-
-	if m.ManualMode {
-		controls := T(m.Lang, "shop.alchemist.controls")
-		sb.WriteString(subtleStyle.Render(shortenItemName(controls, innerW)) + "\n")
-	} else {
-		sb.WriteString(m.renderAutoBanner(state.ActionSummary, innerW) + "\n")
-	}
-	sb.WriteString(subtleStyle.Render(strings.Repeat("─", innerW)) + "\n")
+	sb.WriteString(m.renderShopTop("🧪 " + T(m.Lang, m.TownEst.AlchemistKey), "shop.alchemist.controls", state.ActionSummary, innerW))
 
 	sb.WriteString(lipgloss.NewStyle().Bold(true).Render(T(m.Lang, "shop.alchemist.header")) + "\n")
 	availRows := max(2, viewH-7)
@@ -527,26 +439,18 @@ func (m Model) renderAlchemistScreen(state AlchemistServiceState, viewW, viewH i
 			if displayed >= availRows {
 				break
 			}
-			marker := "  "
-			nameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
-			isChosen := (!m.ManualMode && state.Cursor == i && state.ActionSummary != "")
+			isChosen := m.autoPicked(state.Cursor, i, state.ActionSummary)
 
-			if state.Cursor == i {
-				marker = accentStyle.Render("▶ ")
-				nameStyle = nameStyle.Copy().Bold(true).Underline(true)
-			}
-			costStr := goldStyle.Render(fmt.Sprintf("%dG", off.Cost))
-			if !off.CanAfford {
-				costStr = subtleStyle.Render(fmt.Sprintf("%dG", off.Cost))
-			}
+			marker, nameStyle := shopRowStyle(state.Cursor == i)
+			costStr := costText(off.Cost, off.CanAfford)
 			cat := T(m.Lang, "shop.alchemist.mutation")
-			if off.Type == AlchemistActionPotion {
+			switch off.Type {
+			case AlchemistActionPotion:
 				cat = T(m.Lang, "shop.alchemist.potion")
+			case AlchemistActionElixir:
+				cat = T(m.Lang, "shop.alchemist.elixir")
 			}
-			badge := ""
-			if isChosen {
-				badge = " " + lipgloss.NewStyle().Foreground(lipgloss.Color("46")).Bold(true).Render("✓ " + T(m.Lang, "shop.badge.accepted"))
-			}
+			badge := m.badgeIf(isChosen, "shop.badge.accepted")
 			cleanTitle := shortenItemName(off.ItemTitle, max(10, innerW-38))
 			sb.WriteString(fmt.Sprintf("%s[%s] %s (%s) — %s%s\n", marker, cat, nameStyle.Render(cleanTitle), off.HeroName, costStr, badge))
 			displayed++

@@ -43,10 +43,9 @@ func (m *Model) initGuildScreen() {
 }
 
 func (m *Model) initSmithyScreen() {
-	m.SmithyState = ForgeServiceState{
-		Cursor: 0,
-		Offers: m.GenerateSmithyOffers(),
-	}
+	// Выбранный вид зачарования сохраняется между заходами в кузницу.
+	m.SmithyState = ForgeServiceState{Cursor: 0, EnchantKind: m.SmithyState.EnchantKind}
+	m.SmithyState.Offers = m.GenerateSmithyOffers()
 }
 
 func (m *Model) initTanneryScreen() {
@@ -288,6 +287,12 @@ func (m *Model) handleSmithyKey(key string) (tea.Cmd, bool) {
 				}
 			}
 		}
+		return nil, true
+	case "left", "h":
+		m.cycleEnchantKind(-1)
+		return nil, true
+	case "right", "l":
+		m.cycleEnchantKind(1)
 		return nil, true
 	case "esc":
 		m.TownPhase = TownPhaseTannery

@@ -90,7 +90,11 @@ func (m Model) renderMap(viewW, viewH int) string {
 			if pack, exists := m.Packs[pos]; exists {
 				first := pack.GetFirstLiving()
 				if first != nil {
-					sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color(first.Color)).Bold(true).Render(string(first.Glyph)))
+					packStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(first.Color)).Bold(true)
+					if pack.Chasing {
+						packStyle = packStyle.Reverse(true) // стая заметила отряд и преследует его
+					}
+					sb.WriteString(packStyle.Render(string(first.Glyph)))
 				} else {
 					sb.WriteString(customFloor)
 				}

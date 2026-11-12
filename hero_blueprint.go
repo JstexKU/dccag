@@ -228,7 +228,7 @@ func (bp HeroBlueprint) Preview(smithyLvl int) HeroPreview {
 		HP:        maxHP + pt(StatHP),
 		MP:        base.MaxMP + pt(StatMP),
 		Atk:       heroBaseAtk + smithyLvl + pt(StatAtk),
-		Def:       base.BaseDef + pt(StatDef),
+		Def:       applyRaceDef(base.BaseDef+pt(StatDef), bp.Race),
 		Spd:       base.Speed + raceMod.SpeedFlat + pt(StatSpd),
 		SkillKey:  base.SkillNameKey,
 		SkillCost: base.SkillCost,

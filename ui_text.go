@@ -21,6 +21,9 @@ func padRightTruncate(s string, targetWidth int) string {
 	return s + strings.Repeat(" ", targetWidth-w)
 }
 
+// stripANSI убирает из строки только SGR-последовательности (цвет и стиль, оканчиваются на «m»).
+// Прочие управляющие последовательности (перемещение курсора, очистка) не поддерживаются:
+// они нужны лишь в тестах, где вывод lipgloss приводится к простому тексту.
 func stripANSI(s string) string {
 	var sb strings.Builder
 	inEsc := false

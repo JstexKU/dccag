@@ -354,6 +354,17 @@ func (m Model) renderCodexTabCrafts() string {
 			a.statLabel))
 	}
 
+
+	// Зачарование оружия и аффиксы снаряжения
+	sb.WriteString("\n" + lipgloss.NewStyle().Bold(true).Render(T(m.Lang, "codex.ench.title")) + "\n")
+	sb.WriteString(T(m.Lang, "codex.ench.intro") + "\n")
+	for _, kind := range enchantKinds {
+		sb.WriteString(" • " + T(m.Lang, "codex.ench."+string(kind)) + "\n")
+	}
+	sb.WriteString("\n" + lipgloss.NewStyle().Bold(true).Render(T(m.Lang, "codex.gear.title")) + "\n")
+	for _, key := range []string{"codex.gear.hpmp", "codex.gear.prefix", "codex.gear.vampirism", "codex.gear.fury", "codex.gear.mana", "codex.gear.titan"} {
+		sb.WriteString(" • " + T(m.Lang, key) + "\n")
+	}
 	return sb.String()
 }
 
@@ -369,7 +380,8 @@ func (m Model) renderCodexTabAlchemy() string {
 	sb.WriteString(fmt.Sprintf(" • %s: %s\n", fireStyle.Render(T(m.Lang, "mut.fury.name")), T(m.Lang, "codex.mut_fury_desc")))
 	sb.WriteString(fmt.Sprintf(" • %s: %s\n", healStyle.Render(T(m.Lang, "mut.titan.name")), T(m.Lang, "codex.mut_titan_desc")))
 	sb.WriteString(fmt.Sprintf(" • %s: %s\n", fountStyle.Render(T(m.Lang, "mut.aether.name")), T(m.Lang, "codex.mut_aether_desc")))
-	sb.WriteString(fmt.Sprintf(" • %s: %s\n\n", healStyle.Render(T(m.Lang, "mut.bastion.name")), T(m.Lang, "codex.mut_bastion_desc")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n", healStyle.Render(T(m.Lang, "mut.bastion.name")), T(m.Lang, "codex.mut_bastion_desc")))
+	sb.WriteString(fmt.Sprintf(" • %s: %s\n\n", potionStyle.Render(T(m.Lang, "elixir.exp.name")), T(m.Lang, "codex.elixir_desc")))
 
 	sb.WriteString(codexSecStyle.Render(T(m.Lang, "codex.sec.7")) + "\n")
 	sb.WriteString(fmt.Sprintf(" • %s: %s\n", codexItemStyle.Render(T(m.Lang, "relic.greed_compass.name.1")), T(m.Lang, "codex.relic_greed_desc")))

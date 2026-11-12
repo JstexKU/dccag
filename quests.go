@@ -37,7 +37,7 @@ func generateAutoQuest(curFloor int) AutoQuest {
 	}
 
 	// 4. Биомы с бочками (Катакомбы, Пепел, Шахты) или этажи 3+
-	biomeCycle := (curFloor - 1) % 11
+	biomeCycle := biomeIndex(curFloor)
 	if biomeCycle == 0 || biomeCycle == 2 || biomeCycle == 7 || curFloor >= 3 {
 		candidates = append(candidates, QuestPyromania)
 	}
@@ -45,6 +45,9 @@ func generateAutoQuest(curFloor int) AutoQuest {
 	// 5. Контракт на Босса — только если текущий или следующий спуск ведёт к боссу (10, 11, 20, 21...)
 	nextFloor := curFloor + 1
 	if curFloor > 0 && (curFloor%10 == 0 || nextFloor%10 == 0 || curFloor%11 == 0 || nextFloor%11 == 0) {
+		// Дважды намеренно: двойной вес в случайном выборе — контракт на босса выпадает вдвое чаще.
+		// Условия %11 ниже, судя по всему, остались от прежнего цикла биомов (боссы стоят на этажах %10);
+		// они расширяют окно контракта на этажи 11, 21, 22… — менять их можно только вместе с эталонами.
 		candidates = append(candidates, QuestHuntBoss, QuestHuntBoss)
 	}
 
@@ -52,31 +55,7 @@ func generateAutoQuest(curFloor int) AutoQuest {
 
 	switch qType {
 	case QuestHuntMonster:
-		var pool []MonsterType
-		switch biomeCycle {
-		case 0:
-			pool = []MonsterType{MobRat, MobGoblin, MobSkeleton}
-		case 1:
-			pool = []MonsterType{MobSlime, MobDrowned, MobLizard}
-		case 2:
-			pool = []MonsterType{MobImp, MobOrc, MobSalamander}
-		case 3:
-			pool = []MonsterType{MobGargoyle, MobGolem, MobPhantom}
-		case 4:
-			pool = []MonsterType{MobSproutSkeleton, MobDryad, MobBlightEnt}
-		case 5:
-			pool = []MonsterType{MobSporling, MobTentacle, MobToxicBasil}
-		case 6:
-			pool = []MonsterType{MobTomeBook, MobScrollMimic, MobArchiveKeeper}
-		case 7:
-			pool = []MonsterType{MobObsidianBeetle, MobDeepTroll, MobMinerGhoul}
-		case 8:
-			pool = []MonsterType{MobFallenCrusader, MobBloodCultist, MobShadowInquisitor}
-		case 9:
-			pool = []MonsterType{MobAstralWeaver, MobChronoPhantom, MobEssenceDevour}
-		default: // 10: Трон Бездны
-			pool = []MonsterType{MobVoidDemon, MobDeathKnight}
-		}
+		pool := biomeTable[biomeCycle].MobTypes()
 		target := pool[rng.Intn(len(pool))]
 		count := rng.Intn(3) + 3
 		return AutoQuest{

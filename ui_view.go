@@ -28,7 +28,7 @@ func (m Model) renderRightContentLines(innerRightW, maxLines int) []string {
 			rightBlock := fmt.Sprintf("%s %s", mobBar, hpBadge)
 			rightBlockWidth := (barWidth + 2) + 1 + (runewidth.StringWidth(hpText) + 2)
 			availName := max(4, innerRightW-rightBlockWidth-3)
-			mobName := shortenItemName(T(m.Lang, mob.NameKey), availName)
+			mobName := shortenItemName(m.monsterName(mob), availName)
 			mobNamePadded := padRight(mobName, availName)
 			marker := "•"
 			if m.ManualMode && mob == m.pickTarget() {
@@ -78,7 +78,7 @@ func (m Model) renderEnemyStrip(width int) string {
 		if mob.IsDead {
 			continue
 		}
-		hpStr := fmt.Sprintf("%s %d/%d", T(m.Lang, mob.NameKey), mob.HP, mob.MaxHP)
+		hpStr := fmt.Sprintf("%s %d/%d", m.monsterName(mob), mob.HP, mob.MaxHP)
 		if m.ManualMode && mob == m.pickTarget() {
 			hpStr = "▶" + hpStr
 		}
@@ -103,6 +103,9 @@ func (m Model) View() string {
 	}
 	if m.State == StateArmory {
 		return m.renderArmoryScreen()
+	}
+	if m.State == StateCharacter {
+		return m.renderCharacterScreen()
 	}
 	if m.State == StateLibrary {
 		return m.renderLibraryScreen(m.TermWidth, m.TermHeight)

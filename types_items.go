@@ -1,5 +1,10 @@
 package main
 
+import "strconv"
+
+// maxUpgradeLevel — потолок улучшения предмета в кузнице и дубильне.
+const maxUpgradeLevel = 6
+
 // --- Предметы, Зелья, Мутации ---
 type PotionType string
 
@@ -162,6 +167,7 @@ type EquipItem struct {
 	Value        int
 	Prefix       *PrefixDef
 	Suffix       *SuffixDef
+	Enchant      *Enchant // зачарование оружия у кузнеца (enchant.go)
 }
 
 func (e *EquipItem) TotalStat() int {
@@ -188,12 +194,15 @@ func (e *EquipItem) DisplayName(lang Language) string {
 	if e.Suffix != nil {
 		parts = append(parts, T(lang, e.Suffix.Key))
 	}
+	if e.Enchant != nil {
+		parts = append(parts, e.Enchant.Tag())
+	}
 	return joinNonEmpty(parts, " ")
 }
 
 func (e *EquipItem) UpgradeLevelStr() string {
 	if e.UpgradeLevel > 0 {
-		return "+" + string(rune('0'+e.UpgradeLevel))
+		return "+" + strconv.Itoa(e.UpgradeLevel)
 	}
 	return ""
 }

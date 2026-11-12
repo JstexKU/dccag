@@ -1,8 +1,6 @@
 package main
 
-func init() {
-	AllLoreVolumes = buildLoreDatabase()
-}
+import "strconv"
 
 func buildLoreDatabase() []LoreVolume {
 	var list []LoreVolume
@@ -327,28 +325,13 @@ func buildLoreDatabase() []LoreVolume {
 	// ============================================================
 	// РАЗДЕЛ 5. ЭКСПЕДИЦИОННЫЕ ДНЕВНИКИ БИОМОВ (11 БИОМОВ)
 	// ============================================================
-	biomeList := []struct {
-		Biome BiomeType
-		Slug  string
-	}{
-		{BiomeCatacombs, "catacombs"},
-		{BiomeGrotto, "grotto"},
-		{BiomeInferno, "inferno"},
-		{BiomeCrystal, "crystal"},
-		{BiomeDeadwood, "deadwood"},
-		{BiomeFungal, "fungal"},
-		{BiomeArchives, "archives"},
-		{BiomeMines, "mines"},
-		{BiomeSanctuary, "sanctuary"},
-		{BiomeAstral, "astral"},
-		{BiomeAbyss, "abyss"},
-	}
-	for i, bInfo := range biomeList {
+	for i, def := range biomeTable {
+		slug := string(def.Name)
 		list = append(list, LoreVolume{
-			ID: "diary_" + bInfo.Slug, Category: LoreCatDiaries, VolumeNum: i + 1,
-			TitleKey: "lore.diary." + bInfo.Slug + ".title", AuthorKey: "lore.author.lost_scout",
-			ExcerptKey: "lore.diary." + bInfo.Slug + ".excerpt", ContentKey: "lore.diary." + bInfo.Slug + ".text",
-			BiomeOrigin: bInfo.Biome,
+			ID: "diary_" + slug, Category: LoreCatDiaries, VolumeNum: i + 1,
+			TitleKey: "lore.diary." + slug + ".title", AuthorKey: "lore.author.lost_scout",
+			ExcerptKey: "lore.diary." + slug + ".excerpt", ContentKey: "lore.diary." + slug + ".text",
+			BiomeOrigin: def.Name,
 			Bonus: LoreBonus{Type: LoreBonusPartyExp, Value: 100, DescKey: "lore.bonus.diary_exp"},
 		})
 	}
@@ -398,13 +381,8 @@ func buildLoreDatabase() []LoreVolume {
 	return list
 }
 
-// itoa — вспомогательная функция без внешних зависимостей для сборки ключей
-func itoa(i int) string {
-	if i >= 0 && i <= 9 {
-		return string(rune('0' + i))
-	}
-	return "0"
-}
+// itoa — короткий помощник для сборки ключей словаря
+func itoa(i int) string { return strconv.Itoa(i) }
 
 // FindLoreVolume возвращает том по его ID
 func FindLoreVolume(id string) *LoreVolume {

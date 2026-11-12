@@ -19,6 +19,8 @@ type townGlyph struct {
 	bold   bool
 }
 
+// townStyleCache кэширует стили плиток города. Не потокобезопасен: используется только
+// из Update/View основного цикла Bubble Tea, параллельных обращений к нему нет.
 var townStyleCache = map[[3]uint8]lipgloss.Style{}
 
 func townStyle(g townGlyph) lipgloss.Style {

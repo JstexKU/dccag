@@ -363,17 +363,18 @@ func (m *Model) generateDungeon() {
 		r := rooms[i]
 		isBossRoom := (m.Floor%10 == 0 && i == len(rooms)-1)
 		center := Point{r.X + r.W/2, r.Y + r.H/2}
+		area := RoomArea{X: r.X, Y: r.Y, W: r.W, H: r.H}
 
 		// А. Спавн монстров: в каждой комнате есть пак, в больших — шанс на второй
 		if isBossRoom {
-			m.Packs[center] = spawnMonsterPack(true, m.Floor)
+			m.addPack(center, spawnMonsterPack(true, m.Floor), area)
 		} else {
-			m.Packs[center] = spawnMonsterPack(false, m.Floor)
+			m.addPack(center, spawnMonsterPack(false, m.Floor), area)
 
 			if (r.W >= 10 || r.H >= 7) && rng.Intn(100) < 45 {
 				secondPos := Point{r.X + 2, r.Y + r.H - 2}
 				if m.Grid[secondPos.Y][secondPos.X] == TileFloor && secondPos != center {
-					m.Packs[secondPos] = spawnMonsterPack(false, m.Floor)
+					m.addPack(secondPos, spawnMonsterPack(false, m.Floor), area)
 				}
 			}
 		}

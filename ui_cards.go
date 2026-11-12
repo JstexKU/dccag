@@ -13,14 +13,20 @@ var heroCardDowned = lipgloss.NewStyle().
 	BorderForeground(lipgloss.Color("208")).
 	Padding(0, 1)
 
-func (m Model) renderHeroCard(h *Hero, cardWidth int, forceMode ...CardMode) string {
-	innerWidth := max(14, cardWidth-4)
-	textWidth := max(12, innerWidth-2)
-
-	mode := detectCardMode(innerWidth)
+// resolveCardMode считает внутреннюю ширину карточки, ширину текста и режим отображения;
+// явно переданный режим (forceMode) главнее автоопределения по ширине.
+func resolveCardMode(cardWidth int, forceMode []CardMode) (innerWidth, textWidth int, mode CardMode) {
+	innerWidth = max(14, cardWidth-4)
+	textWidth = max(12, innerWidth-2)
+	mode = detectCardMode(innerWidth)
 	if len(forceMode) > 0 {
 		mode = forceMode[0]
 	}
+	return innerWidth, textWidth, mode
+}
+
+func (m Model) renderHeroCard(h *Hero, cardWidth int, forceMode ...CardMode) string {
+	innerWidth, textWidth, mode := resolveCardMode(cardWidth, forceMode)
 	targetLines := cardContentHeight(mode)
 
 	isActiveTurn := false
@@ -241,6 +247,10 @@ func buffBadge(h *Hero) string {
 		return goldStyle.Render("[💤]")
 	case h.ReviveCooldown > 0:
 		return subtleStyle.Render("[⏳]")
+	case h.PoisonTurns > 0:
+		return stressStyle.Render("[☣]")
+	case h.ChilledTurns > 0:
+		return fountStyle.Render("[❄]")
 	case h.Affliction != AfflictionNone:
 		return stressStyle.Render("[👁]")
 	case h.IsGuarding:
@@ -253,6 +263,8 @@ func buffBadge(h *Hero) string {
 		return accentStyle.Render("[🔮]")
 	case h.IsAura:
 		return fountStyle.Render("[✨]")
+	case h.ExpElixirPct > 0:
+		return accentStyle.Render("[📚]")
 	default:
 		return subtleStyle.Render("[-]")
 	}
@@ -303,13 +315,7 @@ func formatEquipCell(icon string, it *EquipItem, cellW int, lang Language) strin
 }
 
 func (m Model) renderPartyBanner(cardWidth int, forceMode ...CardMode) string {
-	innerWidth := max(14, cardWidth-4)
-	textWidth := max(12, innerWidth-2)
-
-	mode := detectCardMode(innerWidth)
-	if len(forceMode) > 0 {
-		mode = forceMode[0]
-	}
+	innerWidth, textWidth, mode := resolveCardMode(cardWidth, forceMode)
 	targetLines := cardContentHeight(mode)
 
 	relicName := T(m.Lang, "ui.none")

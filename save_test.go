@@ -216,7 +216,7 @@ func TestOldSaveWithoutHeroStillLoads(t *testing.T) {
 	}
 	got, ok := loadSave()
 	if !ok || got.Hero != nil || got.Legacy.TreasuryGold != 40 || got.Lang != LangEN {
-		t.Fatalf("сохранение версии 2.x должно читаться: %+v", got)
+		t.Fatalf("старое сохранение (формат версии 1) без героя должно читаться: %+v", got)
 	}
 }
 
