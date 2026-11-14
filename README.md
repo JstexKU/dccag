@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/dccag-poster.png" alt="dccag v3.4.1 — auto-roguelike" width="100%">
+</p>
+
 # dccag
 
 **A terminal auto-roguelike about a party of adventurers exploring a dangerous, procedurally generated dungeon.**
@@ -105,4 +109,3 @@ Use `L` to switch languages in-game.
 - **Repository:** [JstexKU/dccag](https://github.com/JstexKU/dccag)
 - **Current version:** 3.4.1
 - **Changelog:** [CHANGELOG.md](CHANGELOG.md)
-
