@@ -1,0 +1,1194 @@
+floor 1 seed 1 boss false
+boss=false mini=false n=3
+  #1 rat mob.rat lvl=2 aff=none r 137 hp=27/27 atk=12 def=1 spd=9 exp=22
+  #2 skeleton mob.skeleton lvl=1 aff=none s 252 hp=31/31 atk=13 def=3 spd=8 exp=18
+  #3 skeleton mob.skeleton lvl=1 aff=none s 252 hp=31/31 atk=13 def=3 spd=8 exp=18
+floor 1 seed 1 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=2 aff=poison E 196 hp=142/142 atk=20 def=6 spd=10 exp=136
+  #2 skeleton mob.skeleton lvl=1 aff=none s 245 hp=35/35 atk=14 def=4 spd=8 exp=28
+  #3 skeleton mob.skeleton lvl=1 aff=none s 245 hp=35/35 atk=14 def=4 spd=8 exp=28
+floor 1 seed 2 boss false
+boss=false mini=false n=4
+  #1 rat mob.rat lvl=1 aff=none r 137 hp=21/21 atk=9 def=0 spd=8 exp=18
+  #2 skeleton mob.skeleton lvl=2 aff=none s 252 hp=37/37 atk=16 def=4 spd=9 exp=22
+  #3 rat mob.rat lvl=2 aff=none r 137 hp=27/27 atk=12 def=1 spd=9 exp=22
+  #4 skeleton mob.skeleton lvl=1 aff=none s 252 hp=31/31 atk=13 def=3 spd=8 exp=18
+floor 1 seed 2 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=2 aff=poison E 196 hp=142/142 atk=20 def=6 spd=10 exp=136
+  #2 skeleton mob.skeleton lvl=1 aff=none s 245 hp=35/35 atk=14 def=4 spd=8 exp=28
+  #3 skeleton mob.skeleton lvl=1 aff=none s 245 hp=35/35 atk=14 def=4 spd=8 exp=28
+floor 1 seed 3 boss false
+boss=false mini=false n=3
+  #1 rat mob.rat lvl=1 aff=none r 137 hp=21/21 atk=9 def=0 spd=8 exp=18
+  #2 goblin mob.goblin lvl=2 aff=none g 118 hp=31/31 atk=14 def=2 spd=9 exp=22
+  #3 rat mob.rat lvl=1 aff=none r 137 hp=21/21 atk=9 def=0 spd=8 exp=18
+floor 1 seed 3 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=2 aff=poison E 196 hp=142/142 atk=20 def=6 spd=10 exp=136
+  #2 skeleton mob.skeleton lvl=1 aff=none s 245 hp=35/35 atk=14 def=4 spd=8 exp=28
+  #3 skeleton mob.skeleton lvl=1 aff=none s 245 hp=35/35 atk=14 def=4 spd=8 exp=28
+floor 1 seed 4 boss false
+boss=false mini=false n=5
+  #1 rat mob.rat lvl=1 aff=none r 137 hp=21/21 atk=9 def=0 spd=8 exp=18
+  #2 rat mob.rat lvl=1 aff=none r 137 hp=21/21 atk=9 def=0 spd=8 exp=18
+  #3 rat mob.rat lvl=2 aff=none r 137 hp=27/27 atk=12 def=1 spd=9 exp=22
+  #4 goblin mob.goblin lvl=2 aff=none g 118 hp=31/31 atk=14 def=2 spd=9 exp=22
+  #5 goblin mob.goblin lvl=1 aff=none g 118 hp=25/25 atk=11 def=1 spd=8 exp=18
+floor 1 seed 4 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=2 aff=poison E 196 hp=142/142 atk=20 def=6 spd=10 exp=136
+  #2 skeleton mob.skeleton lvl=1 aff=none s 245 hp=35/35 atk=14 def=4 spd=8 exp=28
+  #3 skeleton mob.skeleton lvl=1 aff=none s 245 hp=35/35 atk=14 def=4 spd=8 exp=28
+floor 2 seed 1 boss false
+boss=false mini=false n=5
+  #1 lizard mob.lizard lvl=2 aff=none l 29 hp=46/46 atk=20 def=4 spd=9 exp=22
+  #2 drowned mob.drowned lvl=3 aff=none u 31 hp=56/56 atk=22 def=3 spd=9 exp=26
+  #3 slime mob.slime lvl=2 aff=poison c 43 hp=42/42 atk=17 def=2 spd=9 exp=22
+  #4 drowned mob.drowned lvl=2 aff=none u 31 hp=50/50 atk=19 def=3 spd=9 exp=22
+  #5 slime mob.slime lvl=2 aff=none c 43 hp=42/42 atk=17 def=2 spd=9 exp=22
+floor 2 seed 1 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=3 aff=poison E 196 hp=158/158 atk=22 def=6 spd=10 exp=144
+  #2 skeleton mob.skeleton lvl=2 aff=none s 245 hp=40/40 atk=16 def=4 spd=8 exp=31
+  #3 skeleton mob.skeleton lvl=2 aff=none s 245 hp=40/40 atk=16 def=4 spd=8 exp=31
+floor 2 seed 2 boss false
+boss=false mini=false n=5
+  #1 lizard mob.lizard lvl=3 aff=none l 29 hp=52/52 atk=23 def=4 spd=9 exp=26
+  #2 lizard mob.lizard lvl=3 aff=none l 29 hp=52/52 atk=23 def=4 spd=9 exp=26
+  #3 lizard mob.lizard lvl=2 aff=none l 29 hp=46/46 atk=20 def=4 spd=9 exp=22
+  #4 drowned mob.drowned lvl=3 aff=none u 31 hp=56/56 atk=22 def=3 spd=9 exp=26
+  #5 lizard mob.lizard lvl=2 aff=none l 29 hp=46/46 atk=20 def=4 spd=9 exp=22
+floor 2 seed 2 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=3 aff=poison E 196 hp=158/158 atk=22 def=6 spd=10 exp=144
+  #2 skeleton mob.skeleton lvl=2 aff=none s 245 hp=40/40 atk=16 def=4 spd=8 exp=31
+  #3 skeleton mob.skeleton lvl=2 aff=none s 245 hp=40/40 atk=16 def=4 spd=8 exp=31
+floor 2 seed 3 boss false
+boss=false mini=false n=5
+  #1 slime mob.slime lvl=2 aff=fire c 43 hp=42/42 atk=21 def=2 spd=9 exp=22
+  #2 slime mob.slime lvl=2 aff=none c 43 hp=42/42 atk=17 def=2 spd=9 exp=22
+  #3 slime mob.slime lvl=3 aff=none c 43 hp=48/48 atk=20 def=2 spd=9 exp=26
+  #4 drowned mob.drowned lvl=3 aff=none u 31 hp=56/56 atk=22 def=3 spd=9 exp=26
+  #5 slime mob.slime lvl=3 aff=stone c 43 hp=63/63 atk=20 def=6 spd=9 exp=26
+floor 2 seed 3 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=3 aff=poison E 196 hp=158/158 atk=22 def=6 spd=10 exp=144
+  #2 skeleton mob.skeleton lvl=2 aff=none s 245 hp=40/40 atk=16 def=4 spd=8 exp=31
+  #3 skeleton mob.skeleton lvl=2 aff=none s 245 hp=40/40 atk=16 def=4 spd=8 exp=31
+floor 2 seed 4 boss false
+boss=false mini=false n=4
+  #1 drowned mob.drowned lvl=2 aff=none u 31 hp=50/50 atk=19 def=3 spd=9 exp=22
+  #2 slime mob.slime lvl=2 aff=none c 43 hp=42/42 atk=17 def=2 spd=9 exp=22
+  #3 slime mob.slime lvl=2 aff=none c 43 hp=42/42 atk=17 def=2 spd=9 exp=22
+  #4 slime mob.slime lvl=2 aff=none c 43 hp=42/42 atk=17 def=2 spd=9 exp=22
+floor 2 seed 4 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=3 aff=poison E 196 hp=158/158 atk=22 def=6 spd=10 exp=144
+  #2 skeleton mob.skeleton lvl=2 aff=none s 245 hp=40/40 atk=16 def=4 spd=8 exp=31
+  #3 skeleton mob.skeleton lvl=2 aff=none s 245 hp=40/40 atk=16 def=4 spd=8 exp=31
+floor 3 seed 1 boss false
+boss=false mini=false n=4
+  #1 orc mob.orc lvl=3 aff=stone o 130 hp=85/85 atk=26 def=9 spd=9 exp=26
+  #2 salamander mob.salamander lvl=3 aff=none m 196 hp=64/64 atk=27 def=4 spd=9 exp=26
+  #3 orc mob.orc lvl=3 aff=none o 130 hp=70/70 atk=26 def=5 spd=9 exp=26
+  #4 salamander mob.salamander lvl=3 aff=none m 196 hp=64/64 atk=27 def=4 spd=9 exp=26
+floor 3 seed 1 boss true
+boss=true mini=true n=3
+  #1 mini_reaver mob.mini_reaver lvl=4 aff=fire R 208 hp=174/174 atk=28 def=5 spd=10 exp=152
+  #2 skeleton mob.skeleton lvl=3 aff=none s 245 hp=45/45 atk=18 def=4 spd=8 exp=34
+  #3 skeleton mob.skeleton lvl=3 aff=none s 245 hp=45/45 atk=18 def=4 spd=8 exp=34
+floor 3 seed 2 boss false
+boss=false mini=false n=3
+  #1 imp mob.imp lvl=3 aff=none i 208 hp=58/58 atk=24 def=3 spd=9 exp=26
+  #2 orc mob.orc lvl=4 aff=none o 130 hp=76/76 atk=29 def=6 spd=10 exp=30
+  #3 salamander mob.salamander lvl=4 aff=none m 196 hp=70/70 atk=30 def=5 spd=10 exp=30
+floor 3 seed 2 boss true
+boss=true mini=true n=3
+  #1 mini_reaver mob.mini_reaver lvl=4 aff=fire R 208 hp=174/174 atk=28 def=5 spd=10 exp=152
+  #2 skeleton mob.skeleton lvl=3 aff=none s 245 hp=45/45 atk=18 def=4 spd=8 exp=34
+  #3 skeleton mob.skeleton lvl=3 aff=none s 245 hp=45/45 atk=18 def=4 spd=8 exp=34
+floor 3 seed 3 boss false
+boss=false mini=false n=3
+  #1 orc mob.orc lvl=4 aff=poison o 130 hp=76/76 atk=29 def=6 spd=10 exp=30
+  #2 orc mob.orc lvl=4 aff=none o 130 hp=76/76 atk=29 def=6 spd=10 exp=30
+  #3 salamander mob.salamander lvl=4 aff=none m 196 hp=70/70 atk=30 def=5 spd=10 exp=30
+floor 3 seed 3 boss true
+boss=true mini=true n=3
+  #1 mini_reaver mob.mini_reaver lvl=4 aff=fire R 208 hp=174/174 atk=28 def=5 spd=10 exp=152
+  #2 skeleton mob.skeleton lvl=3 aff=none s 245 hp=45/45 atk=18 def=4 spd=8 exp=34
+  #3 skeleton mob.skeleton lvl=3 aff=none s 245 hp=45/45 atk=18 def=4 spd=8 exp=34
+floor 3 seed 4 boss false
+boss=false mini=false n=3
+  #1 orc mob.orc lvl=3 aff=none o 130 hp=70/70 atk=26 def=5 spd=9 exp=26
+  #2 salamander mob.salamander lvl=3 aff=none m 196 hp=64/64 atk=27 def=4 spd=9 exp=26
+  #3 orc mob.orc lvl=3 aff=none o 130 hp=70/70 atk=26 def=5 spd=9 exp=26
+floor 3 seed 4 boss true
+boss=true mini=true n=3
+  #1 mini_reaver mob.mini_reaver lvl=4 aff=fire R 208 hp=174/174 atk=28 def=5 spd=10 exp=152
+  #2 skeleton mob.skeleton lvl=3 aff=none s 245 hp=45/45 atk=18 def=4 spd=8 exp=34
+  #3 skeleton mob.skeleton lvl=3 aff=none s 245 hp=45/45 atk=18 def=4 spd=8 exp=34
+floor 4 seed 1 boss false
+boss=false mini=false n=4
+  #1 gargoyle mob.gargoyle lvl=5 aff=none G 102 hp=88/88 atk=34 def=8 spd=10 exp=34
+  #2 phantom mob.phantom lvl=4 aff=none p 159 hp=74/74 atk=34 def=4 spd=10 exp=30
+  #3 golem mob.golem lvl=4 aff=frost C 141 hp=92/92 atk=32 def=9 spd=10 exp=30
+  #4 gargoyle mob.gargoyle lvl=4 aff=vampiric G 102 hp=82/82 atk=31 def=8 spd=10 exp=30
+floor 4 seed 1 boss true
+boss=true mini=true n=3
+  #1 mini_colossus mob.mini_colossus lvl=5 aff=stone C 51 hp=190/190 atk=25 def=10 spd=10 exp=160
+  #2 skeleton mob.skeleton lvl=4 aff=none s 245 hp=50/50 atk=20 def=4 spd=8 exp=37
+  #3 skeleton mob.skeleton lvl=4 aff=none s 245 hp=50/50 atk=20 def=4 spd=8 exp=37
+floor 4 seed 2 boss false
+boss=false mini=false n=4
+  #1 phantom mob.phantom lvl=4 aff=none p 159 hp=74/74 atk=34 def=4 spd=10 exp=30
+  #2 phantom mob.phantom lvl=4 aff=none p 159 hp=74/74 atk=34 def=4 spd=10 exp=30
+  #3 gargoyle mob.gargoyle lvl=4 aff=none G 102 hp=82/82 atk=31 def=8 spd=10 exp=30
+  #4 golem mob.golem lvl=4 aff=none C 141 hp=92/92 atk=32 def=9 spd=10 exp=30
+floor 4 seed 2 boss true
+boss=true mini=true n=3
+  #1 mini_colossus mob.mini_colossus lvl=5 aff=stone C 51 hp=190/190 atk=25 def=10 spd=10 exp=160
+  #2 skeleton mob.skeleton lvl=4 aff=none s 245 hp=50/50 atk=20 def=4 spd=8 exp=37
+  #3 skeleton mob.skeleton lvl=4 aff=none s 245 hp=50/50 atk=20 def=4 spd=8 exp=37
+floor 4 seed 3 boss false
+boss=false mini=false n=4
+  #1 golem mob.golem lvl=5 aff=none C 141 hp=98/98 atk=35 def=9 spd=10 exp=34
+  #2 phantom mob.phantom lvl=5 aff=none p 159 hp=80/80 atk=37 def=4 spd=10 exp=34
+  #3 phantom mob.phantom lvl=4 aff=vampiric p 159 hp=74/74 atk=34 def=4 spd=10 exp=30
+  #4 phantom mob.phantom lvl=5 aff=none p 159 hp=80/80 atk=37 def=4 spd=10 exp=34
+floor 4 seed 3 boss true
+boss=true mini=true n=3
+  #1 mini_colossus mob.mini_colossus lvl=5 aff=stone C 51 hp=190/190 atk=25 def=10 spd=10 exp=160
+  #2 skeleton mob.skeleton lvl=4 aff=none s 245 hp=50/50 atk=20 def=4 spd=8 exp=37
+  #3 skeleton mob.skeleton lvl=4 aff=none s 245 hp=50/50 atk=20 def=4 spd=8 exp=37
+floor 4 seed 4 boss false
+boss=false mini=false n=5
+  #1 gargoyle mob.gargoyle lvl=4 aff=poison G 102 hp=82/82 atk=31 def=8 spd=10 exp=30
+  #2 gargoyle mob.gargoyle lvl=4 aff=none G 102 hp=82/82 atk=31 def=8 spd=10 exp=30
+  #3 phantom mob.phantom lvl=4 aff=stone p 159 hp=89/89 atk=34 def=8 spd=10 exp=30
+  #4 gargoyle mob.gargoyle lvl=4 aff=none G 102 hp=82/82 atk=31 def=8 spd=10 exp=30
+  #5 gargoyle mob.gargoyle lvl=4 aff=frost G 102 hp=82/82 atk=31 def=8 spd=10 exp=30
+floor 4 seed 4 boss true
+boss=true mini=true n=3
+  #1 mini_colossus mob.mini_colossus lvl=5 aff=stone C 51 hp=190/190 atk=25 def=10 spd=10 exp=160
+  #2 skeleton mob.skeleton lvl=4 aff=none s 245 hp=50/50 atk=20 def=4 spd=8 exp=37
+  #3 skeleton mob.skeleton lvl=4 aff=none s 245 hp=50/50 atk=20 def=4 spd=8 exp=37
+floor 5 seed 1 boss false
+boss=false mini=false n=3
+  #1 sprout_skeleton mob.sprout_skeleton lvl=5 aff=none s 106 hp=58/58 atk=27 def=5 spd=10 exp=34
+  #2 blight_ent mob.blight_ent lvl=5 aff=none T 94 hp=86/86 atk=33 def=8 spd=10 exp=34
+  #3 sprout_skeleton mob.sprout_skeleton lvl=5 aff=frost s 106 hp=58/58 atk=27 def=5 spd=10 exp=34
+floor 5 seed 1 boss true
+boss=true mini=true n=3
+  #1 mini_boneblight mob.mini_boneblight lvl=6 aff=poison W 118 hp=206/206 atk=30 def=8 spd=10 exp=168
+  #2 skeleton mob.skeleton lvl=5 aff=none s 245 hp=55/55 atk=22 def=4 spd=8 exp=40
+  #3 skeleton mob.skeleton lvl=5 aff=none s 245 hp=55/55 atk=22 def=4 spd=8 exp=40
+floor 5 seed 2 boss false
+boss=false mini=false n=3
+  #1 blight_ent mob.blight_ent lvl=5 aff=none T 94 hp=86/86 atk=33 def=8 spd=10 exp=34
+  #2 sprout_skeleton mob.sprout_skeleton lvl=6 aff=stone s 106 hp=79/79 atk=30 def=10 spd=11 exp=38
+  #3 dryad mob.dryad lvl=5 aff=none d 83 hp=68/68 atk=31 def=3 spd=10 exp=34
+floor 5 seed 2 boss true
+boss=true mini=true n=3
+  #1 mini_boneblight mob.mini_boneblight lvl=6 aff=poison W 118 hp=206/206 atk=30 def=8 spd=10 exp=168
+  #2 skeleton mob.skeleton lvl=5 aff=none s 245 hp=55/55 atk=22 def=4 spd=8 exp=40
+  #3 skeleton mob.skeleton lvl=5 aff=none s 245 hp=55/55 atk=22 def=4 spd=8 exp=40
+floor 5 seed 3 boss false
+boss=false mini=true n=3
+  #1 mini_boneblight mob.mini_boneblight lvl=6 aff=poison W 118 hp=206/206 atk=30 def=8 spd=10 exp=168
+  #2 skeleton mob.skeleton lvl=5 aff=none s 245 hp=55/55 atk=22 def=4 spd=8 exp=40
+  #3 skeleton mob.skeleton lvl=5 aff=none s 245 hp=55/55 atk=22 def=4 spd=8 exp=40
+floor 5 seed 3 boss true
+boss=true mini=true n=3
+  #1 mini_boneblight mob.mini_boneblight lvl=6 aff=poison W 118 hp=206/206 atk=30 def=8 spd=10 exp=168
+  #2 skeleton mob.skeleton lvl=5 aff=none s 245 hp=55/55 atk=22 def=4 spd=8 exp=40
+  #3 skeleton mob.skeleton lvl=5 aff=none s 245 hp=55/55 atk=22 def=4 spd=8 exp=40
+floor 5 seed 4 boss false
+boss=false mini=false n=5
+  #1 blight_ent mob.blight_ent lvl=5 aff=frost T 94 hp=86/86 atk=33 def=8 spd=10 exp=34
+  #2 sprout_skeleton mob.sprout_skeleton lvl=5 aff=none s 106 hp=58/58 atk=27 def=5 spd=10 exp=34
+  #3 sprout_skeleton mob.sprout_skeleton lvl=6 aff=stone s 106 hp=79/79 atk=30 def=10 spd=11 exp=38
+  #4 blight_ent mob.blight_ent lvl=5 aff=stone T 94 hp=101/101 atk=33 def=12 spd=10 exp=34
+  #5 sprout_skeleton mob.sprout_skeleton lvl=5 aff=stone s 106 hp=73/73 atk=27 def=9 spd=10 exp=34
+floor 5 seed 4 boss true
+boss=true mini=true n=3
+  #1 mini_boneblight mob.mini_boneblight lvl=6 aff=poison W 118 hp=206/206 atk=30 def=8 spd=10 exp=168
+  #2 skeleton mob.skeleton lvl=5 aff=none s 245 hp=55/55 atk=22 def=4 spd=8 exp=40
+  #3 skeleton mob.skeleton lvl=5 aff=none s 245 hp=55/55 atk=22 def=4 spd=8 exp=40
+floor 6 seed 1 boss false
+boss=false mini=false n=6
+  #1 toxic_basil mob.toxic_basil lvl=7 aff=frost b 35 hp=90/90 atk=40 def=7 spd=11 exp=42
+  #2 sporling mob.sporling lvl=6 aff=none x 142 hp=68/68 atk=31 def=5 spd=11 exp=38
+  #3 sporling mob.sporling lvl=6 aff=fire x 142 hp=68/68 atk=35 def=5 spd=11 exp=38
+  #4 tentacle mob.tentacle lvl=6 aff=frost t 65 hp=78/78 atk=33 def=6 spd=11 exp=38
+  #5 tentacle mob.tentacle lvl=7 aff=none t 65 hp=84/84 atk=36 def=6 spd=11 exp=42
+  #6 toxic_basil mob.toxic_basil lvl=6 aff=vampiric b 35 hp=84/84 atk=37 def=7 spd=11 exp=38
+floor 6 seed 1 boss true
+boss=true mini=true n=3
+  #1 mini_boneblight mob.mini_boneblight lvl=7 aff=poison W 118 hp=222/222 atk=32 def=9 spd=10 exp=176
+  #2 skeleton mob.skeleton lvl=6 aff=none s 245 hp=60/60 atk=24 def=4 spd=8 exp=43
+  #3 skeleton mob.skeleton lvl=6 aff=none s 245 hp=60/60 atk=24 def=4 spd=8 exp=43
+floor 6 seed 2 boss false
+boss=false mini=false n=6
+  #1 toxic_basil mob.toxic_basil lvl=6 aff=none b 35 hp=84/84 atk=37 def=7 spd=11 exp=38
+  #2 sporling mob.sporling lvl=7 aff=stone x 142 hp=89/89 atk=34 def=9 spd=11 exp=42
+  #3 toxic_basil mob.toxic_basil lvl=6 aff=none b 35 hp=84/84 atk=37 def=7 spd=11 exp=38
+  #4 toxic_basil mob.toxic_basil lvl=6 aff=fire b 35 hp=84/84 atk=41 def=7 spd=11 exp=38
+  #5 toxic_basil mob.toxic_basil lvl=6 aff=none b 35 hp=84/84 atk=37 def=7 spd=11 exp=38
+  #6 sporling mob.sporling lvl=6 aff=stone x 142 hp=83/83 atk=31 def=9 spd=11 exp=38
+floor 6 seed 2 boss true
+boss=true mini=true n=3
+  #1 mini_boneblight mob.mini_boneblight lvl=7 aff=poison W 118 hp=222/222 atk=32 def=9 spd=10 exp=176
+  #2 skeleton mob.skeleton lvl=6 aff=none s 245 hp=60/60 atk=24 def=4 spd=8 exp=43
+  #3 skeleton mob.skeleton lvl=6 aff=none s 245 hp=60/60 atk=24 def=4 spd=8 exp=43
+floor 6 seed 3 boss false
+boss=false mini=false n=4
+  #1 sporling mob.sporling lvl=7 aff=fire x 142 hp=74/74 atk=38 def=5 spd=11 exp=42
+  #2 sporling mob.sporling lvl=6 aff=vampiric x 142 hp=68/68 atk=31 def=5 spd=11 exp=38
+  #3 toxic_basil mob.toxic_basil lvl=6 aff=none b 35 hp=84/84 atk=37 def=7 spd=11 exp=38
+  #4 sporling mob.sporling lvl=6 aff=stone x 142 hp=83/83 atk=31 def=9 spd=11 exp=38
+floor 6 seed 3 boss true
+boss=true mini=true n=3
+  #1 mini_boneblight mob.mini_boneblight lvl=7 aff=poison W 118 hp=222/222 atk=32 def=9 spd=10 exp=176
+  #2 skeleton mob.skeleton lvl=6 aff=none s 245 hp=60/60 atk=24 def=4 spd=8 exp=43
+  #3 skeleton mob.skeleton lvl=6 aff=none s 245 hp=60/60 atk=24 def=4 spd=8 exp=43
+floor 6 seed 4 boss false
+boss=false mini=false n=5
+  #1 toxic_basil mob.toxic_basil lvl=6 aff=none b 35 hp=84/84 atk=37 def=7 spd=11 exp=38
+  #2 tentacle mob.tentacle lvl=6 aff=frost t 65 hp=78/78 atk=33 def=6 spd=11 exp=38
+  #3 tentacle mob.tentacle lvl=6 aff=none t 65 hp=78/78 atk=33 def=6 spd=11 exp=38
+  #4 tentacle mob.tentacle lvl=7 aff=none t 65 hp=84/84 atk=36 def=6 spd=11 exp=42
+  #5 toxic_basil mob.toxic_basil lvl=6 aff=frost b 35 hp=84/84 atk=37 def=7 spd=11 exp=38
+floor 6 seed 4 boss true
+boss=true mini=true n=3
+  #1 mini_boneblight mob.mini_boneblight lvl=7 aff=poison W 118 hp=222/222 atk=32 def=9 spd=10 exp=176
+  #2 skeleton mob.skeleton lvl=6 aff=none s 245 hp=60/60 atk=24 def=4 spd=8 exp=43
+  #3 skeleton mob.skeleton lvl=6 aff=none s 245 hp=60/60 atk=24 def=4 spd=8 exp=43
+floor 7 seed 1 boss false
+boss=false mini=false n=6
+  #1 scroll_mimic mob.scroll_mimic lvl=7 aff=poison m 178 hp=86/86 atk=39 def=7 spd=11 exp=42
+  #2 tome_book mob.tome_book lvl=7 aff=none b 221 hp=77/77 atk=37 def=4 spd=11 exp=42
+  #3 tome_book mob.tome_book lvl=7 aff=none b 221 hp=77/77 atk=37 def=4 spd=11 exp=42
+  #4 archive_keeper mob.archive_keeper lvl=7 aff=poison A 75 hp=96/96 atk=42 def=8 spd=11 exp=42
+  #5 archive_keeper mob.archive_keeper lvl=8 aff=none A 75 hp=102/102 atk=45 def=9 spd=12 exp=46
+  #6 tome_book mob.tome_book lvl=7 aff=none b 221 hp=77/77 atk=37 def=4 spd=11 exp=42
+floor 7 seed 1 boss true
+boss=true mini=true n=3
+  #1 mini_colossus mob.mini_colossus lvl=8 aff=stone C 51 hp=238/238 atk=31 def=11 spd=10 exp=184
+  #2 skeleton mob.skeleton lvl=7 aff=none s 245 hp=65/65 atk=26 def=4 spd=8 exp=46
+  #3 skeleton mob.skeleton lvl=7 aff=none s 245 hp=65/65 atk=26 def=4 spd=8 exp=46
+floor 7 seed 2 boss false
+boss=false mini=false n=5
+  #1 tome_book mob.tome_book lvl=7 aff=stone b 221 hp=92/92 atk=37 def=8 spd=11 exp=42
+  #2 tome_book mob.tome_book lvl=7 aff=vampiric b 221 hp=77/77 atk=37 def=4 spd=11 exp=42
+  #3 archive_keeper mob.archive_keeper lvl=7 aff=none A 75 hp=96/96 atk=42 def=8 spd=11 exp=42
+  #4 archive_keeper mob.archive_keeper lvl=8 aff=fire A 75 hp=102/102 atk=49 def=9 spd=12 exp=46
+  #5 tome_book mob.tome_book lvl=7 aff=fire b 221 hp=77/77 atk=41 def=4 spd=11 exp=42
+floor 7 seed 2 boss true
+boss=true mini=true n=3
+  #1 mini_colossus mob.mini_colossus lvl=8 aff=stone C 51 hp=238/238 atk=31 def=11 spd=10 exp=184
+  #2 skeleton mob.skeleton lvl=7 aff=none s 245 hp=65/65 atk=26 def=4 spd=8 exp=46
+  #3 skeleton mob.skeleton lvl=7 aff=none s 245 hp=65/65 atk=26 def=4 spd=8 exp=46
+floor 7 seed 3 boss false
+boss=false mini=false n=5
+  #1 scroll_mimic mob.scroll_mimic lvl=7 aff=none m 178 hp=86/86 atk=39 def=7 spd=11 exp=42
+  #2 tome_book mob.tome_book lvl=7 aff=none b 221 hp=77/77 atk=37 def=4 spd=11 exp=42
+  #3 archive_keeper mob.archive_keeper lvl=8 aff=vampiric A 75 hp=102/102 atk=45 def=9 spd=12 exp=46
+  #4 archive_keeper mob.archive_keeper lvl=7 aff=stone A 75 hp=111/111 atk=42 def=12 spd=11 exp=42
+  #5 tome_book mob.tome_book lvl=7 aff=none b 221 hp=77/77 atk=37 def=4 spd=11 exp=42
+floor 7 seed 3 boss true
+boss=true mini=true n=3
+  #1 mini_colossus mob.mini_colossus lvl=8 aff=stone C 51 hp=238/238 atk=31 def=11 spd=10 exp=184
+  #2 skeleton mob.skeleton lvl=7 aff=none s 245 hp=65/65 atk=26 def=4 spd=8 exp=46
+  #3 skeleton mob.skeleton lvl=7 aff=none s 245 hp=65/65 atk=26 def=4 spd=8 exp=46
+floor 7 seed 4 boss false
+boss=false mini=false n=5
+  #1 archive_keeper mob.archive_keeper lvl=7 aff=poison A 75 hp=96/96 atk=42 def=8 spd=11 exp=42
+  #2 archive_keeper mob.archive_keeper lvl=7 aff=none A 75 hp=96/96 atk=42 def=8 spd=11 exp=42
+  #3 archive_keeper mob.archive_keeper lvl=7 aff=none A 75 hp=96/96 atk=42 def=8 spd=11 exp=42
+  #4 archive_keeper mob.archive_keeper lvl=8 aff=none A 75 hp=102/102 atk=45 def=9 spd=12 exp=46
+  #5 archive_keeper mob.archive_keeper lvl=7 aff=poison A 75 hp=96/96 atk=42 def=8 spd=11 exp=42
+floor 7 seed 4 boss true
+boss=true mini=true n=3
+  #1 mini_colossus mob.mini_colossus lvl=8 aff=stone C 51 hp=238/238 atk=31 def=11 spd=10 exp=184
+  #2 skeleton mob.skeleton lvl=7 aff=none s 245 hp=65/65 atk=26 def=4 spd=8 exp=46
+  #3 skeleton mob.skeleton lvl=7 aff=none s 245 hp=65/65 atk=26 def=4 spd=8 exp=46
+floor 8 seed 1 boss false
+boss=false mini=false n=6
+  #1 obsidian_beetle mob.obsidian_beetle lvl=9 aff=none o 238 hp=198/198 atk=88 def=24 spd=12 exp=100
+  #2 miner_ghoul mob.miner_ghoul lvl=8 aff=fire z 243 hp=192/192 atk=96 def=14 spd=12 exp=92
+  #3 miner_ghoul mob.miner_ghoul lvl=9 aff=poison z 243 hp=204/204 atk=94 def=14 spd=12 exp=100
+  #4 miner_ghoul mob.miner_ghoul lvl=9 aff=vampiric z 243 hp=204/204 atk=94 def=14 spd=12 exp=100
+  #5 deep_troll mob.deep_troll lvl=8 aff=none O 130 hp=226/226 atk=94 def=20 spd=12 exp=92
+  #6 miner_ghoul mob.miner_ghoul lvl=8 aff=poison z 243 hp=192/192 atk=88 def=14 spd=12 exp=92
+floor 8 seed 1 boss true
+boss=true mini=true n=3
+  #1 mini_reaver mob.mini_reaver lvl=9 aff=fire R 208 hp=508/508 atk=76 def=12 spd=10 exp=384
+  #2 skeleton mob.skeleton lvl=8 aff=none s 245 hp=140/140 atk=56 def=8 spd=8 exp=98
+  #3 skeleton mob.skeleton lvl=8 aff=none s 245 hp=140/140 atk=56 def=8 spd=8 exp=98
+floor 8 seed 2 boss false
+boss=false mini=false n=6
+  #1 miner_ghoul mob.miner_ghoul lvl=9 aff=stone z 243 hp=234/234 atk=94 def=22 spd=12 exp=100
+  #2 miner_ghoul mob.miner_ghoul lvl=8 aff=poison z 243 hp=192/192 atk=88 def=14 spd=12 exp=92
+  #3 deep_troll mob.deep_troll lvl=8 aff=poison O 130 hp=226/226 atk=94 def=20 spd=12 exp=92
+  #4 miner_ghoul mob.miner_ghoul lvl=8 aff=fire z 243 hp=192/192 atk=96 def=14 spd=12 exp=92
+  #5 miner_ghoul mob.miner_ghoul lvl=9 aff=stone z 243 hp=234/234 atk=94 def=22 spd=12 exp=100
+  #6 obsidian_beetle mob.obsidian_beetle lvl=8 aff=none o 238 hp=186/186 atk=82 def=24 spd=12 exp=92
+floor 8 seed 2 boss true
+boss=true mini=true n=3
+  #1 mini_reaver mob.mini_reaver lvl=9 aff=fire R 208 hp=508/508 atk=76 def=12 spd=10 exp=384
+  #2 skeleton mob.skeleton lvl=8 aff=none s 245 hp=140/140 atk=56 def=8 spd=8 exp=98
+  #3 skeleton mob.skeleton lvl=8 aff=none s 245 hp=140/140 atk=56 def=8 spd=8 exp=98
+floor 8 seed 3 boss false
+boss=false mini=false n=6
+  #1 obsidian_beetle mob.obsidian_beetle lvl=8 aff=poison o 238 hp=186/186 atk=82 def=24 spd=12 exp=92
+  #2 miner_ghoul mob.miner_ghoul lvl=8 aff=stone z 243 hp=222/222 atk=88 def=22 spd=12 exp=92
+  #3 deep_troll mob.deep_troll lvl=8 aff=fire O 130 hp=226/226 atk=102 def=20 spd=12 exp=92
+  #4 miner_ghoul mob.miner_ghoul lvl=9 aff=fire z 243 hp=204/204 atk=102 def=14 spd=12 exp=100
+  #5 miner_ghoul mob.miner_ghoul lvl=8 aff=none z 243 hp=192/192 atk=88 def=14 spd=12 exp=92
+  #6 deep_troll mob.deep_troll lvl=9 aff=none O 130 hp=238/238 atk=100 def=20 spd=12 exp=100
+floor 8 seed 3 boss true
+boss=true mini=true n=3
+  #1 mini_reaver mob.mini_reaver lvl=9 aff=fire R 208 hp=508/508 atk=76 def=12 spd=10 exp=384
+  #2 skeleton mob.skeleton lvl=8 aff=none s 245 hp=140/140 atk=56 def=8 spd=8 exp=98
+  #3 skeleton mob.skeleton lvl=8 aff=none s 245 hp=140/140 atk=56 def=8 spd=8 exp=98
+floor 8 seed 4 boss false
+boss=false mini=false n=4
+  #1 miner_ghoul mob.miner_ghoul lvl=9 aff=poison z 243 hp=204/204 atk=94 def=14 spd=12 exp=100
+  #2 deep_troll mob.deep_troll lvl=8 aff=poison O 130 hp=226/226 atk=94 def=20 spd=12 exp=92
+  #3 miner_ghoul mob.miner_ghoul lvl=9 aff=stone z 243 hp=234/234 atk=94 def=22 spd=12 exp=100
+  #4 miner_ghoul mob.miner_ghoul lvl=9 aff=stone z 243 hp=234/234 atk=94 def=22 spd=12 exp=100
+floor 8 seed 4 boss true
+boss=true mini=true n=3
+  #1 mini_reaver mob.mini_reaver lvl=9 aff=fire R 208 hp=508/508 atk=76 def=12 spd=10 exp=384
+  #2 skeleton mob.skeleton lvl=8 aff=none s 245 hp=140/140 atk=56 def=8 spd=8 exp=98
+  #3 skeleton mob.skeleton lvl=8 aff=none s 245 hp=140/140 atk=56 def=8 spd=8 exp=98
+floor 9 seed 1 boss false
+boss=false mini=false n=4
+  #1 fallen_crusader mob.fallen_crusader lvl=10 aff=fire F 196 hp=256/256 atk=116 def=24 spd=13 exp=108
+  #2 blood_cultist mob.blood_cultist lvl=9 aff=stone c 161 hp=222/222 atk=92 def=20 spd=12 exp=100
+  #3 blood_cultist mob.blood_cultist lvl=10 aff=none c 161 hp=204/204 atk=98 def=14 spd=13 exp=108
+  #4 fallen_crusader mob.fallen_crusader lvl=9 aff=frost F 196 hp=244/244 atk=102 def=22 spd=12 exp=100
+floor 9 seed 1 boss true
+boss=true mini=true n=3
+  #1 mini_stalker mob.mini_stalker lvl=10 aff=vampiric S 93 hp=540/540 atk=84 def=16 spd=10 exp=400
+  #2 skeleton mob.skeleton lvl=9 aff=none s 245 hp=150/150 atk=60 def=8 spd=8 exp=104
+  #3 skeleton mob.skeleton lvl=9 aff=none s 245 hp=150/150 atk=60 def=8 spd=8 exp=104
+floor 9 seed 2 boss false
+boss=false mini=false n=4
+  #1 fallen_crusader mob.fallen_crusader lvl=9 aff=fire F 196 hp=244/244 atk=110 def=22 spd=12 exp=100
+  #2 blood_cultist mob.blood_cultist lvl=10 aff=none c 161 hp=204/204 atk=98 def=14 spd=13 exp=108
+  #3 shadow_inquisitor mob.shadow_inquisitor lvl=9 aff=stone i 125 hp=242/242 atk=98 def=26 spd=12 exp=100
+  #4 blood_cultist mob.blood_cultist lvl=9 aff=stone c 161 hp=222/222 atk=92 def=20 spd=12 exp=100
+floor 9 seed 2 boss true
+boss=true mini=true n=3
+  #1 mini_stalker mob.mini_stalker lvl=10 aff=vampiric S 93 hp=540/540 atk=84 def=16 spd=10 exp=400
+  #2 skeleton mob.skeleton lvl=9 aff=none s 245 hp=150/150 atk=60 def=8 spd=8 exp=104
+  #3 skeleton mob.skeleton lvl=9 aff=none s 245 hp=150/150 atk=60 def=8 spd=8 exp=104
+floor 9 seed 3 boss false
+boss=false mini=false n=5
+  #1 shadow_inquisitor mob.shadow_inquisitor lvl=9 aff=none i 125 hp=212/212 atk=98 def=18 spd=12 exp=100
+  #2 fallen_crusader mob.fallen_crusader lvl=9 aff=stone F 196 hp=274/274 atk=102 def=30 spd=12 exp=100
+  #3 fallen_crusader mob.fallen_crusader lvl=9 aff=stone F 196 hp=274/274 atk=102 def=30 spd=12 exp=100
+  #4 shadow_inquisitor mob.shadow_inquisitor lvl=10 aff=frost i 125 hp=224/224 atk=104 def=20 spd=13 exp=108
+  #5 fallen_crusader mob.fallen_crusader lvl=9 aff=none F 196 hp=244/244 atk=102 def=22 spd=12 exp=100
+floor 9 seed 3 boss true
+boss=true mini=true n=3
+  #1 mini_stalker mob.mini_stalker lvl=10 aff=vampiric S 93 hp=540/540 atk=84 def=16 spd=10 exp=400
+  #2 skeleton mob.skeleton lvl=9 aff=none s 245 hp=150/150 atk=60 def=8 spd=8 exp=104
+  #3 skeleton mob.skeleton lvl=9 aff=none s 245 hp=150/150 atk=60 def=8 spd=8 exp=104
+floor 9 seed 4 boss false
+boss=false mini=false n=5
+  #1 fallen_crusader mob.fallen_crusader lvl=9 aff=poison F 196 hp=244/244 atk=102 def=22 spd=12 exp=100
+  #2 fallen_crusader mob.fallen_crusader lvl=9 aff=fire F 196 hp=244/244 atk=110 def=22 spd=12 exp=100
+  #3 shadow_inquisitor mob.shadow_inquisitor lvl=9 aff=stone i 125 hp=242/242 atk=98 def=26 spd=12 exp=100
+  #4 fallen_crusader mob.fallen_crusader lvl=10 aff=frost F 196 hp=256/256 atk=108 def=24 spd=13 exp=108
+  #5 fallen_crusader mob.fallen_crusader lvl=10 aff=none F 196 hp=256/256 atk=108 def=24 spd=13 exp=108
+floor 9 seed 4 boss true
+boss=true mini=true n=3
+  #1 mini_stalker mob.mini_stalker lvl=10 aff=vampiric S 93 hp=540/540 atk=84 def=16 spd=10 exp=400
+  #2 skeleton mob.skeleton lvl=9 aff=none s 245 hp=150/150 atk=60 def=8 spd=8 exp=104
+  #3 skeleton mob.skeleton lvl=9 aff=none s 245 hp=150/150 atk=60 def=8 spd=8 exp=104
+floor 10 seed 1 boss false
+boss=false mini=false n=6
+  #1 chrono_phantom mob.chrono_phantom lvl=10 aff=vampiric p 183 hp=220/220 atk=104 def=14 spd=13 exp=108
+  #2 chrono_phantom mob.chrono_phantom lvl=10 aff=frost p 183 hp=220/220 atk=104 def=14 spd=13 exp=108
+  #3 essence_devourer mob.essence_devourer lvl=10 aff=poison D 135 hp=240/240 atk=110 def=18 spd=13 exp=108
+  #4 astral_weaver mob.astral_weaver lvl=10 aff=vampiric w 69 hp=212/212 atk=100 def=16 spd=13 exp=108
+  #5 essence_devourer mob.essence_devourer lvl=11 aff=none D 135 hp=252/252 atk=116 def=18 spd=13 exp=116
+  #6 chrono_phantom mob.chrono_phantom lvl=10 aff=stone p 183 hp=250/250 atk=104 def=22 spd=13 exp=108
+floor 10 seed 1 boss true
+boss=true mini=false n=3
+  #1 dragon mob.boss_dragon lvl=10 aff=fire D 196 hp=1000/1000 atk=100 def=30 spd=12 exp=900
+  #2 death_knight mob.death_knight lvl=9 aff=vampiric K 89 hp=290/290 atk=84 def=20 spd=10 exp=150
+  #3 death_knight mob.death_knight lvl=9 aff=vampiric K 89 hp=290/290 atk=84 def=20 spd=10 exp=150
+floor 10 seed 2 boss false
+boss=false mini=false n=5
+  #1 chrono_phantom mob.chrono_phantom lvl=10 aff=frost p 183 hp=220/220 atk=104 def=14 spd=13 exp=108
+  #2 chrono_phantom mob.chrono_phantom lvl=11 aff=stone p 183 hp=262/262 atk=110 def=22 spd=13 exp=116
+  #3 essence_devourer mob.essence_devourer lvl=10 aff=none D 135 hp=240/240 atk=110 def=18 spd=13 exp=108
+  #4 chrono_phantom mob.chrono_phantom lvl=11 aff=none p 183 hp=232/232 atk=110 def=14 spd=13 exp=116
+  #5 essence_devourer mob.essence_devourer lvl=10 aff=fire D 135 hp=240/240 atk=118 def=18 spd=13 exp=108
+floor 10 seed 2 boss true
+boss=true mini=false n=3
+  #1 dragon mob.boss_dragon lvl=10 aff=fire D 196 hp=1000/1000 atk=100 def=30 spd=12 exp=900
+  #2 death_knight mob.death_knight lvl=9 aff=vampiric K 89 hp=290/290 atk=84 def=20 spd=10 exp=150
+  #3 death_knight mob.death_knight lvl=9 aff=vampiric K 89 hp=290/290 atk=84 def=20 spd=10 exp=150
+floor 10 seed 3 boss false
+boss=false mini=false n=4
+  #1 chrono_phantom mob.chrono_phantom lvl=10 aff=none p 183 hp=220/220 atk=104 def=14 spd=13 exp=108
+  #2 chrono_phantom mob.chrono_phantom lvl=10 aff=fire p 183 hp=220/220 atk=112 def=14 spd=13 exp=108
+  #3 chrono_phantom mob.chrono_phantom lvl=10 aff=stone p 183 hp=250/250 atk=104 def=22 spd=13 exp=108
+  #4 essence_devourer mob.essence_devourer lvl=10 aff=vampiric D 135 hp=240/240 atk=110 def=18 spd=13 exp=108
+floor 10 seed 3 boss true
+boss=true mini=false n=3
+  #1 dragon mob.boss_dragon lvl=10 aff=fire D 196 hp=1000/1000 atk=100 def=30 spd=12 exp=900
+  #2 death_knight mob.death_knight lvl=9 aff=vampiric K 89 hp=290/290 atk=84 def=20 spd=10 exp=150
+  #3 death_knight mob.death_knight lvl=9 aff=vampiric K 89 hp=290/290 atk=84 def=20 spd=10 exp=150
+floor 10 seed 4 boss false
+boss=false mini=false n=5
+  #1 chrono_phantom mob.chrono_phantom lvl=10 aff=none p 183 hp=220/220 atk=104 def=14 spd=13 exp=108
+  #2 astral_weaver mob.astral_weaver lvl=10 aff=none w 69 hp=212/212 atk=100 def=16 spd=13 exp=108
+  #3 essence_devourer mob.essence_devourer lvl=10 aff=none D 135 hp=240/240 atk=110 def=18 spd=13 exp=108
+  #4 essence_devourer mob.essence_devourer lvl=10 aff=none D 135 hp=240/240 atk=110 def=18 spd=13 exp=108
+  #5 essence_devourer mob.essence_devourer lvl=11 aff=none D 135 hp=252/252 atk=116 def=18 spd=13 exp=116
+floor 10 seed 4 boss true
+boss=true mini=false n=3
+  #1 dragon mob.boss_dragon lvl=10 aff=fire D 196 hp=1000/1000 atk=100 def=30 spd=12 exp=900
+  #2 death_knight mob.death_knight lvl=9 aff=vampiric K 89 hp=290/290 atk=84 def=20 spd=10 exp=150
+  #3 death_knight mob.death_knight lvl=9 aff=vampiric K 89 hp=290/290 atk=84 def=20 spd=10 exp=150
+floor 11 seed 1 boss false
+boss=false mini=false n=4
+  #1 death_knight mob.death_knight lvl=11 aff=none K 89 hp=308/308 atk=120 def=26 spd=13 exp=116
+  #2 void_demon mob.void_demon lvl=12 aff=vampiric V 161 hp=300/300 atk=122 def=22 spd=14 exp=124
+  #3 void_demon mob.void_demon lvl=11 aff=vampiric V 161 hp=288/288 atk=116 def=20 spd=13 exp=116
+  #4 void_demon mob.void_demon lvl=11 aff=none V 161 hp=288/288 atk=116 def=20 spd=13 exp=116
+floor 11 seed 1 boss true
+boss=true mini=true n=3
+  #1 mini_stalker mob.mini_stalker lvl=12 aff=vampiric S 93 hp=604/604 atk=92 def=16 spd=10 exp=432
+  #2 skeleton mob.skeleton lvl=11 aff=none s 245 hp=170/170 atk=68 def=8 spd=8 exp=116
+  #3 skeleton mob.skeleton lvl=11 aff=none s 245 hp=170/170 atk=68 def=8 spd=8 exp=116
+floor 11 seed 2 boss false
+boss=false mini=false n=4
+  #1 void_demon mob.void_demon lvl=12 aff=fire V 161 hp=300/300 atk=130 def=22 spd=14 exp=124
+  #2 death_knight mob.death_knight lvl=11 aff=none K 89 hp=308/308 atk=120 def=26 spd=13 exp=116
+  #3 death_knight mob.death_knight lvl=11 aff=fire K 89 hp=308/308 atk=128 def=26 spd=13 exp=116
+  #4 death_knight mob.death_knight lvl=12 aff=none K 89 hp=320/320 atk=126 def=28 spd=14 exp=124
+floor 11 seed 2 boss true
+boss=true mini=true n=3
+  #1 mini_stalker mob.mini_stalker lvl=12 aff=vampiric S 93 hp=604/604 atk=92 def=16 spd=10 exp=432
+  #2 skeleton mob.skeleton lvl=11 aff=none s 245 hp=170/170 atk=68 def=8 spd=8 exp=116
+  #3 skeleton mob.skeleton lvl=11 aff=none s 245 hp=170/170 atk=68 def=8 spd=8 exp=116
+floor 11 seed 3 boss false
+boss=false mini=true n=3
+  #1 mini_stalker mob.mini_stalker lvl=12 aff=vampiric S 93 hp=604/604 atk=92 def=16 spd=10 exp=432
+  #2 skeleton mob.skeleton lvl=11 aff=none s 245 hp=170/170 atk=68 def=8 spd=8 exp=116
+  #3 skeleton mob.skeleton lvl=11 aff=none s 245 hp=170/170 atk=68 def=8 spd=8 exp=116
+floor 11 seed 3 boss true
+boss=true mini=true n=3
+  #1 mini_stalker mob.mini_stalker lvl=12 aff=vampiric S 93 hp=604/604 atk=92 def=16 spd=10 exp=432
+  #2 skeleton mob.skeleton lvl=11 aff=none s 245 hp=170/170 atk=68 def=8 spd=8 exp=116
+  #3 skeleton mob.skeleton lvl=11 aff=none s 245 hp=170/170 atk=68 def=8 spd=8 exp=116
+floor 11 seed 4 boss false
+boss=false mini=false n=4
+  #1 death_knight mob.death_knight lvl=11 aff=frost K 89 hp=308/308 atk=120 def=26 spd=13 exp=116
+  #2 death_knight mob.death_knight lvl=12 aff=fire K 89 hp=320/320 atk=134 def=28 spd=14 exp=124
+  #3 void_demon mob.void_demon lvl=11 aff=vampiric V 161 hp=288/288 atk=116 def=20 spd=13 exp=116
+  #4 void_demon mob.void_demon lvl=11 aff=fire V 161 hp=288/288 atk=124 def=20 spd=13 exp=116
+floor 11 seed 4 boss true
+boss=true mini=true n=3
+  #1 mini_stalker mob.mini_stalker lvl=12 aff=vampiric S 93 hp=604/604 atk=92 def=16 spd=10 exp=432
+  #2 skeleton mob.skeleton lvl=11 aff=none s 245 hp=170/170 atk=68 def=8 spd=8 exp=116
+  #3 skeleton mob.skeleton lvl=11 aff=none s 245 hp=170/170 atk=68 def=8 spd=8 exp=116
+floor 12 seed 1 boss false
+boss=false mini=false n=7
+  #1 goblin mob.goblin lvl=12 aff=fire g 118 hp=182/182 atk=96 def=14 spd=14 exp=124
+  #2 rat mob.rat lvl=12 aff=frost r 137 hp=174/174 atk=84 def=12 spd=14 exp=124
+  #3 rat mob.rat lvl=12 aff=poison r 137 hp=174/174 atk=84 def=12 spd=14 exp=124
+  #4 rat mob.rat lvl=12 aff=frost r 137 hp=174/174 atk=84 def=12 spd=14 exp=124
+  #5 goblin mob.goblin lvl=12 aff=stone g 118 hp=212/212 atk=88 def=22 spd=14 exp=124
+  #6 skeleton mob.skeleton lvl=12 aff=fire s 252 hp=194/194 atk=100 def=18 spd=14 exp=124
+  #7 skeleton mob.skeleton lvl=12 aff=none s 252 hp=194/194 atk=92 def=18 spd=14 exp=124
+floor 12 seed 1 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=13 aff=poison E 196 hp=636/636 atk=84 def=20 spd=10 exp=448
+  #2 skeleton mob.skeleton lvl=12 aff=none s 245 hp=180/180 atk=72 def=8 spd=8 exp=122
+  #3 skeleton mob.skeleton lvl=12 aff=none s 245 hp=180/180 atk=72 def=8 spd=8 exp=122
+floor 12 seed 2 boss false
+boss=false mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=13 aff=poison E 196 hp=636/636 atk=84 def=20 spd=10 exp=448
+  #2 skeleton mob.skeleton lvl=12 aff=none s 245 hp=180/180 atk=72 def=8 spd=8 exp=122
+  #3 skeleton mob.skeleton lvl=12 aff=none s 245 hp=180/180 atk=72 def=8 spd=8 exp=122
+floor 12 seed 2 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=13 aff=poison E 196 hp=636/636 atk=84 def=20 spd=10 exp=448
+  #2 skeleton mob.skeleton lvl=12 aff=none s 245 hp=180/180 atk=72 def=8 spd=8 exp=122
+  #3 skeleton mob.skeleton lvl=12 aff=none s 245 hp=180/180 atk=72 def=8 spd=8 exp=122
+floor 12 seed 3 boss false
+boss=false mini=false n=7
+  #1 rat mob.rat lvl=12 aff=vampiric r 137 hp=174/174 atk=84 def=12 spd=14 exp=124
+  #2 goblin mob.goblin lvl=12 aff=none g 118 hp=182/182 atk=88 def=14 spd=14 exp=124
+  #3 goblin mob.goblin lvl=12 aff=vampiric g 118 hp=182/182 atk=88 def=14 spd=14 exp=124
+  #4 rat mob.rat lvl=13 aff=stone r 137 hp=216/216 atk=90 def=20 spd=14 exp=132
+  #5 goblin mob.goblin lvl=13 aff=none g 118 hp=194/194 atk=94 def=14 spd=14 exp=132
+  #6 goblin mob.goblin lvl=12 aff=fire g 118 hp=182/182 atk=96 def=14 spd=14 exp=124
+  #7 rat mob.rat lvl=13 aff=vampiric r 137 hp=186/186 atk=90 def=12 spd=14 exp=132
+floor 12 seed 3 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=13 aff=poison E 196 hp=636/636 atk=84 def=20 spd=10 exp=448
+  #2 skeleton mob.skeleton lvl=12 aff=none s 245 hp=180/180 atk=72 def=8 spd=8 exp=122
+  #3 skeleton mob.skeleton lvl=12 aff=none s 245 hp=180/180 atk=72 def=8 spd=8 exp=122
+floor 12 seed 4 boss false
+boss=false mini=false n=7
+  #1 goblin mob.goblin lvl=12 aff=frost g 118 hp=182/182 atk=88 def=14 spd=14 exp=124
+  #2 skeleton mob.skeleton lvl=12 aff=none s 252 hp=194/194 atk=92 def=18 spd=14 exp=124
+  #3 goblin mob.goblin lvl=12 aff=frost g 118 hp=182/182 atk=88 def=14 spd=14 exp=124
+  #4 skeleton mob.skeleton lvl=13 aff=fire s 252 hp=206/206 atk=106 def=18 spd=14 exp=132
+  #5 goblin mob.goblin lvl=13 aff=poison g 118 hp=194/194 atk=94 def=14 spd=14 exp=132
+  #6 rat mob.rat lvl=12 aff=frost r 137 hp=174/174 atk=84 def=12 spd=14 exp=124
+  #7 goblin mob.goblin lvl=12 aff=vampiric g 118 hp=182/182 atk=88 def=14 spd=14 exp=124
+floor 12 seed 4 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=13 aff=poison E 196 hp=636/636 atk=84 def=20 spd=10 exp=448
+  #2 skeleton mob.skeleton lvl=12 aff=none s 245 hp=180/180 atk=72 def=8 spd=8 exp=122
+  #3 skeleton mob.skeleton lvl=12 aff=none s 245 hp=180/180 atk=72 def=8 spd=8 exp=122
+floor 13 seed 1 boss false
+boss=false mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=14 aff=poison E 196 hp=668/668 atk=88 def=20 spd=10 exp=464
+  #2 skeleton mob.skeleton lvl=13 aff=none s 245 hp=190/190 atk=76 def=8 spd=8 exp=128
+  #3 skeleton mob.skeleton lvl=13 aff=none s 245 hp=190/190 atk=76 def=8 spd=8 exp=128
+floor 13 seed 1 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=14 aff=poison E 196 hp=668/668 atk=88 def=20 spd=10 exp=464
+  #2 skeleton mob.skeleton lvl=13 aff=none s 245 hp=190/190 atk=76 def=8 spd=8 exp=128
+  #3 skeleton mob.skeleton lvl=13 aff=none s 245 hp=190/190 atk=76 def=8 spd=8 exp=128
+floor 13 seed 2 boss false
+boss=false mini=false n=7
+  #1 slime mob.slime lvl=14 aff=poison c 43 hp=228/228 atk=106 def=16 spd=15 exp=140
+  #2 drowned mob.drowned lvl=13 aff=none u 31 hp=232/232 atk=104 def=16 spd=14 exp=132
+  #3 drowned mob.drowned lvl=13 aff=poison u 31 hp=232/232 atk=104 def=16 spd=14 exp=132
+  #4 lizard mob.lizard lvl=13 aff=poison l 29 hp=224/224 atk=106 def=18 spd=14 exp=132
+  #5 slime mob.slime lvl=13 aff=poison c 43 hp=216/216 atk=100 def=14 spd=14 exp=132
+  #6 slime mob.slime lvl=13 aff=poison c 43 hp=216/216 atk=100 def=14 spd=14 exp=132
+  #7 lizard mob.lizard lvl=13 aff=none l 29 hp=224/224 atk=106 def=18 spd=14 exp=132
+floor 13 seed 2 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=14 aff=poison E 196 hp=668/668 atk=88 def=20 spd=10 exp=464
+  #2 skeleton mob.skeleton lvl=13 aff=none s 245 hp=190/190 atk=76 def=8 spd=8 exp=128
+  #3 skeleton mob.skeleton lvl=13 aff=none s 245 hp=190/190 atk=76 def=8 spd=8 exp=128
+floor 13 seed 3 boss false
+boss=false mini=false n=6
+  #1 lizard mob.lizard lvl=13 aff=stone l 29 hp=254/254 atk=106 def=26 spd=14 exp=132
+  #2 drowned mob.drowned lvl=14 aff=poison u 31 hp=244/244 atk=110 def=18 spd=15 exp=140
+  #3 slime mob.slime lvl=14 aff=frost c 43 hp=228/228 atk=106 def=16 spd=15 exp=140
+  #4 slime mob.slime lvl=13 aff=stone c 43 hp=246/246 atk=100 def=22 spd=14 exp=132
+  #5 slime mob.slime lvl=13 aff=frost c 43 hp=216/216 atk=100 def=14 spd=14 exp=132
+  #6 slime mob.slime lvl=14 aff=frost c 43 hp=228/228 atk=106 def=16 spd=15 exp=140
+floor 13 seed 3 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=14 aff=poison E 196 hp=668/668 atk=88 def=20 spd=10 exp=464
+  #2 skeleton mob.skeleton lvl=13 aff=none s 245 hp=190/190 atk=76 def=8 spd=8 exp=128
+  #3 skeleton mob.skeleton lvl=13 aff=none s 245 hp=190/190 atk=76 def=8 spd=8 exp=128
+floor 13 seed 4 boss false
+boss=false mini=false n=7
+  #1 lizard mob.lizard lvl=13 aff=none l 29 hp=224/224 atk=106 def=18 spd=14 exp=132
+  #2 lizard mob.lizard lvl=14 aff=fire l 29 hp=236/236 atk=120 def=20 spd=15 exp=140
+  #3 drowned mob.drowned lvl=13 aff=fire u 31 hp=232/232 atk=112 def=16 spd=14 exp=132
+  #4 lizard mob.lizard lvl=14 aff=vampiric l 29 hp=236/236 atk=112 def=20 spd=15 exp=140
+  #5 drowned mob.drowned lvl=13 aff=frost u 31 hp=232/232 atk=104 def=16 spd=14 exp=132
+  #6 lizard mob.lizard lvl=13 aff=fire l 29 hp=224/224 atk=114 def=18 spd=14 exp=132
+  #7 drowned mob.drowned lvl=13 aff=stone u 31 hp=262/262 atk=104 def=24 spd=14 exp=132
+floor 13 seed 4 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=14 aff=poison E 196 hp=668/668 atk=88 def=20 spd=10 exp=464
+  #2 skeleton mob.skeleton lvl=13 aff=none s 245 hp=190/190 atk=76 def=8 spd=8 exp=128
+  #3 skeleton mob.skeleton lvl=13 aff=none s 245 hp=190/190 atk=76 def=8 spd=8 exp=128
+floor 14 seed 1 boss false
+boss=false mini=false n=5
+  #1 imp mob.imp lvl=14 aff=frost i 208 hp=248/248 atk=114 def=18 spd=15 exp=140
+  #2 orc mob.orc lvl=14 aff=vampiric o 130 hp=272/272 atk=118 def=22 spd=15 exp=140
+  #3 imp mob.imp lvl=14 aff=frost i 208 hp=248/248 atk=114 def=18 spd=15 exp=140
+  #4 imp mob.imp lvl=15 aff=poison i 208 hp=260/260 atk=120 def=18 spd=15 exp=148
+  #5 salamander mob.salamander lvl=14 aff=none m 196 hp=260/260 atk=120 def=20 spd=15 exp=140
+floor 14 seed 1 boss true
+boss=true mini=true n=3
+  #1 mini_reaver mob.mini_reaver lvl=15 aff=fire R 208 hp=700/700 atk=100 def=16 spd=10 exp=480
+  #2 skeleton mob.skeleton lvl=14 aff=none s 245 hp=200/200 atk=80 def=8 spd=8 exp=134
+  #3 skeleton mob.skeleton lvl=14 aff=none s 245 hp=200/200 atk=80 def=8 spd=8 exp=134
+floor 14 seed 2 boss false
+boss=false mini=false n=5
+  #1 imp mob.imp lvl=14 aff=none i 208 hp=248/248 atk=114 def=18 spd=15 exp=140
+  #2 orc mob.orc lvl=15 aff=frost o 130 hp=284/284 atk=124 def=22 spd=15 exp=148
+  #3 orc mob.orc lvl=15 aff=poison o 130 hp=284/284 atk=124 def=22 spd=15 exp=148
+  #4 imp mob.imp lvl=15 aff=vampiric i 208 hp=260/260 atk=120 def=18 spd=15 exp=148
+  #5 imp mob.imp lvl=14 aff=stone i 208 hp=278/278 atk=114 def=26 spd=15 exp=140
+floor 14 seed 2 boss true
+boss=true mini=true n=3
+  #1 mini_reaver mob.mini_reaver lvl=15 aff=fire R 208 hp=700/700 atk=100 def=16 spd=10 exp=480
+  #2 skeleton mob.skeleton lvl=14 aff=none s 245 hp=200/200 atk=80 def=8 spd=8 exp=134
+  #3 skeleton mob.skeleton lvl=14 aff=none s 245 hp=200/200 atk=80 def=8 spd=8 exp=134
+floor 14 seed 3 boss false
+boss=false mini=false n=7
+  #1 orc mob.orc lvl=14 aff=poison o 130 hp=272/272 atk=118 def=22 spd=15 exp=140
+  #2 salamander mob.salamander lvl=14 aff=poison m 196 hp=260/260 atk=120 def=20 spd=15 exp=140
+  #3 imp mob.imp lvl=14 aff=vampiric i 208 hp=248/248 atk=114 def=18 spd=15 exp=140
+  #4 imp mob.imp lvl=15 aff=vampiric i 208 hp=260/260 atk=120 def=18 spd=15 exp=148
+  #5 orc mob.orc lvl=14 aff=vampiric o 130 hp=272/272 atk=118 def=22 spd=15 exp=140
+  #6 salamander mob.salamander lvl=14 aff=frost m 196 hp=260/260 atk=120 def=20 spd=15 exp=140
+  #7 orc mob.orc lvl=14 aff=stone o 130 hp=302/302 atk=118 def=30 spd=15 exp=140
+floor 14 seed 3 boss true
+boss=true mini=true n=3
+  #1 mini_reaver mob.mini_reaver lvl=15 aff=fire R 208 hp=700/700 atk=100 def=16 spd=10 exp=480
+  #2 skeleton mob.skeleton lvl=14 aff=none s 245 hp=200/200 atk=80 def=8 spd=8 exp=134
+  #3 skeleton mob.skeleton lvl=14 aff=none s 245 hp=200/200 atk=80 def=8 spd=8 exp=134
+floor 14 seed 4 boss false
+boss=false mini=true n=3
+  #1 mini_reaver mob.mini_reaver lvl=15 aff=fire R 208 hp=700/700 atk=100 def=16 spd=10 exp=480
+  #2 skeleton mob.skeleton lvl=14 aff=none s 245 hp=200/200 atk=80 def=8 spd=8 exp=134
+  #3 skeleton mob.skeleton lvl=14 aff=none s 245 hp=200/200 atk=80 def=8 spd=8 exp=134
+floor 14 seed 4 boss true
+boss=true mini=true n=3
+  #1 mini_reaver mob.mini_reaver lvl=15 aff=fire R 208 hp=700/700 atk=100 def=16 spd=10 exp=480
+  #2 skeleton mob.skeleton lvl=14 aff=none s 245 hp=200/200 atk=80 def=8 spd=8 exp=134
+  #3 skeleton mob.skeleton lvl=14 aff=none s 245 hp=200/200 atk=80 def=8 spd=8 exp=134
+floor 15 seed 1 boss false
+boss=false mini=false n=6
+  #1 phantom mob.phantom lvl=15 aff=fire p 159 hp=280/280 atk=142 def=18 spd=15 exp=148
+  #2 golem mob.golem lvl=15 aff=frost C 141 hp=316/316 atk=130 def=28 spd=15 exp=148
+  #3 phantom mob.phantom lvl=16 aff=fire p 159 hp=292/292 atk=148 def=20 spd=16 exp=156
+  #4 gargoyle mob.gargoyle lvl=16 aff=none G 102 hp=308/308 atk=134 def=28 spd=16 exp=156
+  #5 phantom mob.phantom lvl=16 aff=fire p 159 hp=292/292 atk=148 def=20 spd=16 exp=156
+  #6 phantom mob.phantom lvl=15 aff=none p 159 hp=280/280 atk=134 def=18 spd=15 exp=148
+floor 15 seed 1 boss true
+boss=true mini=true n=3
+  #1 mini_colossus mob.mini_colossus lvl=16 aff=stone C 51 hp=732/732 atk=94 def=28 spd=10 exp=496
+  #2 skeleton mob.skeleton lvl=15 aff=none s 245 hp=210/210 atk=84 def=8 spd=8 exp=140
+  #3 skeleton mob.skeleton lvl=15 aff=none s 245 hp=210/210 atk=84 def=8 spd=8 exp=140
+floor 15 seed 2 boss false
+boss=false mini=false n=6
+  #1 gargoyle mob.gargoyle lvl=15 aff=stone G 102 hp=326/326 atk=128 def=34 spd=15 exp=148
+  #2 gargoyle mob.gargoyle lvl=15 aff=poison G 102 hp=296/296 atk=128 def=26 spd=15 exp=148
+  #3 gargoyle mob.gargoyle lvl=15 aff=none G 102 hp=296/296 atk=128 def=26 spd=15 exp=148
+  #4 golem mob.golem lvl=15 aff=none C 141 hp=316/316 atk=130 def=28 spd=15 exp=148
+  #5 golem mob.golem lvl=15 aff=stone C 141 hp=346/346 atk=130 def=36 spd=15 exp=148
+  #6 golem mob.golem lvl=15 aff=stone C 141 hp=346/346 atk=130 def=36 spd=15 exp=148
+floor 15 seed 2 boss true
+boss=true mini=true n=3
+  #1 mini_colossus mob.mini_colossus lvl=16 aff=stone C 51 hp=732/732 atk=94 def=28 spd=10 exp=496
+  #2 skeleton mob.skeleton lvl=15 aff=none s 245 hp=210/210 atk=84 def=8 spd=8 exp=140
+  #3 skeleton mob.skeleton lvl=15 aff=none s 245 hp=210/210 atk=84 def=8 spd=8 exp=140
+floor 15 seed 3 boss false
+boss=false mini=false n=6
+  #1 gargoyle mob.gargoyle lvl=15 aff=stone G 102 hp=326/326 atk=128 def=34 spd=15 exp=148
+  #2 phantom mob.phantom lvl=16 aff=vampiric p 159 hp=292/292 atk=140 def=20 spd=16 exp=156
+  #3 gargoyle mob.gargoyle lvl=15 aff=stone G 102 hp=326/326 atk=128 def=34 spd=15 exp=148
+  #4 phantom mob.phantom lvl=15 aff=frost p 159 hp=280/280 atk=134 def=18 spd=15 exp=148
+  #5 golem mob.golem lvl=16 aff=frost C 141 hp=328/328 atk=136 def=30 spd=16 exp=156
+  #6 gargoyle mob.gargoyle lvl=16 aff=none G 102 hp=308/308 atk=134 def=28 spd=16 exp=156
+floor 15 seed 3 boss true
+boss=true mini=true n=3
+  #1 mini_colossus mob.mini_colossus lvl=16 aff=stone C 51 hp=732/732 atk=94 def=28 spd=10 exp=496
+  #2 skeleton mob.skeleton lvl=15 aff=none s 245 hp=210/210 atk=84 def=8 spd=8 exp=140
+  #3 skeleton mob.skeleton lvl=15 aff=none s 245 hp=210/210 atk=84 def=8 spd=8 exp=140
+floor 15 seed 4 boss false
+boss=false mini=false n=5
+  #1 golem mob.golem lvl=15 aff=poison C 141 hp=316/316 atk=130 def=28 spd=15 exp=148
+  #2 gargoyle mob.gargoyle lvl=15 aff=none G 102 hp=296/296 atk=128 def=26 spd=15 exp=148
+  #3 phantom mob.phantom lvl=15 aff=fire p 159 hp=280/280 atk=142 def=18 spd=15 exp=148
+  #4 phantom mob.phantom lvl=15 aff=none p 159 hp=280/280 atk=134 def=18 spd=15 exp=148
+  #5 golem mob.golem lvl=16 aff=frost C 141 hp=328/328 atk=136 def=30 spd=16 exp=156
+floor 15 seed 4 boss true
+boss=true mini=true n=3
+  #1 mini_colossus mob.mini_colossus lvl=16 aff=stone C 51 hp=732/732 atk=94 def=28 spd=10 exp=496
+  #2 skeleton mob.skeleton lvl=15 aff=none s 245 hp=210/210 atk=84 def=8 spd=8 exp=140
+  #3 skeleton mob.skeleton lvl=15 aff=none s 245 hp=210/210 atk=84 def=8 spd=8 exp=140
+floor 16 seed 1 boss false
+boss=false mini=false n=7
+  #1 dryad mob.dryad lvl=16 aff=vampiric d 83 hp=402/402 atk=192 def=27 spd=16 exp=234
+  #2 dryad mob.dryad lvl=16 aff=none d 83 hp=402/402 atk=192 def=27 spd=16 exp=234
+  #3 blight_ent mob.blight_ent lvl=16 aff=fire T 94 hp=456/456 atk=210 def=42 spd=16 exp=234
+  #4 dryad mob.dryad lvl=16 aff=poison d 83 hp=402/402 atk=192 def=27 spd=16 exp=234
+  #5 sprout_skeleton mob.sprout_skeleton lvl=16 aff=poison s 106 hp=372/372 atk=180 def=33 spd=16 exp=234
+  #6 dryad mob.dryad lvl=16 aff=frost d 83 hp=402/402 atk=192 def=27 spd=16 exp=234
+  #7 blight_ent mob.blight_ent lvl=16 aff=poison T 94 hp=456/456 atk=198 def=42 spd=16 exp=234
+floor 16 seed 1 boss true
+boss=true mini=true n=3
+  #1 mini_boneblight mob.mini_boneblight lvl=17 aff=poison W 118 hp=1146/1146 atk=156 def=36 spd=10 exp=768
+  #2 skeleton mob.skeleton lvl=16 aff=none s 245 hp=330/330 atk=132 def=12 spd=8 exp=219
+  #3 skeleton mob.skeleton lvl=16 aff=none s 245 hp=330/330 atk=132 def=12 spd=8 exp=219
+floor 16 seed 2 boss false
+boss=false mini=false n=5
+  #1 dryad mob.dryad lvl=16 aff=vampiric d 83 hp=402/402 atk=192 def=27 spd=16 exp=234
+  #2 sprout_skeleton mob.sprout_skeleton lvl=16 aff=none s 106 hp=372/372 atk=180 def=33 spd=16 exp=234
+  #3 dryad mob.dryad lvl=17 aff=none d 83 hp=420/420 atk=201 def=27 spd=16 exp=246
+  #4 dryad mob.dryad lvl=16 aff=none d 83 hp=402/402 atk=192 def=27 spd=16 exp=234
+  #5 sprout_skeleton mob.sprout_skeleton lvl=16 aff=stone s 106 hp=417/417 atk=180 def=45 spd=16 exp=234
+floor 16 seed 2 boss true
+boss=true mini=true n=3
+  #1 mini_boneblight mob.mini_boneblight lvl=17 aff=poison W 118 hp=1146/1146 atk=156 def=36 spd=10 exp=768
+  #2 skeleton mob.skeleton lvl=16 aff=none s 245 hp=330/330 atk=132 def=12 spd=8 exp=219
+  #3 skeleton mob.skeleton lvl=16 aff=none s 245 hp=330/330 atk=132 def=12 spd=8 exp=219
+floor 16 seed 3 boss false
+boss=false mini=false n=6
+  #1 blight_ent mob.blight_ent lvl=17 aff=frost T 94 hp=474/474 atk=207 def=42 spd=16 exp=246
+  #2 sprout_skeleton mob.sprout_skeleton lvl=17 aff=frost s 106 hp=390/390 atk=189 def=33 spd=16 exp=246
+  #3 blight_ent mob.blight_ent lvl=16 aff=poison T 94 hp=456/456 atk=198 def=42 spd=16 exp=234
+  #4 blight_ent mob.blight_ent lvl=17 aff=vampiric T 94 hp=474/474 atk=207 def=42 spd=16 exp=246
+  #5 dryad mob.dryad lvl=17 aff=vampiric d 83 hp=420/420 atk=201 def=27 spd=16 exp=246
+  #6 dryad mob.dryad lvl=16 aff=stone d 83 hp=447/447 atk=192 def=39 spd=16 exp=234
+floor 16 seed 3 boss true
+boss=true mini=true n=3
+  #1 mini_boneblight mob.mini_boneblight lvl=17 aff=poison W 118 hp=1146/1146 atk=156 def=36 spd=10 exp=768
+  #2 skeleton mob.skeleton lvl=16 aff=none s 245 hp=330/330 atk=132 def=12 spd=8 exp=219
+  #3 skeleton mob.skeleton lvl=16 aff=none s 245 hp=330/330 atk=132 def=12 spd=8 exp=219
+floor 16 seed 4 boss false
+boss=false mini=true n=3
+  #1 mini_boneblight mob.mini_boneblight lvl=17 aff=poison W 118 hp=1146/1146 atk=156 def=36 spd=10 exp=768
+  #2 skeleton mob.skeleton lvl=16 aff=none s 245 hp=330/330 atk=132 def=12 spd=8 exp=219
+  #3 skeleton mob.skeleton lvl=16 aff=none s 245 hp=330/330 atk=132 def=12 spd=8 exp=219
+floor 16 seed 4 boss true
+boss=true mini=true n=3
+  #1 mini_boneblight mob.mini_boneblight lvl=17 aff=poison W 118 hp=1146/1146 atk=156 def=36 spd=10 exp=768
+  #2 skeleton mob.skeleton lvl=16 aff=none s 245 hp=330/330 atk=132 def=12 spd=8 exp=219
+  #3 skeleton mob.skeleton lvl=16 aff=none s 245 hp=330/330 atk=132 def=12 spd=8 exp=219
+floor 17 seed 1 boss false
+boss=false mini=true n=3
+  #1 mini_boneblight mob.mini_boneblight lvl=18 aff=poison W 118 hp=1194/1194 atk=162 def=36 spd=10 exp=792
+  #2 skeleton mob.skeleton lvl=17 aff=none s 245 hp=345/345 atk=138 def=12 spd=8 exp=228
+  #3 skeleton mob.skeleton lvl=17 aff=none s 245 hp=345/345 atk=138 def=12 spd=8 exp=228
+floor 17 seed 1 boss true
+boss=true mini=true n=3
+  #1 mini_boneblight mob.mini_boneblight lvl=18 aff=poison W 118 hp=1194/1194 atk=162 def=36 spd=10 exp=792
+  #2 skeleton mob.skeleton lvl=17 aff=none s 245 hp=345/345 atk=138 def=12 spd=8 exp=228
+  #3 skeleton mob.skeleton lvl=17 aff=none s 245 hp=345/345 atk=138 def=12 spd=8 exp=228
+floor 17 seed 2 boss false
+boss=false mini=false n=7
+  #1 toxic_basil mob.toxic_basil lvl=17 aff=poison b 35 hp=450/450 atk=210 def=36 spd=16 exp=246
+  #2 toxic_basil mob.toxic_basil lvl=17 aff=frost b 35 hp=450/450 atk=210 def=36 spd=16 exp=246
+  #3 tentacle mob.tentacle lvl=17 aff=fire t 65 hp=432/432 atk=210 def=33 spd=16 exp=246
+  #4 tentacle mob.tentacle lvl=17 aff=vampiric t 65 hp=432/432 atk=198 def=33 spd=16 exp=246
+  #5 sporling mob.sporling lvl=18 aff=stone x 142 hp=465/465 atk=201 def=45 spd=17 exp=258
+  #6 sporling mob.sporling lvl=18 aff=poison x 142 hp=420/420 atk=201 def=33 spd=17 exp=258
+  #7 tentacle mob.tentacle lvl=18 aff=none t 65 hp=450/450 atk=207 def=36 spd=17 exp=258
+floor 17 seed 2 boss true
+boss=true mini=true n=3
+  #1 mini_boneblight mob.mini_boneblight lvl=18 aff=poison W 118 hp=1194/1194 atk=162 def=36 spd=10 exp=792
+  #2 skeleton mob.skeleton lvl=17 aff=none s 245 hp=345/345 atk=138 def=12 spd=8 exp=228
+  #3 skeleton mob.skeleton lvl=17 aff=none s 245 hp=345/345 atk=138 def=12 spd=8 exp=228
+floor 17 seed 3 boss false
+boss=false mini=true n=3
+  #1 mini_boneblight mob.mini_boneblight lvl=18 aff=poison W 118 hp=1194/1194 atk=162 def=36 spd=10 exp=792
+  #2 skeleton mob.skeleton lvl=17 aff=none s 245 hp=345/345 atk=138 def=12 spd=8 exp=228
+  #3 skeleton mob.skeleton lvl=17 aff=none s 245 hp=345/345 atk=138 def=12 spd=8 exp=228
+floor 17 seed 3 boss true
+boss=true mini=true n=3
+  #1 mini_boneblight mob.mini_boneblight lvl=18 aff=poison W 118 hp=1194/1194 atk=162 def=36 spd=10 exp=792
+  #2 skeleton mob.skeleton lvl=17 aff=none s 245 hp=345/345 atk=138 def=12 spd=8 exp=228
+  #3 skeleton mob.skeleton lvl=17 aff=none s 245 hp=345/345 atk=138 def=12 spd=8 exp=228
+floor 17 seed 4 boss false
+boss=false mini=false n=5
+  #1 tentacle mob.tentacle lvl=17 aff=frost t 65 hp=432/432 atk=198 def=33 spd=16 exp=246
+  #2 toxic_basil mob.toxic_basil lvl=18 aff=poison b 35 hp=468/468 atk=219 def=39 spd=17 exp=258
+  #3 toxic_basil mob.toxic_basil lvl=17 aff=fire b 35 hp=450/450 atk=222 def=36 spd=16 exp=246
+  #4 sporling mob.sporling lvl=17 aff=stone x 142 hp=447/447 atk=192 def=42 spd=16 exp=246
+  #5 sporling mob.sporling lvl=18 aff=fire x 142 hp=420/420 atk=213 def=33 spd=17 exp=258
+floor 17 seed 4 boss true
+boss=true mini=true n=3
+  #1 mini_boneblight mob.mini_boneblight lvl=18 aff=poison W 118 hp=1194/1194 atk=162 def=36 spd=10 exp=792
+  #2 skeleton mob.skeleton lvl=17 aff=none s 245 hp=345/345 atk=138 def=12 spd=8 exp=228
+  #3 skeleton mob.skeleton lvl=17 aff=none s 245 hp=345/345 atk=138 def=12 spd=8 exp=228
+floor 18 seed 1 boss false
+boss=false mini=false n=7
+  #1 scroll_mimic mob.scroll_mimic lvl=18 aff=poison m 178 hp=456/456 atk=216 def=39 spd=17 exp=258
+  #2 archive_keeper mob.archive_keeper lvl=18 aff=fire A 75 hp=486/486 atk=237 def=42 spd=17 exp=258
+  #3 tome_book mob.tome_book lvl=18 aff=none b 221 hp=429/429 atk=210 def=30 spd=17 exp=258
+  #4 scroll_mimic mob.scroll_mimic lvl=18 aff=none m 178 hp=456/456 atk=216 def=39 spd=17 exp=258
+  #5 tome_book mob.tome_book lvl=19 aff=none b 221 hp=447/447 atk=219 def=30 spd=17 exp=270
+  #6 scroll_mimic mob.scroll_mimic lvl=18 aff=fire m 178 hp=456/456 atk=228 def=39 spd=17 exp=258
+  #7 archive_keeper mob.archive_keeper lvl=19 aff=stone A 75 hp=549/549 atk=234 def=54 spd=17 exp=270
+floor 18 seed 1 boss true
+boss=true mini=true n=3
+  #1 mini_colossus mob.mini_colossus lvl=19 aff=stone C 51 hp=1242/1242 atk=159 def=45 spd=10 exp=816
+  #2 skeleton mob.skeleton lvl=18 aff=none s 245 hp=360/360 atk=144 def=12 spd=8 exp=237
+  #3 skeleton mob.skeleton lvl=18 aff=none s 245 hp=360/360 atk=144 def=12 spd=8 exp=237
+floor 18 seed 2 boss false
+boss=false mini=false n=8
+  #1 scroll_mimic mob.scroll_mimic lvl=19 aff=poison m 178 hp=474/474 atk=225 def=39 spd=17 exp=270
+  #2 scroll_mimic mob.scroll_mimic lvl=18 aff=vampiric m 178 hp=456/456 atk=216 def=39 spd=17 exp=258
+  #3 archive_keeper mob.archive_keeper lvl=18 aff=vampiric A 75 hp=486/486 atk=225 def=42 spd=17 exp=258
+  #4 scroll_mimic mob.scroll_mimic lvl=19 aff=fire m 178 hp=474/474 atk=237 def=39 spd=17 exp=270
+  #5 scroll_mimic mob.scroll_mimic lvl=18 aff=vampiric m 178 hp=456/456 atk=216 def=39 spd=17 exp=258
+  #6 tome_book mob.tome_book lvl=18 aff=vampiric b 221 hp=429/429 atk=210 def=30 spd=17 exp=258
+  #7 scroll_mimic mob.scroll_mimic lvl=18 aff=stone m 178 hp=501/501 atk=216 def=51 spd=17 exp=258
+  #8 archive_keeper mob.archive_keeper lvl=19 aff=none A 75 hp=504/504 atk=234 def=42 spd=17 exp=270
+floor 18 seed 2 boss true
+boss=true mini=true n=3
+  #1 mini_colossus mob.mini_colossus lvl=19 aff=stone C 51 hp=1242/1242 atk=159 def=45 spd=10 exp=816
+  #2 skeleton mob.skeleton lvl=18 aff=none s 245 hp=360/360 atk=144 def=12 spd=8 exp=237
+  #3 skeleton mob.skeleton lvl=18 aff=none s 245 hp=360/360 atk=144 def=12 spd=8 exp=237
+floor 18 seed 3 boss false
+boss=false mini=false n=8
+  #1 tome_book mob.tome_book lvl=18 aff=none b 221 hp=429/429 atk=210 def=30 spd=17 exp=258
+  #2 scroll_mimic mob.scroll_mimic lvl=18 aff=vampiric m 178 hp=456/456 atk=216 def=39 spd=17 exp=258
+  #3 scroll_mimic mob.scroll_mimic lvl=19 aff=fire m 178 hp=474/474 atk=237 def=39 spd=17 exp=270
+  #4 scroll_mimic mob.scroll_mimic lvl=18 aff=stone m 178 hp=501/501 atk=216 def=51 spd=17 exp=258
+  #5 tome_book mob.tome_book lvl=18 aff=fire b 221 hp=429/429 atk=222 def=30 spd=17 exp=258
+  #6 tome_book mob.tome_book lvl=18 aff=vampiric b 221 hp=429/429 atk=210 def=30 spd=17 exp=258
+  #7 scroll_mimic mob.scroll_mimic lvl=18 aff=fire m 178 hp=456/456 atk=228 def=39 spd=17 exp=258
+  #8 archive_keeper mob.archive_keeper lvl=19 aff=poison A 75 hp=504/504 atk=234 def=42 spd=17 exp=270
+floor 18 seed 3 boss true
+boss=true mini=true n=3
+  #1 mini_colossus mob.mini_colossus lvl=19 aff=stone C 51 hp=1242/1242 atk=159 def=45 spd=10 exp=816
+  #2 skeleton mob.skeleton lvl=18 aff=none s 245 hp=360/360 atk=144 def=12 spd=8 exp=237
+  #3 skeleton mob.skeleton lvl=18 aff=none s 245 hp=360/360 atk=144 def=12 spd=8 exp=237
+floor 18 seed 4 boss false
+boss=false mini=false n=7
+  #1 scroll_mimic mob.scroll_mimic lvl=18 aff=fire m 178 hp=456/456 atk=228 def=39 spd=17 exp=258
+  #2 scroll_mimic mob.scroll_mimic lvl=19 aff=vampiric m 178 hp=474/474 atk=225 def=39 spd=17 exp=270
+  #3 scroll_mimic mob.scroll_mimic lvl=19 aff=none m 178 hp=474/474 atk=225 def=39 spd=17 exp=270
+  #4 archive_keeper mob.archive_keeper lvl=18 aff=none A 75 hp=486/486 atk=225 def=42 spd=17 exp=258
+  #5 tome_book mob.tome_book lvl=18 aff=frost b 221 hp=429/429 atk=210 def=30 spd=17 exp=258
+  #6 scroll_mimic mob.scroll_mimic lvl=18 aff=vampiric m 178 hp=456/456 atk=216 def=39 spd=17 exp=258
+  #7 scroll_mimic mob.scroll_mimic lvl=18 aff=fire m 178 hp=456/456 atk=228 def=39 spd=17 exp=258
+floor 18 seed 4 boss true
+boss=true mini=true n=3
+  #1 mini_colossus mob.mini_colossus lvl=19 aff=stone C 51 hp=1242/1242 atk=159 def=45 spd=10 exp=816
+  #2 skeleton mob.skeleton lvl=18 aff=none s 245 hp=360/360 atk=144 def=12 spd=8 exp=237
+  #3 skeleton mob.skeleton lvl=18 aff=none s 245 hp=360/360 atk=144 def=12 spd=8 exp=237
+floor 19 seed 1 boss false
+boss=false mini=false n=7
+  #1 obsidian_beetle mob.obsidian_beetle lvl=20 aff=none o 238 hp=495/495 atk=231 def=54 spd=18 exp=282
+  #2 obsidian_beetle mob.obsidian_beetle lvl=20 aff=stone o 238 hp=540/540 atk=231 def=66 spd=18 exp=282
+  #3 obsidian_beetle mob.obsidian_beetle lvl=19 aff=poison o 238 hp=477/477 atk=222 def=51 spd=17 exp=270
+  #4 miner_ghoul mob.miner_ghoul lvl=19 aff=frost z 243 hp=486/486 atk=231 def=36 spd=17 exp=270
+  #5 miner_ghoul mob.miner_ghoul lvl=20 aff=stone z 243 hp=549/549 atk=240 def=51 spd=18 exp=282
+  #6 obsidian_beetle mob.obsidian_beetle lvl=19 aff=stone o 238 hp=522/522 atk=222 def=63 spd=17 exp=270
+  #7 miner_ghoul mob.miner_ghoul lvl=19 aff=none z 243 hp=486/486 atk=231 def=36 spd=17 exp=270
+floor 19 seed 1 boss true
+boss=true mini=true n=3
+  #1 mini_reaver mob.mini_reaver lvl=20 aff=fire R 208 hp=1290/1290 atk=180 def=30 spd=10 exp=840
+  #2 skeleton mob.skeleton lvl=19 aff=none s 245 hp=375/375 atk=150 def=12 spd=8 exp=246
+  #3 skeleton mob.skeleton lvl=19 aff=none s 245 hp=375/375 atk=150 def=12 spd=8 exp=246
+floor 19 seed 2 boss false
+boss=false mini=false n=7
+  #1 miner_ghoul mob.miner_ghoul lvl=19 aff=stone z 243 hp=531/531 atk=231 def=48 spd=17 exp=270
+  #2 deep_troll mob.deep_troll lvl=19 aff=stone O 130 hp=582/582 atk=240 def=57 spd=17 exp=270
+  #3 deep_troll mob.deep_troll lvl=19 aff=none O 130 hp=537/537 atk=240 def=45 spd=17 exp=270
+  #4 deep_troll mob.deep_troll lvl=20 aff=none O 130 hp=555/555 atk=249 def=48 spd=18 exp=282
+  #5 miner_ghoul mob.miner_ghoul lvl=19 aff=poison z 243 hp=486/486 atk=231 def=36 spd=17 exp=270
+  #6 obsidian_beetle mob.obsidian_beetle lvl=19 aff=stone o 238 hp=522/522 atk=222 def=63 spd=17 exp=270
+  #7 miner_ghoul mob.miner_ghoul lvl=19 aff=frost z 243 hp=486/486 atk=231 def=36 spd=17 exp=270
+floor 19 seed 2 boss true
+boss=true mini=true n=3
+  #1 mini_reaver mob.mini_reaver lvl=20 aff=fire R 208 hp=1290/1290 atk=180 def=30 spd=10 exp=840
+  #2 skeleton mob.skeleton lvl=19 aff=none s 245 hp=375/375 atk=150 def=12 spd=8 exp=246
+  #3 skeleton mob.skeleton lvl=19 aff=none s 245 hp=375/375 atk=150 def=12 spd=8 exp=246
+floor 19 seed 3 boss false
+boss=false mini=false n=8
+  #1 obsidian_beetle mob.obsidian_beetle lvl=20 aff=stone o 238 hp=540/540 atk=231 def=66 spd=18 exp=282
+  #2 obsidian_beetle mob.obsidian_beetle lvl=19 aff=stone o 238 hp=522/522 atk=222 def=63 spd=17 exp=270
+  #3 deep_troll mob.deep_troll lvl=20 aff=vampiric O 130 hp=555/555 atk=249 def=48 spd=18 exp=282
+  #4 miner_ghoul mob.miner_ghoul lvl=19 aff=stone z 243 hp=531/531 atk=231 def=48 spd=17 exp=270
+  #5 miner_ghoul mob.miner_ghoul lvl=19 aff=stone z 243 hp=531/531 atk=231 def=48 spd=17 exp=270
+  #6 miner_ghoul mob.miner_ghoul lvl=20 aff=none z 243 hp=504/504 atk=240 def=39 spd=18 exp=282
+  #7 obsidian_beetle mob.obsidian_beetle lvl=19 aff=vampiric o 238 hp=477/477 atk=222 def=51 spd=17 exp=270
+  #8 deep_troll mob.deep_troll lvl=20 aff=vampiric O 130 hp=555/555 atk=249 def=48 spd=18 exp=282
+floor 19 seed 3 boss true
+boss=true mini=true n=3
+  #1 mini_reaver mob.mini_reaver lvl=20 aff=fire R 208 hp=1290/1290 atk=180 def=30 spd=10 exp=840
+  #2 skeleton mob.skeleton lvl=19 aff=none s 245 hp=375/375 atk=150 def=12 spd=8 exp=246
+  #3 skeleton mob.skeleton lvl=19 aff=none s 245 hp=375/375 atk=150 def=12 spd=8 exp=246
+floor 19 seed 4 boss false
+boss=false mini=false n=6
+  #1 obsidian_beetle mob.obsidian_beetle lvl=19 aff=poison o 238 hp=477/477 atk=222 def=51 spd=17 exp=270
+  #2 miner_ghoul mob.miner_ghoul lvl=19 aff=poison z 243 hp=486/486 atk=231 def=36 spd=17 exp=270
+  #3 miner_ghoul mob.miner_ghoul lvl=19 aff=poison z 243 hp=486/486 atk=231 def=36 spd=17 exp=270
+  #4 obsidian_beetle mob.obsidian_beetle lvl=19 aff=frost o 238 hp=477/477 atk=222 def=51 spd=17 exp=270
+  #5 deep_troll mob.deep_troll lvl=19 aff=frost O 130 hp=537/537 atk=240 def=45 spd=17 exp=270
+  #6 miner_ghoul mob.miner_ghoul lvl=19 aff=poison z 243 hp=486/486 atk=231 def=36 spd=17 exp=270
+floor 19 seed 4 boss true
+boss=true mini=true n=3
+  #1 mini_reaver mob.mini_reaver lvl=20 aff=fire R 208 hp=1290/1290 atk=180 def=30 spd=10 exp=840
+  #2 skeleton mob.skeleton lvl=19 aff=none s 245 hp=375/375 atk=150 def=12 spd=8 exp=246
+  #3 skeleton mob.skeleton lvl=19 aff=none s 245 hp=375/375 atk=150 def=12 spd=8 exp=246
+floor 20 seed 1 boss false
+boss=false mini=false n=8
+  #1 blood_cultist mob.blood_cultist lvl=21 aff=fire c 161 hp=504/504 atk=258 def=36 spd=18 exp=294
+  #2 fallen_crusader mob.fallen_crusader lvl=21 aff=fire F 196 hp=582/582 atk=273 def=51 spd=18 exp=294
+  #3 fallen_crusader mob.fallen_crusader lvl=20 aff=poison F 196 hp=564/564 atk=252 def=51 spd=18 exp=282
+  #4 shadow_inquisitor mob.shadow_inquisitor lvl=20 aff=vampiric i 125 hp=516/516 atk=246 def=45 spd=18 exp=282
+  #5 shadow_inquisitor mob.shadow_inquisitor lvl=20 aff=stone i 125 hp=561/561 atk=246 def=57 spd=18 exp=282
+  #6 fallen_crusader mob.fallen_crusader lvl=20 aff=stone F 196 hp=609/609 atk=252 def=63 spd=18 exp=282
+  #7 fallen_crusader mob.fallen_crusader lvl=20 aff=stone F 196 hp=609/609 atk=252 def=63 spd=18 exp=282
+  #8 blood_cultist mob.blood_cultist lvl=20 aff=poison c 161 hp=486/486 atk=237 def=36 spd=18 exp=282
+floor 20 seed 1 boss true
+boss=true mini=false n=3
+  #1 dragon mob.boss_dragon lvl=20 aff=fire D 196 hp=2100/2100 atk=210 def=60 spd=12 exp=1350
+  #2 death_knight mob.death_knight lvl=19 aff=vampiric K 89 hp=615/615 atk=186 def=39 spd=10 exp=225
+  #3 death_knight mob.death_knight lvl=19 aff=vampiric K 89 hp=615/615 atk=186 def=39 spd=10 exp=225
+floor 20 seed 2 boss false
+boss=false mini=false n=8
+  #1 blood_cultist mob.blood_cultist lvl=20 aff=fire c 161 hp=486/486 atk=249 def=36 spd=18 exp=282
+  #2 shadow_inquisitor mob.shadow_inquisitor lvl=20 aff=vampiric i 125 hp=516/516 atk=246 def=45 spd=18 exp=282
+  #3 shadow_inquisitor mob.shadow_inquisitor lvl=21 aff=poison i 125 hp=534/534 atk=255 def=45 spd=18 exp=294
+  #4 fallen_crusader mob.fallen_crusader lvl=20 aff=stone F 196 hp=609/609 atk=252 def=63 spd=18 exp=282
+  #5 fallen_crusader mob.fallen_crusader lvl=20 aff=none F 196 hp=564/564 atk=252 def=51 spd=18 exp=282
+  #6 blood_cultist mob.blood_cultist lvl=20 aff=vampiric c 161 hp=486/486 atk=237 def=36 spd=18 exp=282
+  #7 shadow_inquisitor mob.shadow_inquisitor lvl=20 aff=frost i 125 hp=516/516 atk=246 def=45 spd=18 exp=282
+  #8 blood_cultist mob.blood_cultist lvl=20 aff=stone c 161 hp=531/531 atk=237 def=48 spd=18 exp=282
+floor 20 seed 2 boss true
+boss=true mini=false n=3
+  #1 dragon mob.boss_dragon lvl=20 aff=fire D 196 hp=2100/2100 atk=210 def=60 spd=12 exp=1350
+  #2 death_knight mob.death_knight lvl=19 aff=vampiric K 89 hp=615/615 atk=186 def=39 spd=10 exp=225
+  #3 death_knight mob.death_knight lvl=19 aff=vampiric K 89 hp=615/615 atk=186 def=39 spd=10 exp=225
+floor 20 seed 3 boss false
+boss=false mini=false n=6
+  #1 blood_cultist mob.blood_cultist lvl=20 aff=none c 161 hp=486/486 atk=237 def=36 spd=18 exp=282
+  #2 shadow_inquisitor mob.shadow_inquisitor lvl=20 aff=frost i 125 hp=516/516 atk=246 def=45 spd=18 exp=282
+  #3 shadow_inquisitor mob.shadow_inquisitor lvl=21 aff=frost i 125 hp=534/534 atk=255 def=45 spd=18 exp=294
+  #4 fallen_crusader mob.fallen_crusader lvl=21 aff=stone F 196 hp=627/627 atk=261 def=63 spd=18 exp=294
+  #5 blood_cultist mob.blood_cultist lvl=20 aff=frost c 161 hp=486/486 atk=237 def=36 spd=18 exp=282
+  #6 shadow_inquisitor mob.shadow_inquisitor lvl=20 aff=vampiric i 125 hp=516/516 atk=246 def=45 spd=18 exp=282
+floor 20 seed 3 boss true
+boss=true mini=false n=3
+  #1 dragon mob.boss_dragon lvl=20 aff=fire D 196 hp=2100/2100 atk=210 def=60 spd=12 exp=1350
+  #2 death_knight mob.death_knight lvl=19 aff=vampiric K 89 hp=615/615 atk=186 def=39 spd=10 exp=225
+  #3 death_knight mob.death_knight lvl=19 aff=vampiric K 89 hp=615/615 atk=186 def=39 spd=10 exp=225
+floor 20 seed 4 boss false
+boss=false mini=false n=8
+  #1 fallen_crusader mob.fallen_crusader lvl=20 aff=none F 196 hp=564/564 atk=252 def=51 spd=18 exp=282
+  #2 blood_cultist mob.blood_cultist lvl=21 aff=fire c 161 hp=504/504 atk=258 def=36 spd=18 exp=294
+  #3 shadow_inquisitor mob.shadow_inquisitor lvl=21 aff=fire i 125 hp=534/534 atk=267 def=45 spd=18 exp=294
+  #4 shadow_inquisitor mob.shadow_inquisitor lvl=20 aff=vampiric i 125 hp=516/516 atk=246 def=45 spd=18 exp=282
+  #5 blood_cultist mob.blood_cultist lvl=21 aff=stone c 161 hp=549/549 atk=246 def=48 spd=18 exp=294
+  #6 blood_cultist mob.blood_cultist lvl=20 aff=vampiric c 161 hp=486/486 atk=237 def=36 spd=18 exp=282
+  #7 blood_cultist mob.blood_cultist lvl=21 aff=fire c 161 hp=504/504 atk=258 def=36 spd=18 exp=294
+  #8 fallen_crusader mob.fallen_crusader lvl=20 aff=none F 196 hp=564/564 atk=252 def=51 spd=18 exp=282
+floor 20 seed 4 boss true
+boss=true mini=false n=3
+  #1 dragon mob.boss_dragon lvl=20 aff=fire D 196 hp=2100/2100 atk=210 def=60 spd=12 exp=1350
+  #2 death_knight mob.death_knight lvl=19 aff=vampiric K 89 hp=615/615 atk=186 def=39 spd=10 exp=225
+  #3 death_knight mob.death_knight lvl=19 aff=vampiric K 89 hp=615/615 atk=186 def=39 spd=10 exp=225
+floor 21 seed 1 boss false
+boss=false mini=false n=8
+  #1 essence_devourer mob.essence_devourer lvl=21 aff=poison D 135 hp=558/558 atk=264 def=42 spd=18 exp=294
+  #2 essence_devourer mob.essence_devourer lvl=21 aff=vampiric D 135 hp=558/558 atk=264 def=42 spd=18 exp=294
+  #3 chrono_phantom mob.chrono_phantom lvl=22 aff=poison p 183 hp=546/546 atk=264 def=39 spd=19 exp=306
+  #4 chrono_phantom mob.chrono_phantom lvl=22 aff=fire p 183 hp=546/546 atk=276 def=39 spd=19 exp=306
+  #5 chrono_phantom mob.chrono_phantom lvl=21 aff=none p 183 hp=528/528 atk=255 def=36 spd=18 exp=294
+  #6 essence_devourer mob.essence_devourer lvl=22 aff=frost D 135 hp=576/576 atk=273 def=45 spd=19 exp=306
+  #7 essence_devourer mob.essence_devourer lvl=21 aff=none D 135 hp=558/558 atk=264 def=42 spd=18 exp=294
+  #8 chrono_phantom mob.chrono_phantom lvl=21 aff=vampiric p 183 hp=528/528 atk=255 def=36 spd=18 exp=294
+floor 21 seed 1 boss true
+boss=true mini=true n=3
+  #1 mini_stalker mob.mini_stalker lvl=22 aff=vampiric S 93 hp=1386/1386 atk=198 def=36 spd=10 exp=888
+  #2 skeleton mob.skeleton lvl=21 aff=none s 245 hp=405/405 atk=162 def=12 spd=8 exp=264
+  #3 skeleton mob.skeleton lvl=21 aff=none s 245 hp=405/405 atk=162 def=12 spd=8 exp=264
+floor 21 seed 2 boss false
+boss=false mini=false n=6
+  #1 astral_weaver mob.astral_weaver lvl=21 aff=frost w 69 hp=516/516 atk=249 def=39 spd=18 exp=294
+  #2 astral_weaver mob.astral_weaver lvl=22 aff=poison w 69 hp=534/534 atk=258 def=42 spd=19 exp=306
+  #3 essence_devourer mob.essence_devourer lvl=21 aff=stone D 135 hp=603/603 atk=264 def=54 spd=18 exp=294
+  #4 essence_devourer mob.essence_devourer lvl=21 aff=frost D 135 hp=558/558 atk=264 def=42 spd=18 exp=294
+  #5 astral_weaver mob.astral_weaver lvl=21 aff=poison w 69 hp=516/516 atk=249 def=39 spd=18 exp=294
+  #6 astral_weaver mob.astral_weaver lvl=21 aff=none w 69 hp=516/516 atk=249 def=39 spd=18 exp=294
+floor 21 seed 2 boss true
+boss=true mini=true n=3
+  #1 mini_stalker mob.mini_stalker lvl=22 aff=vampiric S 93 hp=1386/1386 atk=198 def=36 spd=10 exp=888
+  #2 skeleton mob.skeleton lvl=21 aff=none s 245 hp=405/405 atk=162 def=12 spd=8 exp=264
+  #3 skeleton mob.skeleton lvl=21 aff=none s 245 hp=405/405 atk=162 def=12 spd=8 exp=264
+floor 21 seed 3 boss false
+boss=false mini=false n=6
+  #1 chrono_phantom mob.chrono_phantom lvl=21 aff=vampiric p 183 hp=528/528 atk=255 def=36 spd=18 exp=294
+  #2 astral_weaver mob.astral_weaver lvl=21 aff=poison w 69 hp=516/516 atk=249 def=39 spd=18 exp=294
+  #3 essence_devourer mob.essence_devourer lvl=22 aff=fire D 135 hp=576/576 atk=285 def=45 spd=19 exp=306
+  #4 astral_weaver mob.astral_weaver lvl=21 aff=stone w 69 hp=561/561 atk=249 def=51 spd=18 exp=294
+  #5 astral_weaver mob.astral_weaver lvl=22 aff=vampiric w 69 hp=534/534 atk=258 def=42 spd=19 exp=306
+  #6 chrono_phantom mob.chrono_phantom lvl=22 aff=none p 183 hp=546/546 atk=264 def=39 spd=19 exp=306
+floor 21 seed 3 boss true
+boss=true mini=true n=3
+  #1 mini_stalker mob.mini_stalker lvl=22 aff=vampiric S 93 hp=1386/1386 atk=198 def=36 spd=10 exp=888
+  #2 skeleton mob.skeleton lvl=21 aff=none s 245 hp=405/405 atk=162 def=12 spd=8 exp=264
+  #3 skeleton mob.skeleton lvl=21 aff=none s 245 hp=405/405 atk=162 def=12 spd=8 exp=264
+floor 21 seed 4 boss false
+boss=false mini=false n=7
+  #1 chrono_phantom mob.chrono_phantom lvl=22 aff=frost p 183 hp=546/546 atk=264 def=39 spd=19 exp=306
+  #2 astral_weaver mob.astral_weaver lvl=21 aff=poison w 69 hp=516/516 atk=249 def=39 spd=18 exp=294
+  #3 essence_devourer mob.essence_devourer lvl=21 aff=stone D 135 hp=603/603 atk=264 def=54 spd=18 exp=294
+  #4 astral_weaver mob.astral_weaver lvl=22 aff=poison w 69 hp=534/534 atk=258 def=42 spd=19 exp=306
+  #5 astral_weaver mob.astral_weaver lvl=22 aff=none w 69 hp=534/534 atk=258 def=42 spd=19 exp=306
+  #6 astral_weaver mob.astral_weaver lvl=21 aff=none w 69 hp=516/516 atk=249 def=39 spd=18 exp=294
+  #7 chrono_phantom mob.chrono_phantom lvl=21 aff=frost p 183 hp=528/528 atk=255 def=36 spd=18 exp=294
+floor 21 seed 4 boss true
+boss=true mini=true n=3
+  #1 mini_stalker mob.mini_stalker lvl=22 aff=vampiric S 93 hp=1386/1386 atk=198 def=36 spd=10 exp=888
+  #2 skeleton mob.skeleton lvl=21 aff=none s 245 hp=405/405 atk=162 def=12 spd=8 exp=264
+  #3 skeleton mob.skeleton lvl=21 aff=none s 245 hp=405/405 atk=162 def=12 spd=8 exp=264
+floor 22 seed 1 boss false
+boss=false mini=false n=8
+  #1 void_demon mob.void_demon lvl=22 aff=stone V 161 hp=675/675 atk=273 def=60 spd=19 exp=306
+  #2 death_knight mob.death_knight lvl=23 aff=none K 89 hp=678/678 atk=288 def=57 spd=19 exp=318
+  #3 death_knight mob.death_knight lvl=23 aff=none K 89 hp=678/678 atk=288 def=57 spd=19 exp=318
+  #4 death_knight mob.death_knight lvl=22 aff=none K 89 hp=660/660 atk=279 def=57 spd=19 exp=306
+  #5 void_demon mob.void_demon lvl=22 aff=none V 161 hp=630/630 atk=273 def=48 spd=19 exp=306
+  #6 death_knight mob.death_knight lvl=22 aff=none K 89 hp=660/660 atk=279 def=57 spd=19 exp=306
+  #7 death_knight mob.death_knight lvl=22 aff=poison K 89 hp=660/660 atk=279 def=57 spd=19 exp=306
+  #8 death_knight mob.death_knight lvl=22 aff=stone K 89 hp=705/705 atk=279 def=69 spd=19 exp=306
+floor 22 seed 1 boss true
+boss=true mini=true n=3
+  #1 mini_stalker mob.mini_stalker lvl=23 aff=vampiric S 93 hp=1434/1434 atk=204 def=36 spd=10 exp=912
+  #2 skeleton mob.skeleton lvl=22 aff=none s 245 hp=420/420 atk=168 def=12 spd=8 exp=273
+  #3 skeleton mob.skeleton lvl=22 aff=none s 245 hp=420/420 atk=168 def=12 spd=8 exp=273
+floor 22 seed 2 boss false
+boss=false mini=false n=7
+  #1 void_demon mob.void_demon lvl=23 aff=frost V 161 hp=648/648 atk=282 def=48 spd=19 exp=318
+  #2 void_demon mob.void_demon lvl=22 aff=frost V 161 hp=630/630 atk=273 def=48 spd=19 exp=306
+  #3 death_knight mob.death_knight lvl=22 aff=none K 89 hp=660/660 atk=279 def=57 spd=19 exp=306
+  #4 death_knight mob.death_knight lvl=22 aff=stone K 89 hp=705/705 atk=279 def=69 spd=19 exp=306
+  #5 void_demon mob.void_demon lvl=23 aff=stone V 161 hp=693/693 atk=282 def=60 spd=19 exp=318
+  #6 void_demon mob.void_demon lvl=22 aff=none V 161 hp=630/630 atk=273 def=48 spd=19 exp=306
+  #7 void_demon mob.void_demon lvl=22 aff=frost V 161 hp=630/630 atk=273 def=48 spd=19 exp=306
+floor 22 seed 2 boss true
+boss=true mini=true n=3
+  #1 mini_stalker mob.mini_stalker lvl=23 aff=vampiric S 93 hp=1434/1434 atk=204 def=36 spd=10 exp=912
+  #2 skeleton mob.skeleton lvl=22 aff=none s 245 hp=420/420 atk=168 def=12 spd=8 exp=273
+  #3 skeleton mob.skeleton lvl=22 aff=none s 245 hp=420/420 atk=168 def=12 spd=8 exp=273
+floor 22 seed 3 boss false
+boss=false mini=false n=6
+  #1 void_demon mob.void_demon lvl=22 aff=fire V 161 hp=630/630 atk=285 def=48 spd=19 exp=306
+  #2 death_knight mob.death_knight lvl=23 aff=vampiric K 89 hp=678/678 atk=288 def=57 spd=19 exp=318
+  #3 void_demon mob.void_demon lvl=22 aff=fire V 161 hp=630/630 atk=285 def=48 spd=19 exp=306
+  #4 death_knight mob.death_knight lvl=22 aff=frost K 89 hp=660/660 atk=279 def=57 spd=19 exp=306
+  #5 death_knight mob.death_knight lvl=22 aff=frost K 89 hp=660/660 atk=279 def=57 spd=19 exp=306
+  #6 death_knight mob.death_knight lvl=23 aff=frost K 89 hp=678/678 atk=288 def=57 spd=19 exp=318
+floor 22 seed 3 boss true
+boss=true mini=true n=3
+  #1 mini_stalker mob.mini_stalker lvl=23 aff=vampiric S 93 hp=1434/1434 atk=204 def=36 spd=10 exp=912
+  #2 skeleton mob.skeleton lvl=22 aff=none s 245 hp=420/420 atk=168 def=12 spd=8 exp=273
+  #3 skeleton mob.skeleton lvl=22 aff=none s 245 hp=420/420 atk=168 def=12 spd=8 exp=273
+floor 22 seed 4 boss false
+boss=false mini=false n=7
+  #1 death_knight mob.death_knight lvl=23 aff=fire K 89 hp=678/678 atk=300 def=57 spd=19 exp=318
+  #2 death_knight mob.death_knight lvl=23 aff=vampiric K 89 hp=678/678 atk=288 def=57 spd=19 exp=318
+  #3 void_demon mob.void_demon lvl=23 aff=fire V 161 hp=648/648 atk=294 def=48 spd=19 exp=318
+  #4 death_knight mob.death_knight lvl=22 aff=stone K 89 hp=705/705 atk=279 def=69 spd=19 exp=306
+  #5 death_knight mob.death_knight lvl=23 aff=fire K 89 hp=678/678 atk=300 def=57 spd=19 exp=318
+  #6 void_demon mob.void_demon lvl=22 aff=frost V 161 hp=630/630 atk=273 def=48 spd=19 exp=306
+  #7 death_knight mob.death_knight lvl=22 aff=frost K 89 hp=660/660 atk=279 def=57 spd=19 exp=306
+floor 22 seed 4 boss true
+boss=true mini=true n=3
+  #1 mini_stalker mob.mini_stalker lvl=23 aff=vampiric S 93 hp=1434/1434 atk=204 def=36 spd=10 exp=912
+  #2 skeleton mob.skeleton lvl=22 aff=none s 245 hp=420/420 atk=168 def=12 spd=8 exp=273
+  #3 skeleton mob.skeleton lvl=22 aff=none s 245 hp=420/420 atk=168 def=12 spd=8 exp=273
+floor 23 seed 1 boss false
+boss=false mini=false n=8
+  #1 goblin mob.goblin lvl=24 aff=none g 118 hp=489/489 atk=240 def=39 spd=20 exp=330
+  #2 goblin mob.goblin lvl=24 aff=frost g 118 hp=489/489 atk=240 def=39 spd=20 exp=330
+  #3 rat mob.rat lvl=24 aff=poison r 137 hp=477/477 atk=234 def=36 spd=20 exp=330
+  #4 rat mob.rat lvl=23 aff=fire r 137 hp=459/459 atk=237 def=33 spd=19 exp=318
+  #5 rat mob.rat lvl=24 aff=none r 137 hp=477/477 atk=234 def=36 spd=20 exp=330
+  #6 skeleton mob.skeleton lvl=24 aff=frost s 252 hp=507/507 atk=246 def=45 spd=20 exp=330
+  #7 rat mob.rat lvl=23 aff=vampiric r 137 hp=459/459 atk=225 def=33 spd=19 exp=318
+  #8 rat mob.rat lvl=23 aff=stone r 137 hp=504/504 atk=225 def=45 spd=19 exp=318
+floor 23 seed 1 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=24 aff=poison E 196 hp=1482/1482 atk=192 def=39 spd=10 exp=936
+  #2 skeleton mob.skeleton lvl=23 aff=none s 245 hp=435/435 atk=174 def=12 spd=8 exp=282
+  #3 skeleton mob.skeleton lvl=23 aff=none s 245 hp=435/435 atk=174 def=12 spd=8 exp=282
+floor 23 seed 2 boss false
+boss=false mini=false n=8
+  #1 skeleton mob.skeleton lvl=23 aff=poison s 252 hp=489/489 atk=237 def=42 spd=19 exp=318
+  #2 skeleton mob.skeleton lvl=23 aff=stone s 252 hp=534/534 atk=237 def=54 spd=19 exp=318
+  #3 goblin mob.goblin lvl=24 aff=fire g 118 hp=489/489 atk=252 def=39 spd=20 exp=330
+  #4 skeleton mob.skeleton lvl=23 aff=fire s 252 hp=489/489 atk=249 def=42 spd=19 exp=318
+  #5 goblin mob.goblin lvl=23 aff=none g 118 hp=471/471 atk=231 def=36 spd=19 exp=318
+  #6 rat mob.rat lvl=24 aff=vampiric r 137 hp=477/477 atk=234 def=36 spd=20 exp=330
+  #7 goblin mob.goblin lvl=24 aff=fire g 118 hp=489/489 atk=252 def=39 spd=20 exp=330
+  #8 skeleton mob.skeleton lvl=24 aff=fire s 252 hp=507/507 atk=258 def=45 spd=20 exp=330
+floor 23 seed 2 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=24 aff=poison E 196 hp=1482/1482 atk=192 def=39 spd=10 exp=936
+  #2 skeleton mob.skeleton lvl=23 aff=none s 245 hp=435/435 atk=174 def=12 spd=8 exp=282
+  #3 skeleton mob.skeleton lvl=23 aff=none s 245 hp=435/435 atk=174 def=12 spd=8 exp=282
+floor 23 seed 3 boss false
+boss=false mini=false n=7
+  #1 rat mob.rat lvl=23 aff=fire r 137 hp=459/459 atk=237 def=33 spd=19 exp=318
+  #2 goblin mob.goblin lvl=24 aff=poison g 118 hp=489/489 atk=240 def=39 spd=20 exp=330
+  #3 skeleton mob.skeleton lvl=24 aff=vampiric s 252 hp=507/507 atk=246 def=45 spd=20 exp=330
+  #4 rat mob.rat lvl=23 aff=vampiric r 137 hp=459/459 atk=225 def=33 spd=19 exp=318
+  #5 rat mob.rat lvl=23 aff=poison r 137 hp=459/459 atk=225 def=33 spd=19 exp=318
+  #6 goblin mob.goblin lvl=23 aff=poison g 118 hp=471/471 atk=231 def=36 spd=19 exp=318
+  #7 goblin mob.goblin lvl=23 aff=poison g 118 hp=471/471 atk=231 def=36 spd=19 exp=318
+floor 23 seed 3 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=24 aff=poison E 196 hp=1482/1482 atk=192 def=39 spd=10 exp=936
+  #2 skeleton mob.skeleton lvl=23 aff=none s 245 hp=435/435 atk=174 def=12 spd=8 exp=282
+  #3 skeleton mob.skeleton lvl=23 aff=none s 245 hp=435/435 atk=174 def=12 spd=8 exp=282
+floor 23 seed 4 boss false
+boss=false mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=24 aff=poison E 196 hp=1482/1482 atk=192 def=39 spd=10 exp=936
+  #2 skeleton mob.skeleton lvl=23 aff=none s 245 hp=435/435 atk=174 def=12 spd=8 exp=282
+  #3 skeleton mob.skeleton lvl=23 aff=none s 245 hp=435/435 atk=174 def=12 spd=8 exp=282
+floor 23 seed 4 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=24 aff=poison E 196 hp=1482/1482 atk=192 def=39 spd=10 exp=936
+  #2 skeleton mob.skeleton lvl=23 aff=none s 245 hp=435/435 atk=174 def=12 spd=8 exp=282
+  #3 skeleton mob.skeleton lvl=23 aff=none s 245 hp=435/435 atk=174 def=12 spd=8 exp=282
+floor 24 seed 1 boss false
+boss=false mini=false n=8
+  #1 slime mob.slime lvl=24 aff=none c 43 hp=696/696 atk=332 def=52 spd=20 exp=440
+  #2 drowned mob.drowned lvl=24 aff=poison u 31 hp=728/728 atk=340 def=56 spd=20 exp=440
+  #3 slime mob.slime lvl=25 aff=frost c 43 hp=720/720 atk=344 def=52 spd=20 exp=456
+  #4 slime mob.slime lvl=24 aff=vampiric c 43 hp=696/696 atk=332 def=52 spd=20 exp=440
+  #5 slime mob.slime lvl=25 aff=stone c 43 hp=780/780 atk=344 def=68 spd=20 exp=456
+  #6 drowned mob.drowned lvl=24 aff=none u 31 hp=728/728 atk=340 def=56 spd=20 exp=440
+  #7 drowned mob.drowned lvl=24 aff=fire u 31 hp=728/728 atk=356 def=56 spd=20 exp=440
+  #8 slime mob.slime lvl=25 aff=stone c 43 hp=780/780 atk=344 def=68 spd=20 exp=456
+floor 24 seed 1 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=25 aff=poison E 196 hp=2040/2040 atk=264 def=56 spd=10 exp=1280
+  #2 skeleton mob.skeleton lvl=24 aff=none s 245 hp=600/600 atk=240 def=16 spd=8 exp=388
+  #3 skeleton mob.skeleton lvl=24 aff=none s 245 hp=600/600 atk=240 def=16 spd=8 exp=388
+floor 24 seed 2 boss false
+boss=false mini=false n=9
+  #1 slime mob.slime lvl=24 aff=poison c 43 hp=696/696 atk=332 def=52 spd=20 exp=440
+  #2 lizard mob.lizard lvl=24 aff=stone l 29 hp=772/772 atk=344 def=76 spd=20 exp=440
+  #3 drowned mob.drowned lvl=24 aff=stone u 31 hp=788/788 atk=340 def=72 spd=20 exp=440
+  #4 slime mob.slime lvl=24 aff=stone c 43 hp=756/756 atk=332 def=68 spd=20 exp=440
+  #5 slime mob.slime lvl=24 aff=none c 43 hp=696/696 atk=332 def=52 spd=20 exp=440
+  #6 drowned mob.drowned lvl=24 aff=frost u 31 hp=728/728 atk=340 def=56 spd=20 exp=440
+  #7 drowned mob.drowned lvl=24 aff=stone u 31 hp=788/788 atk=340 def=72 spd=20 exp=440
+  #8 drowned mob.drowned lvl=25 aff=none u 31 hp=752/752 atk=352 def=56 spd=20 exp=456
+  #9 lizard mob.lizard lvl=24 aff=fire l 29 hp=712/712 atk=360 def=60 spd=20 exp=440
+floor 24 seed 2 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=25 aff=poison E 196 hp=2040/2040 atk=264 def=56 spd=10 exp=1280
+  #2 skeleton mob.skeleton lvl=24 aff=none s 245 hp=600/600 atk=240 def=16 spd=8 exp=388
+  #3 skeleton mob.skeleton lvl=24 aff=none s 245 hp=600/600 atk=240 def=16 spd=8 exp=388
+floor 24 seed 3 boss false
+boss=false mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=25 aff=poison E 196 hp=2040/2040 atk=264 def=56 spd=10 exp=1280
+  #2 skeleton mob.skeleton lvl=24 aff=none s 245 hp=600/600 atk=240 def=16 spd=8 exp=388
+  #3 skeleton mob.skeleton lvl=24 aff=none s 245 hp=600/600 atk=240 def=16 spd=8 exp=388
+floor 24 seed 3 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=25 aff=poison E 196 hp=2040/2040 atk=264 def=56 spd=10 exp=1280
+  #2 skeleton mob.skeleton lvl=24 aff=none s 245 hp=600/600 atk=240 def=16 spd=8 exp=388
+  #3 skeleton mob.skeleton lvl=24 aff=none s 245 hp=600/600 atk=240 def=16 spd=8 exp=388
+floor 24 seed 4 boss false
+boss=false mini=false n=9
+  #1 drowned mob.drowned lvl=24 aff=frost u 31 hp=728/728 atk=340 def=56 spd=20 exp=440
+  #2 drowned mob.drowned lvl=24 aff=fire u 31 hp=728/728 atk=356 def=56 spd=20 exp=440
+  #3 slime mob.slime lvl=24 aff=vampiric c 43 hp=696/696 atk=332 def=52 spd=20 exp=440
+  #4 drowned mob.drowned lvl=24 aff=none u 31 hp=728/728 atk=340 def=56 spd=20 exp=440
+  #5 drowned mob.drowned lvl=24 aff=vampiric u 31 hp=728/728 atk=340 def=56 spd=20 exp=440
+  #6 lizard mob.lizard lvl=24 aff=poison l 29 hp=712/712 atk=344 def=60 spd=20 exp=440
+  #7 drowned mob.drowned lvl=25 aff=stone u 31 hp=812/812 atk=352 def=72 spd=20 exp=456
+  #8 slime mob.slime lvl=24 aff=none c 43 hp=696/696 atk=332 def=52 spd=20 exp=440
+  #9 slime mob.slime lvl=25 aff=vampiric c 43 hp=720/720 atk=344 def=52 spd=20 exp=456
+floor 24 seed 4 boss true
+boss=true mini=true n=3
+  #1 mini_executioner mob.mini_executioner lvl=25 aff=poison E 196 hp=2040/2040 atk=264 def=56 spd=10 exp=1280
+  #2 skeleton mob.skeleton lvl=24 aff=none s 245 hp=600/600 atk=240 def=16 spd=8 exp=388
+  #3 skeleton mob.skeleton lvl=24 aff=none s 245 hp=600/600 atk=240 def=16 spd=8 exp=388

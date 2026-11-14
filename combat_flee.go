@@ -65,25 +65,28 @@ func (m *Model) shouldAttemptFlee() bool {
 	return hpPercent < fleeAt || (livingCount <= 2 && hpPercent < fleeAt+0.15)
 }
 
-func (m *Model) attemptFlee() {
-	globalDebugReport.FleeAttempts++
-	chance := 45
-
+// fleeChance — шанс успешно сбежать из боя, %. База 55%, ловкие классы и защитники помогают,
+// глубина снижает шанс (по 1% за 4 этажа), но не ниже 45% и не выше 90%: безнадёжный побег
+// только калечил отряд и ни разу не удавался.
+func (m *Model) fleeChance() int {
+	chance := 55
 	for _, h := range m.Party {
 		if !h.IsDead && !h.IsDowned {
 			if h.Class == ClassRogue || h.Class == ClassRanger {
-				chance += 20
+				chance += 15
 			}
 			if h.Class == ClassTank || h.Class == ClassPaladin {
 				chance += 10
 			}
 		}
 	}
+	chance -= m.Floor / 4
+	return max(45, min(90, chance))
+}
 
-	chance -= m.Floor / 2
-	if chance < 20 {
-		chance = 20
-	}
+func (m *Model) attemptFlee() {
+	globalDebugReport.FleeAttempts++
+	chance := m.fleeChance()
 
 	roll := rng.Intn(100)
 	if roll < chance {
@@ -162,7 +165,7 @@ func (m *Model) attemptFlee() {
 
 		for _, h := range m.Party {
 			if !h.IsDead && !h.IsDowned {
-				chipDamage := int(float64(h.HP) * 0.20)
+				chipDamage := int(float64(h.HP) * 0.10)
 				if chipDamage < 2 {
 					chipDamage = 2
 				}
@@ -185,6 +188,6 @@ func (m *Model) attemptFlee() {
 				}
 			}
 		}
-		m.Combat.FleeCooldown = 3
+		m.Combat.FleeCooldown = 8
 	}
 }

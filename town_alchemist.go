@@ -36,6 +36,12 @@ type AlchemistServiceState struct {
 	ChosenIdx     int
 }
 
+// maxHeroMutations — предел мутаций героя по его уровню (не меньше 5 на старте). Стоимость мутации
+// ограничена сверху (см. CalculateMutationCost), поэтому без предела богатый отряд скупал бы их бесконечно.
+func maxHeroMutations(level int) int {
+	return max(5, level/2)
+}
+
 func (m *Model) GenerateAlchemistOffers() []AlchemistOffer {
 	var offers []AlchemistOffer
 
@@ -43,30 +49,34 @@ func (m *Model) GenerateAlchemistOffers() []AlchemistOffer {
 		if h.IsDead || h.IsDowned {
 			continue
 		}
-		pref := GetClassMutationPreference(h, m.Floor, m.Stats.FallenHeroes)
-		baseCost := 240
-		switch pref {
-		case MutChimera:
-			baseCost = 280
-		case MutBastion:
-			baseCost = 260
-		case MutFury:
-			baseCost = 240
-		case MutTitan:
-			baseCost = 230
-		case MutAether:
-			baseCost = 220
+		// Герой, достигший предела мутаций, не получает предложения, пока не поднимет уровень.
+		// Лимит заложен здесь, чтобы автопилот (stepTown, townNeedsVisit) и интерфейс видели одно и то же.
+		if h.Mutations.Total() < maxHeroMutations(h.Level) {
+			pref := GetClassMutationPreference(h, m.Floor, m.Stats.FallenHeroes)
+			baseCost := 240
+			switch pref {
+			case MutChimera:
+				baseCost = 280
+			case MutBastion:
+				baseCost = 260
+			case MutFury:
+				baseCost = 240
+			case MutTitan:
+				baseCost = 230
+			case MutAether:
+				baseCost = 220
+			}
+			cost := CalculateMutationCost(baseCost, m.Floor, h.Mutations.Total())
+			offers = append(offers, AlchemistOffer{
+				Type:      AlchemistActionMutation,
+				HeroIdx:   idx,
+				HeroName:  h.DisplayName(m.Lang),
+				ItemTitle: T(m.Lang, "mut."+string(pref)+".name"),
+				Cost:      cost,
+				CanAfford: m.Gold >= cost,
+				MutType:   pref,
+			})
 		}
-		cost := CalculateMutationCost(baseCost, m.Floor, h.Mutations.Total())
-		offers = append(offers, AlchemistOffer{
-			Type:      AlchemistActionMutation,
-			HeroIdx:   idx,
-			HeroName:  h.DisplayName(m.Lang),
-			ItemTitle: T(m.Lang, "mut."+string(pref)+".name"),
-			Cost:      cost,
-			CanAfford: m.Gold >= cost,
-			MutType:   pref,
-		})
 
 		maxPots := m.MaxPotionSlots()
 		if h.HasFreePotionSlot(maxPots) {
@@ -102,6 +112,9 @@ func (m *Model) ExecuteAlchemistOffer(offer AlchemistOffer) bool {
 	h := m.Party[offer.HeroIdx]
 	if offer.Type == AlchemistActionElixir && h.ExpElixirPct > 0 {
 		return false // эликсир уже действует
+	}
+	if offer.Type == AlchemistActionMutation && h.Mutations.Total() >= maxHeroMutations(h.Level) {
+		return false // предел мутаций: устаревшее предложение не продаётся
 	}
 	m.Gold -= offer.Cost
 	globalDebugReport.GoldSpentBreakdown[spendAlchemy] += offer.Cost

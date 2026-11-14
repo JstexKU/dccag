@@ -45,6 +45,7 @@ func (m *Model) syncMaxFloor() {
 // weakHeroes возвращает живых героев, отстающих от рекомендуемого уровня самого
 // глубокого этажа на TrainingGap и больше, ЛИБО отстающих от среднего уровня живых соратников.
 func (m *Model) weakHeroes() []*Hero {
+	rec := recommendedLevel(m.MaxFloor)
 	gap := max(1, m.Tactics.TrainingGap)
 	targetLvl := m.targetLevel()
 
@@ -53,9 +54,16 @@ func (m *Model) weakHeroes() []*Hero {
 		if h.IsDead || h.LostInAbyss {
 			continue
 		}
-		if targetLvl-h.Level >= gap {
-			out = append(out, h)
+		diff := targetLvl - h.Level
+		if diff < gap {
+			continue
 		}
+		// Ветеран, уже переросший требования этажа, считается слабым только при заметном
+		// отставании от отряда (не менее 15%), а не из-за разницы в пару уровней на сотне уровней.
+		if h.Level >= rec && targetLvl > 15 && diff*100/targetLvl < 15 {
+			continue
+		}
+		out = append(out, h)
 	}
 	return out
 }

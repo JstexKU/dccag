@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.4.1] - 2026-11-13
+
 ### Added
 - **Heroes window (P).** A full character sheet for every party member: level, Health/Mana/Stress bars, an Experience bar with the points left to the next level, combat stats (attack, defense, speed, crit chance with its d20 threshold, stress resistance, combat role, combat rating vs the party average), abilities (class skill with readiness, leader calling, racial traits), bonuses and conditions (mutations, gear bonuses, weapon effects, poison/chill/guard/…), equipment with every affix, the potion belt, the party bag and personal deeds. Tab / ←→ / 1–9 switch heroes, ↑↓ PgUp/PgDn scroll, P or Esc closes. In manual combat P is still the potion key, so **H** opens the window everywhere. While it is open the game is paused and the keys do not leak into the game behind it. A lagging hero also sees the Elixir of Diligence offer.
 - **Roaming monster packs.** Packs no longer stand still: while the party is away they wander within 3 cells of their spawn point inside their own room. When the party enters the room and comes within 4 cells, the pack notices it (👁 in the log, the glyph is highlighted on the map) and chases it, never leaving the room; if the party leaves the room or gets farther than 6 cells the pack loses track and walks back home. A pack that catches the party starts the fight itself. Bosses stay put, packs farther than 14 cells from the party sleep. Packs are processed in map order so seeded runs stay reproducible. **Changes balance and seeded runs.**
@@ -16,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Monster affixes now work and are visible.** 🔥 Fire hits ignore armor, ☣️ Venom poisons (damage over 3 hero turns, never lethal) and adds stress, ❄️ Frost slows the party's initiative and chills heroes (30% to lose a turn for 2 turns), 🩸 Vampiric heals itself for half of the damage dealt, 🪨 Stone keeps its +DEF/+HP. Mutants carry their icon in names (map strip, enemy list, combat log), the combat start lists the affixes in the pack, heroes show ☣/❄ badges, and the Bard's ballad / Cleric's blessing cleanse the statuses. **Changes balance and seeded runs.**
 
 ### Fixed
+- **Endless Mutation buying at the Alchemist.** A mutation costs at most 6× its base price whatever the floor or the number of mutations, so a rich party kept buying them without end (tens of millions of gold, attack in the tens of thousands). A hero now holds at most `max(5, level/2)` mutations; the limit lives in `GenerateAlchemistOffers`, so the autopilot (`stepTown`, `townNeedsVisit`) and the screen stay in sync, and a stale offer is refused.
+- **Fleeing from combat almost never worked.** The chance was 45% plus class bonuses minus `floor/2` with a 20% floor, a failed attempt cost 20% of every hero's HP and the cooldown was 3 turns. It is now 55% (+15% Rogue/Ranger, +10% Tank/Paladin each) minus `floor/4`, clamped to 45–90%; a failure costs 10% HP and the cooldown is 8 turns.
+- **Veterans sent to train over a 1–2% level difference.** `weakHeroes` now ignores a hero who is already above the recommended level of the deepest floor and lags the party's target level by less than 15% (when that level is above 15).
+- The version in `main.go` is 3.4.1 and the stray `## [Unreleased]` block in the middle of the history was merged into 3.0.0.
 - **New heroes started with an empty affliction instead of `none`.** Every check against `AfflictionNone` therefore misfired until the hero was cured once: stress ≥ 100 never turned into a virtue or a psychosis, every hero card showed the 👁 badge, the autopilot thought the whole party needed the Church, the Church printed the raw key `affliction.` and the Alchemist offered a stress potion to everyone. `buildHero` now sets `AfflictionNone`. **This changes game balance and seeded runs.**
 - The Alchemist names potions through the dictionary instead of printing the raw potion type (`🟣 (stress)`).
 - The hero preview in the creator now applies the racial defence modifier, exactly like `TotalDef` (shared `applyRaceDef`).
@@ -184,21 +190,6 @@ Telemetry spend categories use stable, language-neutral keys (spend.*).
 - Main-menu timer ticks carry a generation number (`MenuGen`), so a stale tick can no longer start the expedition from inside the editor.
 - `persistState` takes the hero blueprint as an extra argument.
 - Removed the `[I] Codex | [E] Armory | [S] Stats` hints from the main menu: those keys never worked there.
-
-## [Unreleased]
-
-### Changed
-- Large source files were split by responsibility (`types_*.go`, `ui_*.go`, `combat_*.go`, `party.go`, `autopilot.go`, `step.go`, `tiles.go`, `loot.go`, `economy.go`, `update.go`, `model.go` and others). Declarations were moved without changes; see the structure in the README.
-- The interface takes the version from `version` through `displayVersion()` instead of hard-coded strings; release builds that pass a tag with the `v` prefix no longer show `vv2.9.0`.
-
-### Removed
-- Unused code: `Hero.Verb`, `blankLines`, `wallStyle`, `floorStyle`, `ArmorNone`, `SuffNone`.
-- 45 unused dictionary keys in RU and EN (`ui.btn_*`, `codex.base_*`, `status.*` and others).
-- A stray copy of `main.go` that was committed under the file name `\`.
-- Citation markers (`[cite: ...]`) left in the README.
-
-### Known issues
-- The cleric title `title.resurrector` can never be earned: `Feats.Revives` is not incremented anywhere (`Hero.AddRevive` is never called); revival happens in the Church, not through a Cleric action.
 
 ## [2.9.0]
 

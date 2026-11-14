@@ -1,188 +1,305 @@
-# Dungeon Crawler Console Auto Game (DCCAG)
+# Changelog
 
-A grim tactical text-based dungeon crawler featuring autonomous squad mechanics and runtime internationalization, built with Go and Bubble Tea.
+All notable changes to this project will be documented in this file.
 
-[![Go Version](https://img.shields.io/badge/Go-1.24%2B-blue)](https://golang.org/)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/JstexKU/dccag?color=orange)](https://github.com/JstexKU/dccag/releases)
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/).
 
----
+## [Unreleased]
 
-## 🎮 About The Project
+## [3.4.1] - 2026-11-13
 
-**DCCAG** is an autonomous console roguelike. Each expedition you get a party of 5 heroes picked at random from **10 classes** (Tank, Warrior, Rogue, Mage, Cleric, Paladin, Ranger, Monk, Bard, Warlock) and 7 races (Human, Elf, Beastman, Olongr, Dwarf, Demonkin, Dragonkin). The party explores infinite procedural floors, fights monster packs, manages stress and psychological afflictions, trades in the Capital and crafts gear, all inside a terminal UI. You can set its **tactics** and watch, take **manual control**, or create **your own leader hero** who leads the party.
+### Fixed
+- Fixed save file migration for pre-3.3 saves (training gap defaults).
+- Fixed hero sanitization logic for corrupted save files.
+- Fixed companion validation errors on game load.
 
-### ✨ Key Features
-* **A Town You Walk Through**: the Capital is a map with nine buildings drawn with roofs, signs and doors: the Market, Magistrate, Church, Tavern, Guild, Forge, Tannery, Alchemist and the Dungeon Gate in the middle of the square. The autopilot walks the party from building to building (skipping the ones with nothing to do), opens the building's card at the door, finishes its business, steps back out onto the street and walks on to the next one. In manual mode you walk the streets with the arrow keys and step on a door to enter (`Esc` leaves).
-* **Two Ways Into the Dungeon** (the Gate card): **1. Continue the descent** to the deepest floor reached, or **2. Pick a cleared floor**: it fills up again with small packs of monsters that suit that floor, so recruits can level up without dying on the deep floors. The autopilot chooses by itself: it trains when two or more fighters lag behind the recommended level, or one lags and the previous trips ended in retreats without progress. Training ends when the weak fighters catch up or the floor is cleared; on training floors the autopilot never takes the stairs down. Both switches live in the tactics screen.
-* **A Fully Custom Party**: the editor (`C` in the main menu) works on five slots (`PgUp`/`PgDn`): slot 1 is the leader, slots 2-5 are companions; empty slots are filled with random fighters of classes not yet taken. `Ctrl+T` rolls a whole random party, `Del` clears a slot.
-* **Your Own Leader Hero** (`C` in the main menu): choose a name, gender, race, class and a *calling*, and spend 6 free points on health, mana, attack, defense and speed. The preview shows the final stats before you commit. The hero is saved to `save.json` and leads every new expedition (`★` on the card); the other four heroes are random and never share the leader's class. The leader is never left behind in the Abyss, the Church revives them for free and the Guild never replaces them, but their fall terrifies the party. Callings: *Inspirer* (allies take 15% less stress), *Strategist* (+10% gold), *Mentor* (+10% experience for the party). `Ctrl+R` in the editor rolls a random hero; `X` in the menu (pressed twice) removes the hero.
-* **Manual Control** (`M`): Take direct command of the expedition. Move through the labyrinth with arrow keys, make camp (`C`), exit voluntarily (`X`), command heroes during combat (`A` strike, `Space` skill, `D` guard, `P` potions), and select enemy focus targets (←/→). Toggle seamlessly between autopilot and manual control at any time.
-* **Autopilot Tactics** (`T`): Fine-tune squad thresholds for emergency retreat, combat flee, potion drinking, and decision rules for trapped chests, blood altars, and room events.
-* **Room Events** (`?` on the map): Campfires, wandering alchemical merchants, whispering idols, ambushes, and locked vaults (picked by rogues or smashed open by bruisers).
-* **Town Economy & Trading**: Automated visit pipeline (Market, Magistrate, Church, Tavern, Guild, Smithy, Tannery, Alchemist). Heroes proactively purchase missing gear and buy equipment upgrades from merchants.
-* **Capital Militia Meta-Progression**: Cumulative municipal investments unlock 5 permanent tiers of free reinforcements (from local watchmen up to Citadel Keepers).
-* **Permanent Legacy & Memorial Book**: Town treasury, infrastructure upgrades, tactics, and language settings persist across sessions in `save.json`. Fallen heroes are recorded in the Memorial Book, and unrecovered casualties left behind in the Abyss are permanently lost.
-* **Capital Library & Lore**: discover lore tiles in dungeon halls and the Forgotten Archives, then read unlocked volumes in the Capital Library. The library contains 80 books and manuscripts across six categories, with a two-column reader opened by `B`; lore rewards can grant class perks, racial bonuses, experience, stress relief, and bane damage. Unlocked volumes persist in `save.json`.
-* **Seven Playable Races**: Human, Elf, Beastman, Olongr, Dwarf, Demonkin, and Dragonkin, each with distinct racial traits.
-* **Trilingual Localization**: switch between Russian (**RU**), English (**EN**) and Belarusian (**BE**) on the fly with `L`.
-* **Darkest Dungeon-Inspired Mechanics**: Sanity meter (0–200), afflictions (Paranoia, Selfishness, Maniac), virtues, and lethal heart attacks.
-* **Uniform Normalized UI**: Grid system locking 6 uniform hero and party banner cards with consistent dimensions and borders across Landscape, Portrait, and PortraitWide layouts.
-* **Reproducible Runs**: `-seed N` replays the same dungeon, handy for bug reports and balancing.
+## [3.4.0] - 2026-11-12
 
----
+### Added
+- Hero creator system with blueprint saving.
+- Companion system (support for up to 4 companions per leader).
+- Save format extended with `Hero` and `Companions` fields.
 
-## ⌨️ Controls
+### Changed
+- `persistState()` now accepts hero and companions parameters for accurate state persistence.
 
-| Key | Action |
-| :--- | :--- |
-| **`C`** | *Main menu:* create or edit your party (`PgUp`/`PgDn` switch heroes, `Ctrl+T` random party, `Del` clear a hero, `X` twice in the menu removes the party) |
-| **`←↑↓→`** | *Manual, in the Capital:* walk the streets; a building's door opens its card, `Esc` leaves it |
-| **`Space`** / **`Enter`** | Pause / resume autopilot (or start the game from the menu) |
-| **`N`** | One step while paused |
-| **`M`** | Toggle manual control / autopilot |
-| **`T`** | Autopilot tactics (`↑/↓` select, `←/→` change, `T`/`Esc` back) |
-| **`F`** | Try to flee from combat |
-| **`←↑↓→`** | *Manual:* move the party one tile |
-| **`C`** / **`X`** | *Manual:* make camp (limited by a cooldown) / leave through the exit tile `<` |
-| **`A`** / **`Space`** / **`D`** / **`P`** | *Manual combat:* plain strike / class skill / guard / potion (`1`-`9` pick, `←/→` choose who gets it) |
-| **`←`** / **`→`** | *Manual combat:* choose the target (marked with `▶`) |
-| **`E`** | Party Armory & mutations |
-| **`I`** | Codex (`Tab` / `Shift+Tab` or `1`-`7` to switch tabs) |
-| **`B`** | Capital Library: browse unlocked lore volumes |
-| **`S`** | Expedition statistics & Memorial Book |
-| **`R`** | Restart the expedition (only from the Defeat and Glory screens) |
-| **`1` / `2`** | Normal / fast speed (outside the Codex) |
-| **`+` / `-`** | Fine speed control |
-| **`↑` / `↓`**, **`PgUp` / `PgDn`** | Scroll logs and windows |
-| **`L`** | Switch language |
-| **`Q`** / **`Ctrl+C`** | Quit (progress is saved) |
+## [3.3.3] - 2026-11-12
 
-### Command-line flags
+### Fixed
+- Fixed localization slot validation (empty string checks).
+- Fixed save migration logic for pre-3.3 tactics configurations.
 
-| Flag | Purpose |
-| :--- | :--- |
-| `-manual` | Start in manual control mode |
-| `-seed N` | Deterministic run with the given seed (`0` = random) |
-| `-report` | Collect telemetry and write `dccag_report.json` |
-| `-no-save` | Neither read nor write the save file |
-| `-reset-save` | Delete the save file and exit |
-| `-version` | Print the version and exit |
+## [3.3.2] - 2026-11-11
 
-The save file lives in your user config directory (`~/.config/dccag/save.json` on Linux, `%AppData%\\dccag\\save.json` on Windows, `~/Library/Application Support/dccag/save.json` on macOS).
+### Added
+- Expanded Guild Contract System with 19 contract types (reconnaissance, combat challenges, etc.).
+- Smart filtering for contracts by depth, boss, and biome.
+- Dynamic viewport for inventory in Market UI with auto-follow cursor.
+- Adaptive scroll indicators for better navigation.
 
----
+### Changed
+- Contract system now supports advanced filtering logic.
+- Market UI viewport dynamically adjusts to content size.
 
-## 🚀 Getting Started
+## [3.3.1] - 2026-11-10
 
-### Option 1: Pre-built binaries (no Go required)
-Download the binary for your system from **[Releases](https://github.com/JstexKU/dccag/releases)**.
+### Fixed
+- Fixed duplicate `revealFog` calls during dungeon generation.
+- Fixed undefined boss/elite attribute errors.
+- Migrated ~180 hardcoded UI strings to localization dictionaries.
+- Updated `TVerb` to accept dynamic keys.
+- Made telemetry spending categories language-independent (`spend.*`).
 
-The current release workflow publishes these targets:
+### Changed
+- Refactored localization system for better maintainability and scalability.
 
-* **Linux**: `dccag-linux-amd64`, `dccag-linux-arm64`
-* **macOS**: `dccag-darwin-amd64`, `dccag-darwin-arm64`
-* **Windows**: `dccag-windows-amd64.exe`
+## [3.3.0] - 2026-11-09
 
-Each release also contains **`sha256sums.txt`** for verifying the downloaded binaries:
+### Added
+- 7 playable races: Human, Elf, Beastman, Olongr, Dwarf, Demonkin, Dragonkin.
+- Unique racial traits and class synergies.
+- Belarusian localization (RU/EN/BE) with in-game switching via `L` key.
+- 10 legendary relics with active mechanics: Compass of Greed, Martyr's Crown, Holy Grail, Pioneer's Eye, Quicksilver Vial, Obsidian Anvil, Whispering Skull, Phoenix Core, Cornucopia, Inquisitor's Seal.
+- Normalized hotkey handling (works correctly on any keyboard layout).
+- Extended Codex with a new 6th tab.
 
-```bash
-sha256sum -c sha256sums.txt
-chmod +x dccag-<os>-<arch>
-./dccag-<os>-<arch>
-```
+### Changed
+- Complete localization overhaul with three-language support framework.
+- Relic system redesigned to include active abilities and deeper gameplay impact.
 
-On Windows, verify the checksum with `Get-FileHash` in PowerShell, then run the `.exe`.
+## [3.2.0] - 2026-11-06
 
-### Option 2: Run from source
+### Added
+- Capital Library and Lore system.
+- Six-category registry of 80 books and manuscripts.
+- Interactive lore reader activated via `B` key.
+- Lore tiles hidden in dungeons and Forgotten Archives.
+- Lore discovery rewards: class perks, racial bonuses, experience, and stress relief.
 
-Requires **Go 1.24+**.
+### Changed
+- Integrated lore discovery directly with dungeon exploration mechanics.
 
-```bash
-git clone https://github.com/JstexKU/dccag.git
-cd dccag
-go run .
-```
+## [3.1.0] - 2026-11-03
 
-Or use `./install.sh` to build for your platform (or all of them).
+### Added
+- Hero blueprint saving integrated into save files.
+- Save format version 1 with dedicated hero support.
+- Hero data sanitization on load (validates name, race, class, calling, and stat points).
 
----
+### Changed
+- `SaveData` structure extended with the `Hero` field.
+- `persistState()` updated to accept and serialize hero parameters.
 
-## 🧪 Development
+## [3.0.0] - 2026-10-31
 
-```bash
-go vet ./...
-go test ./...
-gofmt -l .        # should print nothing
-```
+### Added
+- Full capital map rework with manual movement mechanics.
+- Expansion to 7 races (introducing Dwarf, Demonkin, Dragonkin).
+- 10 legendary relics with active mechanics.
+- Complete multi-language localization system (RU/EN/BE).
+- Manual mode toggle for player-controlled dungeon navigation.
+- Deterministic simulation support via `-seed` command-line flag.
 
-**Translations.** Player-facing text is stored in the Russian, English and Belarusian dictionaries (`i18n_ru.go`, `i18n_en.go`, `i18n_be.go`) and fetched with `T(lang, key, args...)`; gendered verbs use `TVerb(lang, gender, key)` (`verb.<key>.m` / `verb.<key>.f`). Avoid hardcoded UI text and language-specific branches; `i18n_hardcode_test.go` checks for hardcoded Cyrillic, inline language branches, missing verb/sign keys and localization regressions.
+### Changed
+- Major UI overhaul for capital navigation and town interactions.
+- Relic system completely redesigned from passive bonuses to active mechanics.
+- Core localization framework implemented across all UI and log elements.
 
+## [2.9.2] - 2026-10-27
 
-Tests cover dictionary parity (RU/EN keys and format arguments), the autopilot tactics, saving and loading, room events, tick-chain handling and a headless seeded simulation.
+### Fixed
+- Improved save file sanitization and legacy value clamping.
+- Fixed tick generation logic to prevent stale updates after closing overlays (e.g., Armory).
 
-### 📂 Project Structure
+## [2.9.1] - 2026-10-26
 
-**Entry point and loop**
-* `main.go`: version, CLI flags, `main()`.
-* `model.go`: `Model`, game states, town phases, model construction and restart.
-* `update.go`: Bubble Tea `Update`, key handling, tick chain.
-* `telemetry.go`: the `-report` telemetry collector.
-* `save.go`, `rng.go`: persistence (legacy, language, tactics) and the single random source (`-seed`).
+### Added
+- `SaveData` structure with explicit version, language, legacy, and tactics fields.
+- Atomic save writing via temporary files to prevent corruption.
+- `persistState()` function for safe and reliable state saving.
 
-**Data types**
-* `types_hero.go`: races, classes, afflictions, heroes and their stats.
-* `types_items.go`: potions, mutations, equipment, materials, bag upgrades.
-* `types_monster.go`: monsters, packs, turn order, active combat.
-* `types_world.go`: tiles, biomes, quests, run statistics, town legacy and budget, relics.
-* `types_lore.go`, `lore_data.go`: lore data, categories and unlocked-volume metadata.
-* `styles.go`: Lipgloss styles.
+### Changed
+- Refactored the entire save system for improved reliability and crash resistance.
 
-**Dungeon**
-* `dungeon_gen.go`: floor size, procedural generation, fog of war.
-* `monsters.go`: monster pack spawning and scaling.
-* `loot.go`: item generation.
-* `tiles.go`: altars, fountains, trapped chests, relics.
-* `events.go`: room events (`?` tiles).
-* `quests.go`: contracts and quest progress.
-* `step.go`: the main game step and movement onto a tile.
-* `biomes.go`: biome configuration.
+## [2.9.0] - 2026-10-25
 
-**Leader hero**
-* `hero_blueprint.go`: hero blueprint, point allocation, stat preview, starting party assembly (leader, custom companions, random fill).
-* `creator.go`: the creation screen, its input handling and the main-menu hero lines.
-* `leader.go`: leader rules (rescue, Church, Guild, shock on fall).
+### Added
+- RNG seeding with `-seed` flag for fully reproducible runs.
+- `seedRNG()` function to enable deterministic generation for testing and speedrunning.
 
-**Party and decisions**
-* `party.go`: hero creation, stress, potions, experience, equipment, fallen heroes.
-* `titles.go`: glory titles.
-* `autopilot.go`: retreat and healing decisions, pathfinding to targets.
-* `tactics.go`: autopilot settings and their screen.
-* `manual.go`: manual control (movement, hero commands, camp, key handling).
+### Changed
+- Random number generation now supports a deterministic mode alongside the default time-based seeding.
 
-**Combat**
-* `combat.go`: targeting, damage, combat start, kill credit.
-* `combat_turn.go`: one combat turn (skills of all classes, monster turns).
-* `combat_flee.go`: fleeing and emergency retreat.
+## [2.8.4 – 2.8.9] - 2026-10-19 – 2026-10-23
 
-**Town**
-* `town.go`: the town visit pipeline (`stepTown`).
-* `town_map.go`, `town_map_render.go`: the generated town map (streets, decorated buildings, signs) and its drawing.
-* `town_walk.go`: walking through the town, entering and leaving buildings, skipping idle ones, autopilot route.
-* `gate.go`: the Dungeon Gate card with the two entrances and the departure.
-* `training.go`: training floors: weak fighters, the departure plan, repopulation with small packs.
-* `economy.go`: establishments, budget, potion and mutation prices, market.
-* `militia.go`: Guild militia tiers.
+### Fixed
+- Save file format stability improvements and legacy tax calculation fixes.
+- Tactics clamping on load to prevent out-of-bounds values.
+- Language validation in save files to prevent crashes on corrupted data.
+- Multiple stabilization patches preparing the codebase for the 2.9.0 release.
 
-**Interface**
-* `ui_layout.go`, `ui_text.go`: layout detection and text helpers.
-* `ui_view.go`: `View`, Landscape / Portrait layouts, log box, controls bar.
-* `ui_cards.go`: hero cards and the party banner.
-* `ui_map.go`, `ui_town.go`, `ui_screens.go`: map, town hub, menu / statistics / armory screens.
-* `codex.go`, `ui_library.go`: Codex tabs and the Capital Library reader.
-* `i18n.go`, `i18n_ru.go`, `i18n_en.go`, `i18n_be.go`: translation lookup and RU / EN / BE dictionaries.
+## [2.8.3] - 2026-10-18
 
-### 📜 License
-Distributed under the MIT License. See [LICENSE](LICENSE).
+### Fixed
+- Verified legacy calculation logic after a completed run.
+- Added robust save overwrite tests.
 
----
+## [2.8.1] - 2026-10-17
+
+### Added
+- `TestSaveOverwrite` and `TestLegacyAfterRun` test suites.
+
+### Fixed
+- Save file round-trip verification to ensure data integrity.
+
+## [2.8.0] - 2026-10-16
+
+### Changed
+- Synchronized `var version` with the menu display string to eliminate version mismatch confusion.
+
+## [2.7.2] - 2026-10-15
+
+### Added
+- Modular codebase split into separate files: `rng.go`, `save.go`, `militia.go`, `tactics.go`.
+- Comprehensive test coverage: `save_test.go`, `sim_test.go`, `tactics_test.go`.
+- New data types: `RetreatReason`, `HealingUrgency`, `LostInAbyss`, `TickGen`, `Tactics`, `TileEvent`, `EventsSeen`, `TotalInvested`.
+- `buyMissingOrBetterGear()` function in town for auto-buying missing or superior equipment.
+- Adaptive town display modes (`renderTownHubWide`, `renderTownHubMedium`, `renderTownHubCompact`).
+
+### Changed
+- Major architectural refactoring into dedicated modules.
+- Town UI now dynamically adapts to terminal dimensions.
+
+## [2.7.1] - 2026-10-13
+
+### Added
+- `renderEnemyStrip` for clear enemy health visualization.
+- `renderLogBox` with adjustable `boxH` parameter.
+- Localized `renderControls` for consistent UI.
+- Militia tier and progress display integrated into the stats screen.
+
+## [2.7.0] - 2026-10-12
+
+### Added
+- `RunCounted` flag in `Model` to prevent double incrementing of `TotalRuns`.
+- `RestTurnsLeft` mechanic for camp and rest management.
+- `runtime.GOMAXPROCS(1)` in `main()` for stable execution on 32-bit architectures and iSH environments.
+
+### Fixed
+- Resolved double run counting bug.
+- Improved overall stability on constrained environments.
+
+## [2.6.0] - 2026-10-09
+
+### Added
+- Adaptive interface system.
+- Display layout modes: `LayoutLandscape`, `LayoutPortraitWide`, `LayoutPortrait`.
+- Adaptive hero cards: `CardWide`, `CardMedium`, `CardCompact`.
+
+### Changed
+- UI rendering now dynamically adapts to terminal width and height, ensuring readability on all screen sizes.
+
+## [2.5.0] - 2026-10-06
+
+### Added
+- 4 playable races: Humans, Elves, Beastmen, Olongrs, each with unique `RaceModifiers`.
+- Expanded class roster to 10 classes (added Paladin, Ranger, Monk, Bard, Warlock).
+
+### Changed
+- Implemented the foundational race system with stat modifiers.
+- Significantly expanded class variety and role diversity.
+
+## [2.4.3] - 2026-10-03
+
+### Fixed
+- `GetClassMutationPreference` now correctly considers fallen heroes' history.
+- Critical HP drops now properly prioritize "Titan's Blood" mutation for survival.
+
+## [2.4.2] - 2026-10-02
+
+### Changed
+- Improved alchemical mutation logic by incorporating historical run data for smarter recommendations.
+
+## [2.4.1] - 2026-10-01
+
+### Changed
+- Tightened rest mechanics (camping now only works up to floor 5; deeper floors are pure hardcore).
+- Adjusted base HP stats for better early-game balance.
+- Rebalanced church and alchemist service costs.
+
+## [2.4.0] - 2026-09-30
+
+### Added
+- `Language` type (`LangRU`, `LangEN`).
+- Dictionary key system: `NameKey`, `TitleKey`, `BaseNameKey`.
+- `T()` and `TVerb()` translation functions.
+
+### Changed
+- **Major localization refactor**: Replaced all hardcoded UI and log strings with dictionary lookups, paving the way for multi-language support.
+
+## [2.3.0] - 2026-09-27
+
+### Added
+- Gender-aware verb support (`Verb`) for grammatically correct logs in Russian.
+- Procedural generation of named capital establishments (unique forge, tavern, and guild names).
+
+## [2.2.0] - 2026-09-24
+
+### Added
+- `Tannery` crafting specialization (`TanneryLevel`).
+- Leather and cloth material tiers (`LeatherMaterials`).
+- Movement speed bonuses (`SpeedBonus`).
+- Multi-potion belt system (`[]*Potion`).
+
+### Changed
+- Split the crafting system into distinct specializations (Smithy vs. Tannery).
+- Expanded the potion system from single slots to belt-based inventory management.
+
+## [2.1.0] - 2026-09-21
+
+### Added
+- Town budgeting and allocation system (`AllocateBudget`).
+- Alchemical mutations with class-specific priority logic (`GetClassMutationPreference`).
+
+## [2.0.1] - 2026-09-18
+
+### Added
+- Full level and experience progression system (`Level`, `Exp`, `GainExp`, `distributePartyExp`) for heroes.
+
+### Changed
+- Introduced a major progression overhaul: heroes now gain levels and permanently improve stats.
+
+## [1.1.2] - 2026-09-15
+
+### Added
+- Alchemical mutations: Chimera, Rage, Titan, Ether, Bastion.
+- Refined material naming conventions via the `Adj` system.
+
+## [1.1. asdasd1] - 2026-09-14
+
+### Added
+- Extended combat logging capacity (up to 100 entries).
+- Log scrolling functionality (`LogScroll`).
+- Improved visual layout of the Arsenal screen.
+
+## [1.1.0] - 2026-09-13
+
+### Added
+- Aggro and threat system (`CombatRole`).
+- Damage interception and guarding mechanics (`ApplyDamage`).
+- Town budgeting foundation (`TownBudget`).
+- Dynamic potion pricing based on floor depth.
+
+### Changed
+- Combat system now actively tracks aggro and character roles.
+- Town economy mechanics implemented.
+
+## [1.0.0] - 2026-09-11
+
+### Added
+- Initial public release.
+- Core game structure: biomes, relics, basic combat, and equipment.
+- Quest system with relic-finding objectives.
+- Potion system with auto-drink logic.
+- Gold tracking and run statistics.
